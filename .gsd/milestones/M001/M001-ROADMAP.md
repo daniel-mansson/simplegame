@@ -52,7 +52,7 @@ This milestone is complete only when all are true:
 
 ## Slices
 
-- [ ] **S01: Core MVP Infrastructure & Project Setup** `risk:high` `depends:[]`
+- [x] **S01: Core MVP Infrastructure & Project Setup** `risk:high` `depends:[]`
   > After this: Unity project exists with UniTask installed, MVP base types defined (IView, Presenter, UIFactory), and edit-mode tests prove a presenter can be constructed with a mocked view interface and injected service — verified by passing tests.
 
 - [ ] **S02: Screen Management** `risk:medium` `depends:[S01]`

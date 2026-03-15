@@ -58,7 +58,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S01
 - Supporting slices: M001/S02, M001/S03, M001/S04, M001/S05
-- Validation: unmapped
+- Validation: S01 — UIFactory + SamplePresenter wiring uses constructor injection throughout; verified by passing edit-mode tests; no DI framework in manifest or code
 - Notes: None
 
 ### R006 — No static state (domain reload disabled support)
@@ -69,7 +69,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S01
 - Supporting slices: M001/S02, M001/S03, M001/S04, M001/S05
-- Validation: unmapped
+- Validation: S01 — static guard passes with zero output; all 6 core files have no static fields; remains active because future slices must continue to satisfy this constraint
 - Notes: This rules out any singleton pattern that uses static Instance fields.
 
 ### R007 — Model layer with domain services/systems
@@ -190,12 +190,22 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S01
 - Supporting slices: M001/S02, M001/S03
-- Validation: unmapped
+- Validation: S01 — MockSampleView implements ISampleView with no Unity runtime; all 6 presenter tests run in edit-mode with no MonoBehaviour; active because S02/S03 layers not yet tested
 - Notes: This is the litmus test for whether the MVP separation is actually working.
 
 ## Validated
 
-(none yet)
+### R003 — Interface-per-view for presenter dependency
+- Class: core-capability
+- Status: validated
+- Validated by: S01 — ISampleView + SamplePresenter; `MockViewHasNoPresenterReference` test passes via reflection; presenter depends only on the interface
+- Proof: TestResults.xml total="6" passed="6" failed="0"; ISampleView has no presenter/service types (grep verified)
+
+### R005 — Constructor/init injection only (no DI framework)
+- Class: constraint
+- Status: validated
+- Validated by: S01 — UIFactory constructor injection + SamplePresenter constructor injection; `UIFactoryCreatesSamplePresenterWithService` and `PresenterInitializeSetsWelcomeLabel` tests pass
+- Proof: TestResults.xml all passing; no DI framework packages in manifest.json; no service locator pattern in any Core file
 
 ## Deferred
 
@@ -260,23 +270,23 @@ Use it to track what is actively in scope, what has been validated by completed 
 
 | ID | Class | Status | Primary owner | Supporting | Proof |
 |---|---|---|---|---|---|
-| R001 | core-capability | active | M001/S01 | M001/S02, S03, S04, S05 | unmapped |
-| R002 | core-capability | active | M001/S01 | M001/S05 | unmapped |
-| R003 | core-capability | active | M001/S01 | none | unmapped |
-| R004 | core-capability | active | M001/S01 | M001/S05 | unmapped |
-| R005 | constraint | active | M001/S01 | M001/S02, S03, S04, S05 | unmapped |
-| R006 | constraint | active | M001/S01 | M001/S02, S03, S04, S05 | unmapped |
-| R007 | core-capability | active | M001/S01 | M001/S05 | unmapped |
+| R001 | core-capability | active | M001/S01 | M001/S02, S03, S04, S05 | S01 — IView, Presenter<TView>, UIFactory, ISampleView, SamplePresenter defined; compile clean |
+| R002 | core-capability | active | M001/S01 | M001/S05 | S01 — ISampleView grep clean; MockViewHasNoPresenterReference test passes |
+| R003 | core-capability | validated | M001/S01 | none | S01 — 6/6 tests pass; interface-only dependency proven |
+| R004 | core-capability | active | M001/S01 | M001/S05 | S01 — UIFactory.CreateSamplePresenter() is the single wiring point; no scattered new SamplePresenter() |
+| R005 | constraint | validated | M001/S01 | M001/S02, S03, S04, S05 | S01 — all 6 tests pass via constructor injection; no DI framework |
+| R006 | constraint | active | M001/S01 | M001/S02, S03, S04, S05 | S01 — static guard passes; active for future slices |
+| R007 | core-capability | active | M001/S01 | M001/S05 | S01 — GameService plain C# class injected into SamplePresenter |
 | R008 | launchability | active | M001/S05 | M001/S02 | unmapped |
 | R009 | core-capability | active | M001/S02 | M001/S05 | unmapped |
 | R010 | primary-user-loop | active | M001/S02 | M001/S04, S05 | unmapped |
 | R011 | core-capability | active | M001/S03 | M001/S05 | unmapped |
 | R012 | core-capability | active | M001/S03 | M001/S04 | unmapped |
 | R013 | quality-attribute | active | M001/S04 | M001/S05 | unmapped |
-| R014 | constraint | active | M001/S01 | M001/S02, S03, S04 | unmapped |
-| R015 | quality-attribute | active | M001/S01 | M001/S02, S03 | unmapped |
+| R014 | constraint | active | M001/S01 | M001/S02, S03, S04 | S01 — UniTask resolved at ad5ed25e82a3; compiles with zero errors |
+| R015 | quality-attribute | active | M001/S01 | M001/S02, S03 | S01 — 6/6 edit-mode tests pass in batchmode CLI |
 | R016 | launchability | active | M001/S05 | none | unmapped |
-| R017 | quality-attribute | active | M001/S01 | M001/S02, S03 | unmapped |
+| R017 | quality-attribute | active | M001/S01 | M001/S02, S03 | S01 — MockSampleView in pure C#; all presenter tests run without Unity runtime |
 | R018 | differentiator | deferred | none | none | unmapped |
 | R019 | quality-attribute | deferred | none | none | unmapped |
 | R020 | anti-feature | out-of-scope | none | none | n/a |
@@ -287,5 +297,5 @@ Use it to track what is actively in scope, what has been validated by completed 
 
 - Active requirements: 17
 - Mapped to slices: 17
-- Validated: 0
+- Validated: 2 (R003, R005)
 - Unmapped active requirements: 0

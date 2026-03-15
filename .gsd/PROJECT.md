@@ -10,7 +10,9 @@ A proven, testable UI architecture where views are fully independent (no backwar
 
 ## Current State
 
-Empty project. No Unity project structure exists yet.
+S01 complete. Unity 6000.3.4f1 project compiling with UniTask installed (git URL, resolved at commit ad5ed25e82a3). MVP base types defined: IView, Presenter<TView>, ISampleView, SamplePresenter, UIFactory, GameService. Assembly definitions in place for runtime and edit-mode tests. 6 NUnit edit-mode tests passing in Unity batchmode CLI — TestResults.xml: result="Passed", total="6", failed="0". No static state in any C# file. All core types are pure C# with no UnityEngine coupling.
+
+Next: S02 — Screen Management (ScreenManager with additive scene loading).
 
 ## Architecture / Key Patterns
 
@@ -28,4 +30,4 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 
 ## Milestone Sequence
 
-- [ ] M001: MVP UI Architecture Foundation — Boot flow, screen management, popups, transitions, and demo screens proving the full dependency chain
+- [x] M001: MVP UI Architecture Foundation — S01 ✅ (core MVP infra + tests passing) · S02–S05 pending
