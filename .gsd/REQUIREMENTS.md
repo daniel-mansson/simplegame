@@ -14,7 +14,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S01
 - Supporting slices: M001/S02, M001/S03, M001/S04, M001/S05
-- Validation: unmapped
+- Validation: S05 — 3 View MonoBehaviours (MainMenuView, SettingsView, ConfirmDialogView) implement interfaces; 3 plain C# presenters use constructor injection; GameService flows through UIFactory; 49/49 edit-mode tests pass; no layer cross-references; pending play-mode UAT for full runtime proof
 - Notes: Presenters must not be MonoBehaviours. Views must not know about presenters or models.
 
 ### R002 — View independence (no backward refs to systems/services)
@@ -25,7 +25,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S01
 - Supporting slices: M001/S05
-- Validation: unmapped
+- Validation: S05 — MockMainMenuViewHasNoPresenterReference, MockSettingsViewHasNoPresenterReference, MockConfirmDialogViewHasNoPresenterReference reflection tests pass; MainMenuView/SettingsView/ConfirmDialogView MonoBehaviours have zero non-Unity references; 49/49 tests pass
 - Notes: This constraint is stricter than typical MVP — views don't even have a SetPresenter method.
 
 ### R003 — Interface-per-view for presenter dependency
@@ -47,8 +47,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S01
 - Supporting slices: M001/S05
-- Validation: unmapped
-- Notes: Factory receives view instances and services, constructs presenters with constructor/init injection.
+- Validation: S05 — UIFactory expanded with CreateMainMenuPresenter, CreateSettingsPresenter, CreateConfirmDialogPresenter; GameBootstrapper is the sole caller; 17 DemoWiringTests confirm all 3 factory Create methods; callback-based constructor proven; 49/49 tests pass
 
 ### R005 — Constructor/init injection only (no DI framework)
 - Class: constraint
@@ -69,7 +68,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S01
 - Supporting slices: M001/S02, M001/S03, M001/S04, M001/S05
-- Validation: S01 — static guard passes with zero output; S02 — static guard passes for all Core/ScreenManagement/ files; no static fields introduced in ScreenId, ISceneLoader, ScreenManager, UnitySceneLoader, or SceneSetup; S03 — static guard passes for all Core/PopupManagement/ and Runtime/PopupManagement/ files; no static fields in PopupId, IInputBlocker, IPopupContainer, PopupManager, IPopupView, or UnityInputBlocker
+- Validation: S05 — static guard (`grep -r "static " --include="*.cs" Assets/ | grep -v "static void|static class|static readonly|static async|static UniTask"`) returns empty across all 5 slices' files; SceneSetupHelpers static void + out-params pattern resolves false-positive edge case for canvas/button factory helpers
 - Notes: This rules out any singleton pattern that uses static Instance fields.
 
 ### R007 — Model layer with domain services/systems
@@ -80,7 +79,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S01
 - Supporting slices: M001/S05
-- Validation: unmapped
+- Validation: S05 — GameService constructed in GameBootstrapper and injected through UIFactory all the way to MainMenuPresenter via constructor injection; full dependency chain proven; 49/49 tests pass
 - Notes: Similar to a domain logic layer. Services are plain C# classes injected into presenters.
 
 ### R008 — Boot scene → main scene initialization flow
@@ -91,7 +90,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S05
 - Supporting slices: M001/S02
-- Validation: unmapped
+- Validation: S05 — Boot.unity at EditorBuildSettings index 0; GameBootstrapper in Boot scene constructs GameService → managers → UIFactory → awaits ShowScreenAsync(MainMenu); full boot log trail emitted; batchmode compile + scene setup verified; pending play-mode UAT
 - Notes: Boot scene should be the only scene that needs to be open in the editor to enter play mode.
 
 ### R009 — Hybrid scene management (persistent + additive scenes)
@@ -102,7 +101,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S02
 - Supporting slices: M001/S05
-- Validation: S02 — UnitySceneLoader wraps LoadSceneAsync(name, LoadSceneMode.Additive) and UnloadSceneAsync; load/unload sequencing proven by ShowScreenAsync_UnloadsPreviousBeforeLoadingNext test; MainMenu.unity and Settings.unity registered in EditorBuildSettings; runtime integration with persistent scene deferred to S05
+- Validation: S05 — Boot scene is persistent; MainMenu/Settings are additively loaded/unloaded by ScreenManager; GameBootstrapper wires infrastructure to persistent scene; InputBlocker, TransitionOverlay, PopupCanvas all in Boot scene; pending play-mode UAT for runtime proof
 - Notes: The persistent scene hosts the screen manager, popup layer, transition overlay, and input blocker.
 
 ### R010 — Screen navigation between full screens
@@ -113,7 +112,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S02
 - Supporting slices: M001/S04, M001/S05
-- Validation: S02 — ScreenManager.ShowScreenAsync and GoBackAsync with Stack<ScreenId> history proven by 8 edit-mode tests; ScreenId enum provides type-safe identification; CurrentScreen and CanGoBack properties ready for presenter consumption; runtime presenter wiring deferred to S05
+- Validation: S05 — GameBootstrapper calls ShowScreenAsync(MainMenu) at boot; NavigateAndWirePresenter handles Settings; GoBackAndWirePresenter handles back; presenter disposed before each transition; presenter initialized after; 49/49 tests pass; pending play-mode UAT for runtime proof
 - Notes: Screen manager should support forward navigation and back navigation.
 
 ### R011 — Stack-based popup system
@@ -157,7 +156,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S01
 - Supporting slices: M001/S02, M001/S03, M001/S04
-- Validation: S01 — UniTask resolved at ad5ed25e82a3; compiles with zero errors; S02 — ISceneLoader returns UniTask; ScreenManager uses UniTask; UnitySceneLoader uses .ToUniTask(ct); MockSceneLoader returns UniTask.CompletedTask confirming interface contract; CancellationToken threaded through UnitySceneLoader calls; S03 — IPopupContainer uses UniTask+CancellationToken; PopupManager async methods; MockPopupContainer returns UniTask.CompletedTask
+- Validation: S01+S02+S03+S05 — UniTask in ISceneLoader, ScreenManager, IPopupContainer, PopupManager, GameBootstrapper (async UniTaskVoid Start), presenter callbacks (Func<UniTask>); CancellationToken threaded; Mock*s return UniTask.CompletedTask; 49/49 tests pass
 - Notes: Install via UPM git URL.
 
 ### R015 — Edit-mode unit tests for presenters and core logic
@@ -168,7 +167,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S01
 - Supporting slices: M001/S02, M001/S03
-- Validation: S01 — 6 MVPWiringTests pass; S02 — 8 ScreenManagerTests added; total 14/14 pass in batchmode; ScreenManager fully exercised without Unity runtime via MockSceneLoader; S03 — 13 PopupManagerTests added; total 27/27 pass in batchmode; PopupManager fully exercised without Unity runtime via MockPopupContainer and MockInputBlocker
+- Validation: S01+S02+S03+S05 — 49/49 edit-mode tests pass: 6 MVPWiringTests, 8 ScreenManagerTests, 13 PopupManagerTests, 5 TransitionTests, 17 DemoWiringTests; all 3 demo presenters tested with mock views; all fixture types run without Unity runtime
 - Notes: Mocked view interfaces enable presenter testing without Unity runtime.
 
 ### R016 — Demo screens proving end-to-end dependency flow
@@ -179,7 +178,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S05
 - Supporting slices: none
-- Validation: unmapped
+- Validation: S05 — Boot.unity/MainMenu.unity/Settings.unity fully populated; GameBootstrapper wires full chain; MainMenu↔Settings navigation + ConfirmDialog popup implemented; 49/49 tests pass; pending play-mode UAT for runtime proof
 - Notes: Expected outcome: navigate between screens with a basic demo setup that passes dependencies correctly across the app.
 
 ### R017 — Each layer testable in isolation
@@ -190,7 +189,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S01
 - Supporting slices: M001/S02, M001/S03
-- Validation: S01 — MockSampleView in pure C#; all 6 presenter tests run without Unity runtime; S02 — MockSceneLoader and BlockingMockSceneLoader enable full ScreenManager testing with zero Unity dependency; ISceneLoader has no UnityEngine using; all 8 ScreenManager tests run in edit-mode; S03 — MockPopupContainer + MockInputBlocker enable full PopupManager testing with zero Unity dependency; IInputBlocker and IPopupContainer have no UnityEngine using; all 13 PopupManager tests run in edit-mode
+- Validation: S01+S02+S03+S05 — MockMainMenuView, MockSettingsView, MockConfirmDialogView in pure C#; all 17 DemoWiringTests run without Unity runtime; all 49 total tests run without Unity runtime; no IView/IPopupView/IScreenView types have UnityEngine using; IMainMenuView/ISettingsView/IConfirmDialogView grep clean
 - Notes: This is the litmus test for whether the MVP separation is actually working.
 
 ## Validated
@@ -288,23 +287,23 @@ Use it to track what is actively in scope, what has been validated by completed 
 
 | ID | Class | Status | Primary owner | Supporting | Proof |
 |---|---|---|---|---|---|
-| R001 | core-capability | active | M001/S01 | M001/S02, S03, S04, S05 | S01 — IView, Presenter<TView>, UIFactory, ISampleView, SamplePresenter defined; compile clean |
-| R002 | core-capability | active | M001/S01 | M001/S05 | S01 — ISampleView grep clean; MockViewHasNoPresenterReference test passes |
+| R001 | core-capability | active | M001/S01 | M001/S02, S03, S04, S05 | S05 — 3 view interfaces + 3 presenters + 3 view MonoBehaviours; 49/49 tests; static guard clean; no UnityEngine in Core |
+| R002 | core-capability | active | M001/S01 | M001/S05 | S05 — 3 MockXxxViewHasNoPresenterReference reflection tests pass; view MonoBehaviours grep clean |
 | R003 | core-capability | validated | M001/S01 | none | S01 — 6/6 tests pass; interface-only dependency proven |
-| R004 | core-capability | active | M001/S01 | M001/S05 | S01 — UIFactory.CreateSamplePresenter() is the single wiring point; no scattered new SamplePresenter() |
+| R004 | core-capability | active | M001/S01 | M001/S05 | S05 — UIFactory 4 Create methods; GameBootstrapper is sole caller; 17 DemoWiringTests pass |
 | R005 | constraint | validated | M001/S01 | M001/S02, S03, S04, S05 | S01 — all 6 tests pass via constructor injection; no DI framework |
-| R006 | constraint | active | M001/S01 | M001/S02, S03, S04, S05 | S01+S02 — static guard passes for all ScreenManagement core files; no static fields in any new S02 file |
-| R007 | core-capability | active | M001/S01 | M001/S05 | S01 — GameService plain C# class injected into SamplePresenter |
-| R008 | launchability | active | M001/S05 | M001/S02 | unmapped |
-| R009 | core-capability | active | M001/S02 | M001/S05 | S02 — UnitySceneLoader uses LoadSceneMode.Additive; sequencing proven by 8 tests; scenes registered in EditorBuildSettings |
-| R010 | primary-user-loop | active | M001/S02 | M001/S04, S05 | S02 — ShowScreenAsync + GoBackAsync + Stack<ScreenId> history; 8/8 tests pass; CurrentScreen + CanGoBack properties ready |
+| R006 | constraint | active | M001/S01 | M001/S02, S03, S04, S05 | S05 — static guard returns empty across all 5 slices' files |
+| R007 | core-capability | active | M001/S01 | M001/S05 | S05 — GameService flows through full chain: Boot → UIFactory → MainMenuPresenter |
+| R008 | launchability | active | M001/S05 | M001/S02 | S05 — Boot.unity at index 0; GameBootstrapper wires full chain; pending UAT |
+| R009 | core-capability | active | M001/S02 | M001/S05 | S05 — Boot scene persistent; MainMenu/Settings additive; infrastructure in Boot scene; pending UAT |
+| R010 | primary-user-loop | active | M001/S02 | M001/S04, S05 | S05 — GameBootstrapper wires ShowScreenAsync + GoBack + presenter lifecycle; pending UAT |
 | R011 | core-capability | validated | M001/S03 | M001/S05 | S03 — PopupManager Stack<PopupId> push/pop/dismiss-all; 5 stack tests + 3 input-blocking tests pass; 27/27 total |
 | R012 | core-capability | validated | M001/S03 | M001/S04 | S03 — IInputBlocker reference-counting contract; UnityInputBlocker CanvasGroup; 2 reference-counting tests + 4 integration tests pass |
 | R013 | quality-attribute | validated | M001/S04 | M001/S05 | S04 — ITransitionPlayer + ScreenManager orchestration + UnityTransitionPlayer; 5 transition tests; 32/32 pass; static guard clean; finally-block Unblock confirmed |
-| R014 | constraint | active | M001/S01 | M001/S02, S03, S04 | S01+S02+S03 — UniTask in ISceneLoader, ScreenManager, IPopupContainer, PopupManager; CancellationToken threaded; Mock*s return UniTask.CompletedTask |
-| R015 | quality-attribute | active | M001/S01 | M001/S02, S03 | S01+S02+S03 — 27/27 edit-mode tests pass; PopupManager fully exercised without Unity runtime via MockPopupContainer and MockInputBlocker |
-| R016 | launchability | active | M001/S05 | none | unmapped |
-| R017 | quality-attribute | active | M001/S01 | M001/S02, S03 | S01+S02+S03 — MockSceneLoader + MockPopupContainer + MockInputBlocker; 27/27 tests run without Unity runtime; ISceneLoader, IInputBlocker, IPopupContainer have no UnityEngine |
+| R014 | constraint | active | M001/S01 | M001/S02, S03, S04 | S05 — UniTask in all async paths including GameBootstrapper + presenter Func<UniTask> callbacks; 49/49 tests pass |
+| R015 | quality-attribute | active | M001/S01 | M001/S02, S03 | S05 — 49/49 edit-mode tests pass (6+8+13+5+17); all run without Unity runtime |
+| R016 | launchability | active | M001/S05 | none | S05 — 3 scenes built; full dependency chain from boot to presenter; pending UAT |
+| R017 | quality-attribute | active | M001/S01 | M001/S02, S03 | S05 — 3 demo mock views in pure C#; 17 DemoWiringTests run without Unity; no UnityEngine in Core |
 | R018 | differentiator | deferred | none | none | unmapped |
 | R019 | quality-attribute | deferred | none | none | unmapped |
 | R020 | anti-feature | out-of-scope | none | none | n/a |
@@ -316,4 +315,5 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Active requirements: 17
 - Mapped to slices: 17
 - Validated: 5 (R003, R005, R011, R012, R013)
+- Pending play-mode UAT: R001, R002, R004, R006, R007, R008, R009, R010, R014, R015, R016, R017 (batchmode-verified; runtime walkthrough is final proof step)
 - Unmapped active requirements: 0

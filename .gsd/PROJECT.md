@@ -10,9 +10,9 @@ A proven, testable UI architecture where views are fully independent (no backwar
 
 ## Current State
 
-S01, S02, S03, and S04 complete. Unity 6000.3.4f1 project compiling with UniTask installed (git URL, resolved at commit ad5ed25e82a3). MVP base types defined: IView, Presenter<TView>, ISampleView, SamplePresenter, UIFactory, GameService. ScreenManagement layer complete: ScreenId enum, ISceneLoader interface, ScreenManager (history stack, ShowScreenAsync, GoBackAsync, concurrency guard, optional ITransitionPlayer + IInputBlocker injection with finally-block unblock). Popup system complete: PopupId enum, IInputBlocker interface (reference-counting contract), IPopupContainer interface, PopupManager (stack-based, concurrency-guarded), IPopupView marker interface, UnityInputBlocker MonoBehaviour (CanvasGroup reference-counting). Transition system complete: ITransitionPlayer interface (pure C#, no UnityEngine), ScreenManager orchestration (Block → FadeOut → unload → load → FadeIn → Unblock in finally), UnityTransitionPlayer MonoBehaviour (CanvasGroup alpha interpolation, blocksRaycasts=false enforced, ready for S05 wiring). MainMenu.unity and Settings.unity placeholder scenes registered in EditorBuildSettings. 32 NUnit edit-mode tests passing in Unity batchmode CLI — TestResults.xml: result="Passed", total="32", passed="32", failed="0". No static state in any C# file. Core types are pure C# with no UnityEngine coupling.
+All five S01–S05 slices complete. M001 MVP UI Architecture Foundation is fully assembled. Unity 6000.3.4f1 project compiling with UniTask installed. Full dependency chain: Boot.unity at EditorBuildSettings index 0 → GameBootstrapper initializes GameService + UnitySceneLoader + ScreenManager + PopupManager + UIFactory with closures → ShowScreenAsync(MainMenu) → MainMenuView/SettingsView wired via FindFirstObjectByType → presenter Initialize(). 49/49 NUnit edit-mode tests passing. Three scenes: Boot (GameBootstrapper, UnityInputBlocker sort=100, UnityTransitionPlayer sort=200, UnityPopupContainer sort=300, ConfirmDialogView pre-instantiated), MainMenu (Canvas + MainMenuView + Settings button + Open Popup button), Settings (Canvas + SettingsView + Back button). Static guard clean. No UnityEngine in Core.
 
-Next: S05 — Boot Flow & Demo Screens (boot scene wires all services, constructs factory, transitions to MainMenu with real fade; user navigates MainMenu → Settings → back → popup).
+**Pending:** Play-mode UAT walkthrough (human-verified): Boot → MainMenu → Settings → MainMenu → popup open → popup dismiss. See `.gsd/milestones/M001/slices/S05/S05-UAT.md`.
 
 ## Architecture / Key Patterns
 
@@ -20,9 +20,11 @@ Next: S05 — Boot Flow & Demo Screens (boot scene wires all services, construct
 - **View independence**: Views have no references to presenters, models, or services. One interface per view that the presenter depends on.
 - **Explicit DI**: Constructor or Init method injection only. No DI framework, no static state, no singletons.
 - **Central UI Factory**: One factory constructs all presenters, receiving all dependencies and wiring the correct ones to each presenter.
-- **Hybrid scene management**: Persistent scene with additive scene loading for major states.
-- **UniTask**: All async operations (transitions, scene loading, popup animations) use UniTask.
-- **Testing**: Edit-mode tests preferred. Views can use play-mode tests. Each layer testable in isolation.
+- **Hybrid scene management**: Persistent Boot scene with additive scene loading for screen scenes (MainMenu, Settings).
+- **UniTask**: All async operations (transitions, scene loading, popup animations, boot sequence) use UniTask.
+- **Testing**: Edit-mode tests preferred (49/49 passing). Views can use play-mode tests (deferred R019). Each layer testable in isolation.
+- **Presenter callbacks**: Presenters receive Action<ScreenId>/Action<PopupId>/Func<UniTask> callbacks from UIFactory, not full manager references — keeps presenters independently testable.
+- **Popup pre-instantiation**: UnityPopupContainer shows/hides pre-instantiated popup GameObjects in Boot scene via SetActive — avoids popup scene management complexity.
 
 ## Capability Contract
 
@@ -30,4 +32,4 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 
 ## Milestone Sequence
 
-- [x] M001: MVP UI Architecture Foundation — S01 ✅ · S02 ✅ · S03 ✅ (popup system + input blocking, 27/27 tests passing) · S04 ✅ (transition system, 32/32 tests passing) · S05 pending
+- [x] M001: MVP UI Architecture Foundation — S01 ✅ · S02 ✅ · S03 ✅ · S04 ✅ · S05 ✅ (pending play-mode UAT)

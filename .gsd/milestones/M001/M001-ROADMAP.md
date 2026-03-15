@@ -64,7 +64,7 @@ This milestone is complete only when all are true:
 - [x] **S04: Transition System** `risk:low` `depends:[S02]`
   > After this: TransitionManager plays a fade-to-black transition during screen navigation. Input is blocked during the transition. Verified by play-mode walkthrough showing smooth fade between screens.
 
-- [ ] **S05: Boot Flow & Demo Screens** `risk:low` `depends:[S01,S02,S03,S04]`
+- [x] **S05: Boot Flow & Demo Screens** `risk:low` `depends:[S01,S02,S03,S04]`
   > After this: Boot scene initializes all services and the UI factory, transitions to MainMenu, user navigates to Settings and back, opens a popup — full dependency chain flows correctly. This is the final integration proof.
 
 ## Boundary Map

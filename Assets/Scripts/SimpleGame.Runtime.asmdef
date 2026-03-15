@@ -1,7 +1,7 @@
 {
   "name": "SimpleGame.Runtime",
   "rootNamespace": "SimpleGame",
-  "references": ["UniTask"],
+  "references": ["UniTask", "UnityEngine.UI"],
   "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,

@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="49" result="Passed" total="49" passed="49" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.0670548">
+  <test-suite type="TestSuite" id="1000" name="simplegame" fullname="simplegame" runstate="Runnable" testcasecount="49" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.067055" total="49" passed="49" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="1055" name="SimpleGame.Tests.EditMode.dll" fullname="C:/OtherWork/simplegame/Library/ScriptAssemblies/SimpleGame.Tests.EditMode.dll" runstate="Runnable" testcasecount="49" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.059670" total="49" passed="49" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="82092" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="1056" name="SimpleGame" fullname="SimpleGame" runstate="Runnable" testcasecount="49" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.059186" total="49" passed="49" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1057" name="Tests" fullname="SimpleGame.Tests" runstate="Runnable" testcasecount="49" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.058799" total="49" passed="49" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1001" name="DemoWiringTests" fullname="SimpleGame.Tests.DemoWiringTests" classname="SimpleGame.Tests.DemoWiringTests" runstate="Runnable" testcasecount="17" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.034352" total="17" passed="17" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1012" name="ConfirmDialogPresenter_CancelClicked_InvokesDismissCallback" fullname="SimpleGame.Tests.DemoWiringTests.ConfirmDialogPresenter_CancelClicked_InvokesDismissCallback" methodname="ConfirmDialogPresenter_CancelClicked_InvokesDismissCallback" classname="SimpleGame.Tests.DemoWiringTests" runstate="Runnable" seed="977662002" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.013430" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1011" name="ConfirmDialogPresenter_ConfirmClicked_InvokesDismissCallback" fullname="SimpleGame.Tests.DemoWiringTests.ConfirmDialogPresenter_ConfirmClicked_InvokesDismissCallback" methodname="ConfirmDialogPresenter_ConfirmClicked_InvokesDismissCallback" classname="SimpleGame.Tests.DemoWiringTests" runstate="Runnable" seed="1224106591" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000215" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1015" name="ConfirmDialogPresenter_Dispose_UnsubscribesEvents" fullname="SimpleGame.Tests.DemoWiringTests.ConfirmDialogPresenter_Dispose_UnsubscribesEvents" methodname="ConfirmDialogPresenter_Dispose_UnsubscribesEvents" classname="SimpleGame.Tests.DemoWiringTests" runstate="Runnable" seed="467849135" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000312" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1007" name="ConfirmDialogPresenter_Initialize_SetsMessage" fullname="SimpleGame.Tests.DemoWiringTests.ConfirmDialogPresenter_Initialize_SetsMessage" methodname="ConfirmDialogPresenter_Initialize_SetsMessage" classname="SimpleGame.Tests.DemoWiringTests" runstate="Runnable" seed="1469672561" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.002297" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1013" name="MainMenuPresenter_Dispose_UnsubscribesEvents" fullname="SimpleGame.Tests.DemoWiringTests.MainMenuPresenter_Dispose_UnsubscribesEvents" methodname="MainMenuPresenter_Dispose_UnsubscribesEvents" classname="SimpleGame.Tests.DemoWiringTests" runstate="Runnable" seed="1000105848" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.001374" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1005" name="MainMenuPresenter_Initialize_SetsTitle" fullname="SimpleGame.Tests.DemoWiringTests.MainMenuPresenter_Initialize_SetsTitle" methodname="MainMenuPresenter_Initialize_SetsTitle" classname="SimpleGame.Tests.DemoWiringTests" runstate="Runnable" seed="1761074570" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000203" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1009" name="MainMenuPresenter_PopupClicked_InvokesShowPopupCallback" fullname="SimpleGame.Tests.DemoWiringTests.MainMenuPresenter_PopupClicked_InvokesShowPopupCallback" methodname="MainMenuPresenter_PopupClicked_InvokesShowPopupCallback" classname="SimpleGame.Tests.DemoWiringTests" runstate="Runnable" seed="1083211254" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000228" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1008" name="MainMenuPresenter_SettingsClicked_InvokesNavigateCallback" fullname="SimpleGame.Tests.DemoWiringTests.MainMenuPresenter_SettingsClicked_InvokesNavigateCallback" methodname="MainMenuPresenter_SettingsClicked_InvokesNavigateCallback" classname="SimpleGame.Tests.DemoWiringTests" runstate="Runnable" seed="377581694" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000207" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1018" name="MockConfirmDialogView_HasNoPresenterOrServiceReference" fullname="SimpleGame.Tests.DemoWiringTests.MockConfirmDialogView_HasNoPresenterOrServiceReference" methodname="MockConfirmDialogView_HasNoPresenterOrServiceReference" classname="SimpleGame.Tests.DemoWiringTests" runstate="Runnable" seed="1240511752" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000383" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1016" name="MockMainMenuView_HasNoPresenterOrServiceReference" fullname="SimpleGame.Tests.DemoWiringTests.MockMainMenuView_HasNoPresenterOrServiceReference" methodname="MockMainMenuView_HasNoPresenterOrServiceReference" classname="SimpleGame.Tests.DemoWiringTests" runstate="Runnable" seed="2091332456" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000158" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1017" name="MockSettingsView_HasNoPresenterOrServiceReference" fullname="SimpleGame.Tests.DemoWiringTests.MockSettingsView_HasNoPresenterOrServiceReference" methodname="MockSettingsView_HasNoPresenterOrServiceReference" classname="SimpleGame.Tests.DemoWiringTests" runstate="Runnable" seed="1484208120" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000151" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1010" name="SettingsPresenter_BackClicked_InvokesGoBackCallback" fullname="SimpleGame.Tests.DemoWiringTests.SettingsPresenter_BackClicked_InvokesGoBackCallback" methodname="SettingsPresenter_BackClicked_InvokesGoBackCallback" classname="SimpleGame.Tests.DemoWiringTests" runstate="Runnable" seed="1756115112" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000499" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1014" name="SettingsPresenter_Dispose_UnsubscribesEvents" fullname="SimpleGame.Tests.DemoWiringTests.SettingsPresenter_Dispose_UnsubscribesEvents" methodname="SettingsPresenter_Dispose_UnsubscribesEvents" classname="SimpleGame.Tests.DemoWiringTests" runstate="Runnable" seed="1191249850" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000246" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1006" name="SettingsPresenter_Initialize_SetsTitle" fullname="SimpleGame.Tests.DemoWiringTests.SettingsPresenter_Initialize_SetsTitle" methodname="SettingsPresenter_Initialize_SetsTitle" classname="SimpleGame.Tests.DemoWiringTests" runstate="Runnable" seed="494965878" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000219" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1004" name="UIFactory_CreatesConfirmDialogPresenter" fullname="SimpleGame.Tests.DemoWiringTests.UIFactory_CreatesConfirmDialogPresenter" methodname="UIFactory_CreatesConfirmDialogPresenter" classname="SimpleGame.Tests.DemoWiringTests" runstate="Runnable" seed="316732284" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.001624" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1002" name="UIFactory_CreatesMainMenuPresenter" fullname="SimpleGame.Tests.DemoWiringTests.UIFactory_CreatesMainMenuPresenter" methodname="UIFactory_CreatesMainMenuPresenter" classname="SimpleGame.Tests.DemoWiringTests" runstate="Runnable" seed="1319910821" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000172" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1003" name="UIFactory_CreatesSettingsPresenter" fullname="SimpleGame.Tests.DemoWiringTests.UIFactory_CreatesSettingsPresenter" methodname="UIFactory_CreatesSettingsPresenter" classname="SimpleGame.Tests.DemoWiringTests" runstate="Runnable" seed="775060517" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000167" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1019" name="MVPWiringTests" fullname="SimpleGame.Tests.MVPWiringTests" classname="SimpleGame.Tests.MVPWiringTests" runstate="Runnable" testcasecount="6" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.003289" total="6" passed="6" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1025" name="MockViewHasNoPresenterReference" fullname="SimpleGame.Tests.MVPWiringTests.MockViewHasNoPresenterReference" methodname="MockViewHasNoPresenterReference" classname="SimpleGame.Tests.MVPWiringTests" runstate="Runnable" seed="1099002006" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000341" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1020" name="PresenterCanBeConstructedWithMockView" fullname="SimpleGame.Tests.MVPWiringTests.PresenterCanBeConstructedWithMockView" methodname="PresenterCanBeConstructedWithMockView" classname="SimpleGame.Tests.MVPWiringTests" runstate="Runnable" seed="1768742652" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000234" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1024" name="PresenterDisposeUnsubscribesFromViewEvents" fullname="SimpleGame.Tests.MVPWiringTests.PresenterDisposeUnsubscribesFromViewEvents" methodname="PresenterDisposeUnsubscribesFromViewEvents" classname="SimpleGame.Tests.MVPWiringTests" runstate="Runnable" seed="476620106" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000693" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1022" name="PresenterInitializeSetsWelcomeLabel" fullname="SimpleGame.Tests.MVPWiringTests.PresenterInitializeSetsWelcomeLabel" methodname="PresenterInitializeSetsWelcomeLabel" classname="SimpleGame.Tests.MVPWiringTests" runstate="Runnable" seed="1537857839" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000190" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1023" name="PresenterRespondsToViewEvents" fullname="SimpleGame.Tests.MVPWiringTests.PresenterRespondsToViewEvents" methodname="PresenterRespondsToViewEvents" classname="SimpleGame.Tests.MVPWiringTests" runstate="Runnable" seed="1712573944" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000215" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1021" name="UIFactoryCreatesSamplePresenterWithService" fullname="SimpleGame.Tests.MVPWiringTests.UIFactoryCreatesSamplePresenterWithService" methodname="UIFactoryCreatesSamplePresenterWithService" classname="SimpleGame.Tests.MVPWiringTests" runstate="Runnable" seed="1425488905" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000165" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1026" name="PopupManagerTests" fullname="SimpleGame.Tests.PopupManagerTests" classname="SimpleGame.Tests.PopupManagerTests" runstate="Runnable" testcasecount="13" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.009048" total="13" passed="13" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1035" name="DismissAllAsync_ClearsEntireStack" fullname="SimpleGame.Tests.PopupManagerTests.DismissAllAsync_ClearsEntireStack" methodname="DismissAllAsync_ClearsEntireStack" classname="SimpleGame.Tests.PopupManagerTests" runstate="Runnable" seed="60209429" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.002186" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1031" name="DismissPopupAsync_CallsContainerHidePopup" fullname="SimpleGame.Tests.PopupManagerTests.DismissPopupAsync_CallsContainerHidePopup" methodname="DismissPopupAsync_CallsContainerHidePopup" classname="SimpleGame.Tests.PopupManagerTests" runstate="Runnable" seed="888706077" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000913" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1033" name="DismissPopupAsync_KeepsInputBlockedWhenPopupsRemain" fullname="SimpleGame.Tests.PopupManagerTests.DismissPopupAsync_KeepsInputBlockedWhenPopupsRemain" methodname="DismissPopupAsync_KeepsInputBlockedWhenPopupsRemain" classname="SimpleGame.Tests.PopupManagerTests" runstate="Runnable" seed="1166678145" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000346" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1030" name="DismissPopupAsync_PopsTopPopup" fullname="SimpleGame.Tests.PopupManagerTests.DismissPopupAsync_PopsTopPopup" methodname="DismissPopupAsync_PopsTopPopup" classname="SimpleGame.Tests.PopupManagerTests" runstate="Runnable" seed="389366349" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000363" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1032" name="DismissPopupAsync_UnblocksInputWhenStackEmpty" fullname="SimpleGame.Tests.PopupManagerTests.DismissPopupAsync_UnblocksInputWhenStackEmpty" methodname="DismissPopupAsync_UnblocksInputWhenStackEmpty" classname="SimpleGame.Tests.PopupManagerTests" runstate="Runnable" seed="204779445" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000226" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1034" name="DismissPopupAsync_WithEmptyStack_IsNoOp" fullname="SimpleGame.Tests.PopupManagerTests.DismissPopupAsync_WithEmptyStack_IsNoOp" methodname="DismissPopupAsync_WithEmptyStack_IsNoOp" classname="SimpleGame.Tests.PopupManagerTests" runstate="Runnable" seed="2070091091" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000933" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1036" name="HasActivePopup_ReflectsStackState" fullname="SimpleGame.Tests.PopupManagerTests.HasActivePopup_ReflectsStackState" methodname="HasActivePopup_ReflectsStackState" classname="SimpleGame.Tests.PopupManagerTests" runstate="Runnable" seed="1279027664" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000242" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1039" name="InputBlocker_BlockUnblockBlock_Sequence" fullname="SimpleGame.Tests.PopupManagerTests.InputBlocker_BlockUnblockBlock_Sequence" methodname="InputBlocker_BlockUnblockBlock_Sequence" classname="SimpleGame.Tests.PopupManagerTests" runstate="Runnable" seed="1285231778" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000197" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1038" name="InputBlocker_NestedBlockUnblock" fullname="SimpleGame.Tests.PopupManagerTests.InputBlocker_NestedBlockUnblock" methodname="InputBlocker_NestedBlockUnblock" classname="SimpleGame.Tests.PopupManagerTests" runstate="Runnable" seed="72864527" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000191" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1029" name="ShowPopupAsync_BlocksInput" fullname="SimpleGame.Tests.PopupManagerTests.ShowPopupAsync_BlocksInput" methodname="ShowPopupAsync_BlocksInput" classname="SimpleGame.Tests.PopupManagerTests" runstate="Runnable" seed="1481971151" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000212" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1028" name="ShowPopupAsync_CallsContainerShowPopup" fullname="SimpleGame.Tests.PopupManagerTests.ShowPopupAsync_CallsContainerShowPopup" methodname="ShowPopupAsync_CallsContainerShowPopup" classname="SimpleGame.Tests.PopupManagerTests" runstate="Runnable" seed="1148324732" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000199" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1037" name="ShowPopupAsync_GuardsAgainstConcurrentOperation" fullname="SimpleGame.Tests.PopupManagerTests.ShowPopupAsync_GuardsAgainstConcurrentOperation" methodname="ShowPopupAsync_GuardsAgainstConcurrentOperation" classname="SimpleGame.Tests.PopupManagerTests" runstate="Runnable" seed="94515551" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000298" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1027" name="ShowPopupAsync_PushesPopupOntoStack" fullname="SimpleGame.Tests.PopupManagerTests.ShowPopupAsync_PushesPopupOntoStack" methodname="ShowPopupAsync_PushesPopupOntoStack" classname="SimpleGame.Tests.PopupManagerTests" runstate="Runnable" seed="1691095181" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000275" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1040" name="ScreenManagerTests" fullname="SimpleGame.Tests.ScreenManagerTests" classname="SimpleGame.Tests.ScreenManagerTests" runstate="Runnable" testcasecount="8" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.005763" total="8" passed="8" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1046" name="CanGoBack_ReflectsHistoryState" fullname="SimpleGame.Tests.ScreenManagerTests.CanGoBack_ReflectsHistoryState" methodname="CanGoBack_ReflectsHistoryState" classname="SimpleGame.Tests.ScreenManagerTests" runstate="Runnable" seed="435320348" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.002105" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1045" name="CurrentScreen_TracksActiveScreen" fullname="SimpleGame.Tests.ScreenManagerTests.CurrentScreen_TracksActiveScreen" methodname="CurrentScreen_TracksActiveScreen" classname="SimpleGame.Tests.ScreenManagerTests" runstate="Runnable" seed="1784895806" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000307" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1048" name="FirstShowScreen_DoesNotUnload" fullname="SimpleGame.Tests.ScreenManagerTests.FirstShowScreen_DoesNotUnload" methodname="FirstShowScreen_DoesNotUnload" classname="SimpleGame.Tests.ScreenManagerTests" runstate="Runnable" seed="140075154" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000172" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1043" name="GoBackAsync_ReturnsToPreviousScreen" fullname="SimpleGame.Tests.ScreenManagerTests.GoBackAsync_ReturnsToPreviousScreen" methodname="GoBackAsync_ReturnsToPreviousScreen" classname="SimpleGame.Tests.ScreenManagerTests" runstate="Runnable" seed="7950142" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000293" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1044" name="GoBackAsync_WithEmptyHistory_IsNoOp" fullname="SimpleGame.Tests.ScreenManagerTests.GoBackAsync_WithEmptyHistory_IsNoOp" methodname="GoBackAsync_WithEmptyHistory_IsNoOp" classname="SimpleGame.Tests.ScreenManagerTests" runstate="Runnable" seed="376803786" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000241" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1047" name="ShowScreenAsync_GuardsAgainstConcurrentNavigation" fullname="SimpleGame.Tests.ScreenManagerTests.ShowScreenAsync_GuardsAgainstConcurrentNavigation" methodname="ShowScreenAsync_GuardsAgainstConcurrentNavigation" classname="SimpleGame.Tests.ScreenManagerTests" runstate="Runnable" seed="1861334220" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000437" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1041" name="ShowScreenAsync_LoadsCorrectScene" fullname="SimpleGame.Tests.ScreenManagerTests.ShowScreenAsync_LoadsCorrectScene" methodname="ShowScreenAsync_LoadsCorrectScene" classname="SimpleGame.Tests.ScreenManagerTests" runstate="Runnable" seed="1035914118" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000178" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1042" name="ShowScreenAsync_UnloadsPreviousBeforeLoadingNext" fullname="SimpleGame.Tests.ScreenManagerTests.ShowScreenAsync_UnloadsPreviousBeforeLoadingNext" methodname="ShowScreenAsync_UnloadsPreviousBeforeLoadingNext" classname="SimpleGame.Tests.ScreenManagerTests" runstate="Runnable" seed="755703777" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000264" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1049" name="TransitionTests" fullname="SimpleGame.Tests.TransitionTests" classname="SimpleGame.Tests.TransitionTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.004585" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1052" name="GoBackAsync_WithTransition_PlaysFullTransitionSequence" fullname="SimpleGame.Tests.TransitionTests.GoBackAsync_WithTransition_PlaysFullTransitionSequence" methodname="GoBackAsync_WithTransition_PlaysFullTransitionSequence" classname="SimpleGame.Tests.TransitionTests" runstate="Runnable" seed="45158593" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000771" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1053" name="ShowScreenAsync_WithoutTransition_BehavesIdentically" fullname="SimpleGame.Tests.TransitionTests.ShowScreenAsync_WithoutTransition_BehavesIdentically" methodname="ShowScreenAsync_WithoutTransition_BehavesIdentically" classname="SimpleGame.Tests.TransitionTests" runstate="Runnable" seed="1810154778" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000352" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1051" name="ShowScreenAsync_WithTransition_BlocksAndUnblocksInput" fullname="SimpleGame.Tests.TransitionTests.ShowScreenAsync_WithTransition_BlocksAndUnblocksInput" methodname="ShowScreenAsync_WithTransition_BlocksAndUnblocksInput" classname="SimpleGame.Tests.TransitionTests" runstate="Runnable" seed="623613908" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000300" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1050" name="ShowScreenAsync_WithTransition_CallsFadeOutBeforeUnloadAndFadeInAfterLoad" fullname="SimpleGame.Tests.TransitionTests.ShowScreenAsync_WithTransition_CallsFadeOutBeforeUnloadAndFadeInAfterLoad" methodname="ShowScreenAsync_WithTransition_CallsFadeOutBeforeUnloadAndFadeInAfterLoad" classname="SimpleGame.Tests.TransitionTests" runstate="Runnable" seed="982936316" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.000379" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1054" name="ShowScreenAsync_WithTransition_UnblocksInputOnException" fullname="SimpleGame.Tests.TransitionTests.ShowScreenAsync_WithTransition_UnblocksInputOnException" methodname="ShowScreenAsync_WithTransition_UnblocksInputOnException" classname="SimpleGame.Tests.TransitionTests" runstate="Runnable" seed="1494661658" result="Passed" start-time="2026-03-15 15:30:22Z" end-time="2026-03-15 15:30:22Z" duration="0.001328" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Saving results to: TestResults_T02.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>
