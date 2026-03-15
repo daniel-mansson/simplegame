@@ -69,7 +69,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S01
 - Supporting slices: M001/S02, M001/S03, M001/S04, M001/S05
-- Validation: S01 — static guard passes with zero output; S02 — static guard passes for all Core/ScreenManagement/ files; no static fields introduced in ScreenId, ISceneLoader, ScreenManager, UnitySceneLoader, or SceneSetup; remains active for S03–S05
+- Validation: S01 — static guard passes with zero output; S02 — static guard passes for all Core/ScreenManagement/ files; no static fields introduced in ScreenId, ISceneLoader, ScreenManager, UnitySceneLoader, or SceneSetup; S03 — static guard passes for all Core/PopupManagement/ and Runtime/PopupManagement/ files; no static fields in PopupId, IInputBlocker, IPopupContainer, PopupManager, IPopupView, or UnityInputBlocker
 - Notes: This rules out any singleton pattern that uses static Instance fields.
 
 ### R007 — Model layer with domain services/systems
@@ -124,7 +124,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S03
 - Supporting slices: M001/S05
-- Validation: unmapped
+- Validation: S03 — PopupManager with Stack<PopupId>; push/pop/dismiss-all; concurrency guard; HasActivePopup/TopPopup/PopupCount properties; 5 dedicated tests pass; TestResults.xml total="27" passed="27" failed="0"
 - Notes: Popup views live in the persistent scene's popup layer, not in screen scenes.
 
 ### R012 — Full-screen raycast input blocker
@@ -135,7 +135,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S03
 - Supporting slices: M001/S04
-- Validation: unmapped
+- Validation: S03 — IInputBlocker interface with reference-counting contract; UnityInputBlocker MonoBehaviour with CanvasGroup blocksRaycasts toggle; MockInputBlocker verifies reference-counting in 3 dedicated tests; integration with PopupManager proven by show/dismiss/dismiss-all tests
 - Notes: Uses a CanvasGroup with blocksRaycasts on a high-sort-order canvas.
 
 ### R013 — Fade transitions between screens
@@ -157,7 +157,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S01
 - Supporting slices: M001/S02, M001/S03, M001/S04
-- Validation: S01 — UniTask resolved at ad5ed25e82a3; compiles with zero errors; S02 — ISceneLoader returns UniTask; ScreenManager uses UniTask; UnitySceneLoader uses .ToUniTask(ct); MockSceneLoader returns UniTask.CompletedTask confirming interface contract; CancellationToken threaded through UnitySceneLoader calls
+- Validation: S01 — UniTask resolved at ad5ed25e82a3; compiles with zero errors; S02 — ISceneLoader returns UniTask; ScreenManager uses UniTask; UnitySceneLoader uses .ToUniTask(ct); MockSceneLoader returns UniTask.CompletedTask confirming interface contract; CancellationToken threaded through UnitySceneLoader calls; S03 — IPopupContainer uses UniTask+CancellationToken; PopupManager async methods; MockPopupContainer returns UniTask.CompletedTask
 - Notes: Install via UPM git URL.
 
 ### R015 — Edit-mode unit tests for presenters and core logic
@@ -168,7 +168,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S01
 - Supporting slices: M001/S02, M001/S03
-- Validation: S01 — 6 MVPWiringTests pass; S02 — 8 ScreenManagerTests added; total 14/14 pass in batchmode; ScreenManager fully exercised without Unity runtime via MockSceneLoader; remains active for S03 popup tests
+- Validation: S01 — 6 MVPWiringTests pass; S02 — 8 ScreenManagerTests added; total 14/14 pass in batchmode; ScreenManager fully exercised without Unity runtime via MockSceneLoader; S03 — 13 PopupManagerTests added; total 27/27 pass in batchmode; PopupManager fully exercised without Unity runtime via MockPopupContainer and MockInputBlocker
 - Notes: Mocked view interfaces enable presenter testing without Unity runtime.
 
 ### R016 — Demo screens proving end-to-end dependency flow
@@ -190,10 +190,22 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S01
 - Supporting slices: M001/S02, M001/S03
-- Validation: S01 — MockSampleView in pure C#; all 6 presenter tests run without Unity runtime; S02 — MockSceneLoader and BlockingMockSceneLoader enable full ScreenManager testing with zero Unity dependency; ISceneLoader has no UnityEngine using; all 8 ScreenManager tests run in edit-mode; remains active for S03 popup layer
+- Validation: S01 — MockSampleView in pure C#; all 6 presenter tests run without Unity runtime; S02 — MockSceneLoader and BlockingMockSceneLoader enable full ScreenManager testing with zero Unity dependency; ISceneLoader has no UnityEngine using; all 8 ScreenManager tests run in edit-mode; S03 — MockPopupContainer + MockInputBlocker enable full PopupManager testing with zero Unity dependency; IInputBlocker and IPopupContainer have no UnityEngine using; all 13 PopupManager tests run in edit-mode
 - Notes: This is the litmus test for whether the MVP separation is actually working.
 
 ## Validated
+
+### R011 — Stack-based popup system
+- Class: core-capability
+- Status: validated
+- Validated by: S03 — PopupManager with Stack<PopupId>; ShowPopupAsync/DismissPopupAsync/DismissAllAsync; concurrency guard; 5 dedicated stack/dismiss tests pass; TestResults.xml total="27" passed="27" failed="0"
+- Proof: TestResults.xml total="27" passed="27" failed="0"; PopupManager.cs has no static state; grep confirms no UnityEngine in Core
+
+### R012 — Full-screen raycast input blocker
+- Class: core-capability
+- Status: validated
+- Validated by: S03 — IInputBlocker reference-counting interface; UnityInputBlocker MonoBehaviour with CanvasGroup; MockInputBlocker reference-counting proven by 2 dedicated tests; integration with PopupManager proven by show/dismiss/dismiss-all input-blocking tests
+- Proof: TestResults.xml total="27" passed="27" failed="0"; InputBlocker_NestedBlockUnblock and InputBlocker_BlockUnblockBlock_Sequence pass; ShowPopupAsync_BlocksInput, DismissPopupAsync_UnblocksInputWhenStackEmpty, DismissPopupAsync_KeepsInputBlockedWhenPopupsRemain, DismissAllAsync_ClearsEntireStack all pass
 
 ### R003 — Interface-per-view for presenter dependency
 - Class: core-capability
@@ -280,13 +292,13 @@ Use it to track what is actively in scope, what has been validated by completed 
 | R008 | launchability | active | M001/S05 | M001/S02 | unmapped |
 | R009 | core-capability | active | M001/S02 | M001/S05 | S02 — UnitySceneLoader uses LoadSceneMode.Additive; sequencing proven by 8 tests; scenes registered in EditorBuildSettings |
 | R010 | primary-user-loop | active | M001/S02 | M001/S04, S05 | S02 — ShowScreenAsync + GoBackAsync + Stack<ScreenId> history; 8/8 tests pass; CurrentScreen + CanGoBack properties ready |
-| R011 | core-capability | active | M001/S03 | M001/S05 | unmapped |
-| R012 | core-capability | active | M001/S03 | M001/S04 | unmapped |
+| R011 | core-capability | validated | M001/S03 | M001/S05 | S03 — PopupManager Stack<PopupId> push/pop/dismiss-all; 5 stack tests + 3 input-blocking tests pass; 27/27 total |
+| R012 | core-capability | validated | M001/S03 | M001/S04 | S03 — IInputBlocker reference-counting contract; UnityInputBlocker CanvasGroup; 2 reference-counting tests + 4 integration tests pass |
 | R013 | quality-attribute | active | M001/S04 | M001/S05 | unmapped |
-| R014 | constraint | active | M001/S01 | M001/S02, S03, S04 | S01+S02 — UniTask in ISceneLoader, ScreenManager, UnitySceneLoader; CancellationToken threaded; MockSceneLoader returns UniTask.CompletedTask |
-| R015 | quality-attribute | active | M001/S01 | M001/S02, S03 | S01+S02 — 14/14 edit-mode tests pass; 8 ScreenManagerTests run without Unity runtime |
+| R014 | constraint | active | M001/S01 | M001/S02, S03, S04 | S01+S02+S03 — UniTask in ISceneLoader, ScreenManager, IPopupContainer, PopupManager; CancellationToken threaded; Mock*s return UniTask.CompletedTask |
+| R015 | quality-attribute | active | M001/S01 | M001/S02, S03 | S01+S02+S03 — 27/27 edit-mode tests pass; PopupManager fully exercised without Unity runtime via MockPopupContainer and MockInputBlocker |
 | R016 | launchability | active | M001/S05 | none | unmapped |
-| R017 | quality-attribute | active | M001/S01 | M001/S02, S03 | S01+S02 — MockSceneLoader + BlockingMockSceneLoader; 14/14 tests run without Unity runtime; ISceneLoader has no UnityEngine |
+| R017 | quality-attribute | active | M001/S01 | M001/S02, S03 | S01+S02+S03 — MockSceneLoader + MockPopupContainer + MockInputBlocker; 27/27 tests run without Unity runtime; ISceneLoader, IInputBlocker, IPopupContainer have no UnityEngine |
 | R018 | differentiator | deferred | none | none | unmapped |
 | R019 | quality-attribute | deferred | none | none | unmapped |
 | R020 | anti-feature | out-of-scope | none | none | n/a |
@@ -297,5 +309,5 @@ Use it to track what is actively in scope, what has been validated by completed 
 
 - Active requirements: 17
 - Mapped to slices: 17
-- Validated: 2 (R003, R005)
+- Validated: 4 (R003, R005, R011, R012)
 - Unmapped active requirements: 0

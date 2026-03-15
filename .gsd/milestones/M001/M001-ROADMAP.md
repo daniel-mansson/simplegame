@@ -58,7 +58,7 @@ This milestone is complete only when all are true:
 - [x] **S02: Screen Management** `risk:medium` `depends:[S01]`
   > After this: ScreenManager navigates between screens using additive scene loading. Two placeholder screen scenes can be loaded/unloaded. Verified by edit-mode tests for navigation logic and play-mode walkthrough showing scenes loading/unloading.
 
-- [ ] **S03: Popup System & Input Blocking** `risk:medium` `depends:[S01]`
+- [x] **S03: Popup System & Input Blocking** `risk:medium` `depends:[S01]`
   > After this: PopupManager opens/dismisses stack-based popups over the current screen. InputBlocker prevents interaction when active. Verified by edit-mode tests for popup stack logic and play-mode walkthrough showing popup stacking and input blocking.
 
 - [ ] **S04: Transition System** `risk:low` `depends:[S02]`
