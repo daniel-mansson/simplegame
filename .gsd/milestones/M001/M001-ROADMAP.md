@@ -61,7 +61,7 @@ This milestone is complete only when all are true:
 - [x] **S03: Popup System & Input Blocking** `risk:medium` `depends:[S01]`
   > After this: PopupManager opens/dismisses stack-based popups over the current screen. InputBlocker prevents interaction when active. Verified by edit-mode tests for popup stack logic and play-mode walkthrough showing popup stacking and input blocking.
 
-- [ ] **S04: Transition System** `risk:low` `depends:[S02]`
+- [x] **S04: Transition System** `risk:low` `depends:[S02]`
   > After this: TransitionManager plays a fade-to-black transition during screen navigation. Input is blocked during the transition. Verified by play-mode walkthrough showing smooth fade between screens.
 
 - [ ] **S05: Boot Flow & Demo Screens** `risk:low` `depends:[S01,S02,S03,S04]`

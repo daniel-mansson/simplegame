@@ -10,9 +10,9 @@ A proven, testable UI architecture where views are fully independent (no backwar
 
 ## Current State
 
-S01, S02, and S03 complete. Unity 6000.3.4f1 project compiling with UniTask installed (git URL, resolved at commit ad5ed25e82a3). MVP base types defined: IView, Presenter<TView>, ISampleView, SamplePresenter, UIFactory, GameService. ScreenManagement layer complete: ScreenId enum, ISceneLoader interface, ScreenManager (history stack, ShowScreenAsync, GoBackAsync, concurrency guard), UnitySceneLoader. Popup system complete: PopupId enum, IInputBlocker interface (reference-counting contract), IPopupContainer interface, PopupManager (stack-based, concurrency-guarded), IPopupView marker interface, UnityInputBlocker MonoBehaviour (CanvasGroup reference-counting). MainMenu.unity and Settings.unity placeholder scenes registered in EditorBuildSettings. 27 NUnit edit-mode tests passing in Unity batchmode CLI — TestResults.xml: result="Passed", total="27", passed="27", failed="0". No static state in any C# file. Core types are pure C# with no UnityEngine coupling.
+S01, S02, S03, and S04 complete. Unity 6000.3.4f1 project compiling with UniTask installed (git URL, resolved at commit ad5ed25e82a3). MVP base types defined: IView, Presenter<TView>, ISampleView, SamplePresenter, UIFactory, GameService. ScreenManagement layer complete: ScreenId enum, ISceneLoader interface, ScreenManager (history stack, ShowScreenAsync, GoBackAsync, concurrency guard, optional ITransitionPlayer + IInputBlocker injection with finally-block unblock). Popup system complete: PopupId enum, IInputBlocker interface (reference-counting contract), IPopupContainer interface, PopupManager (stack-based, concurrency-guarded), IPopupView marker interface, UnityInputBlocker MonoBehaviour (CanvasGroup reference-counting). Transition system complete: ITransitionPlayer interface (pure C#, no UnityEngine), ScreenManager orchestration (Block → FadeOut → unload → load → FadeIn → Unblock in finally), UnityTransitionPlayer MonoBehaviour (CanvasGroup alpha interpolation, blocksRaycasts=false enforced, ready for S05 wiring). MainMenu.unity and Settings.unity placeholder scenes registered in EditorBuildSettings. 32 NUnit edit-mode tests passing in Unity batchmode CLI — TestResults.xml: result="Passed", total="32", passed="32", failed="0". No static state in any C# file. Core types are pure C# with no UnityEngine coupling.
 
-Next: S04 — Transition System (TransitionManager with fade-to-black between screens).
+Next: S05 — Boot Flow & Demo Screens (boot scene wires all services, constructs factory, transitions to MainMenu with real fade; user navigates MainMenu → Settings → back → popup).
 
 ## Architecture / Key Patterns
 
@@ -30,4 +30,4 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 
 ## Milestone Sequence
 
-- [x] M001: MVP UI Architecture Foundation — S01 ✅ · S02 ✅ · S03 ✅ (popup system + input blocking, 27/27 tests passing) · S04–S05 pending
+- [x] M001: MVP UI Architecture Foundation — S01 ✅ · S02 ✅ · S03 ✅ (popup system + input blocking, 27/27 tests passing) · S04 ✅ (transition system, 32/32 tests passing) · S05 pending

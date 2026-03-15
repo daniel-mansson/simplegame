@@ -140,14 +140,14 @@ Use it to track what is actively in scope, what has been validated by completed 
 
 ### R013 — Fade transitions between screens
 - Class: quality-attribute
-- Status: active
+- Status: validated
 - Description: Smooth fade-to-black (or similar) transition plays when navigating between screens. Input is blocked during transitions.
 - Why it matters: Screens don't pop in/out — transitions give visual continuity and cover scene loading.
 - Source: user
 - Primary owning slice: M001/S04
 - Supporting slices: M001/S05
-- Validation: unmapped
-- Notes: Fade overlay in persistent scene. Transition flow: block input → fade out → unload old scene → load new scene → fade in → unblock input.
+- Validation: S04 — ITransitionPlayer pure C# interface with FadeOutAsync/FadeInAsync; ScreenManager orchestration sequence proven (Block → FadeOut → unload → load → FadeIn → Unblock in finally); input blocked for full duration; GoBack plays same sequence; null player preserves original behavior; exception safety proven; UnityTransitionPlayer MonoBehaviour with CanvasGroup alpha interpolation ready for S05 wiring; 32/32 tests pass
+- Notes: Fade overlay in persistent scene. Transition flow: block input → fade out → unload old scene → load new scene → fade in → unblock input. Runtime visual integration deferred to S05.
 
 ### R014 — UniTask async/await for async operations
 - Class: constraint
@@ -206,6 +206,12 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Status: validated
 - Validated by: S03 — IInputBlocker reference-counting interface; UnityInputBlocker MonoBehaviour with CanvasGroup; MockInputBlocker reference-counting proven by 2 dedicated tests; integration with PopupManager proven by show/dismiss/dismiss-all input-blocking tests
 - Proof: TestResults.xml total="27" passed="27" failed="0"; InputBlocker_NestedBlockUnblock and InputBlocker_BlockUnblockBlock_Sequence pass; ShowPopupAsync_BlocksInput, DismissPopupAsync_UnblocksInputWhenStackEmpty, DismissPopupAsync_KeepsInputBlockedWhenPopupsRemain, DismissAllAsync_ClearsEntireStack all pass
+
+### R013 — Fade transitions between screens
+- Class: quality-attribute
+- Status: validated
+- Validated by: S04 — ITransitionPlayer pure C# interface with FadeOutAsync/FadeInAsync; ScreenManager orchestration sequence (Block → FadeOut → unload → load → FadeIn → Unblock in finally) proven by 5 edit-mode tests; input blocked for full duration; GoBack plays same sequence; null player preserves original behavior; exception safety proven; UnityTransitionPlayer MonoBehaviour with CanvasGroup alpha interpolation; 32/32 tests pass
+- Proof: TestResults.xml total="32" passed="32" failed="0"; static guard clean; no UnityEngine in Core/TransitionManagement; blocksRaycasts=false enforced at 6 points in UnityTransitionPlayer; finally block confirmed at ScreenManager lines 75 and 118
 
 ### R003 — Interface-per-view for presenter dependency
 - Class: core-capability
@@ -294,7 +300,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 | R010 | primary-user-loop | active | M001/S02 | M001/S04, S05 | S02 — ShowScreenAsync + GoBackAsync + Stack<ScreenId> history; 8/8 tests pass; CurrentScreen + CanGoBack properties ready |
 | R011 | core-capability | validated | M001/S03 | M001/S05 | S03 — PopupManager Stack<PopupId> push/pop/dismiss-all; 5 stack tests + 3 input-blocking tests pass; 27/27 total |
 | R012 | core-capability | validated | M001/S03 | M001/S04 | S03 — IInputBlocker reference-counting contract; UnityInputBlocker CanvasGroup; 2 reference-counting tests + 4 integration tests pass |
-| R013 | quality-attribute | active | M001/S04 | M001/S05 | unmapped |
+| R013 | quality-attribute | validated | M001/S04 | M001/S05 | S04 — ITransitionPlayer + ScreenManager orchestration + UnityTransitionPlayer; 5 transition tests; 32/32 pass; static guard clean; finally-block Unblock confirmed |
 | R014 | constraint | active | M001/S01 | M001/S02, S03, S04 | S01+S02+S03 — UniTask in ISceneLoader, ScreenManager, IPopupContainer, PopupManager; CancellationToken threaded; Mock*s return UniTask.CompletedTask |
 | R015 | quality-attribute | active | M001/S01 | M001/S02, S03 | S01+S02+S03 — 27/27 edit-mode tests pass; PopupManager fully exercised without Unity runtime via MockPopupContainer and MockInputBlocker |
 | R016 | launchability | active | M001/S05 | none | unmapped |
@@ -309,5 +315,5 @@ Use it to track what is actively in scope, what has been validated by completed 
 
 - Active requirements: 17
 - Mapped to slices: 17
-- Validated: 4 (R003, R005, R011, R012)
+- Validated: 5 (R003, R005, R011, R012, R013)
 - Unmapped active requirements: 0
