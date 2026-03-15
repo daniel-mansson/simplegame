@@ -55,7 +55,7 @@ This milestone is complete only when all are true:
 - [x] **S01: Core MVP Infrastructure & Project Setup** `risk:high` `depends:[]`
   > After this: Unity project exists with UniTask installed, MVP base types defined (IView, Presenter, UIFactory), and edit-mode tests prove a presenter can be constructed with a mocked view interface and injected service — verified by passing tests.
 
-- [ ] **S02: Screen Management** `risk:medium` `depends:[S01]`
+- [x] **S02: Screen Management** `risk:medium` `depends:[S01]`
   > After this: ScreenManager navigates between screens using additive scene loading. Two placeholder screen scenes can be loaded/unloaded. Verified by edit-mode tests for navigation logic and play-mode walkthrough showing scenes loading/unloading.
 
 - [ ] **S03: Popup System & Input Blocking** `risk:medium` `depends:[S01]`

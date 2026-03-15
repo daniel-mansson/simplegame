@@ -69,7 +69,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S01
 - Supporting slices: M001/S02, M001/S03, M001/S04, M001/S05
-- Validation: S01 — static guard passes with zero output; all 6 core files have no static fields; remains active because future slices must continue to satisfy this constraint
+- Validation: S01 — static guard passes with zero output; S02 — static guard passes for all Core/ScreenManagement/ files; no static fields introduced in ScreenId, ISceneLoader, ScreenManager, UnitySceneLoader, or SceneSetup; remains active for S03–S05
 - Notes: This rules out any singleton pattern that uses static Instance fields.
 
 ### R007 — Model layer with domain services/systems
@@ -102,7 +102,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S02
 - Supporting slices: M001/S05
-- Validation: unmapped
+- Validation: S02 — UnitySceneLoader wraps LoadSceneAsync(name, LoadSceneMode.Additive) and UnloadSceneAsync; load/unload sequencing proven by ShowScreenAsync_UnloadsPreviousBeforeLoadingNext test; MainMenu.unity and Settings.unity registered in EditorBuildSettings; runtime integration with persistent scene deferred to S05
 - Notes: The persistent scene hosts the screen manager, popup layer, transition overlay, and input blocker.
 
 ### R010 — Screen navigation between full screens
@@ -113,7 +113,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S02
 - Supporting slices: M001/S04, M001/S05
-- Validation: unmapped
+- Validation: S02 — ScreenManager.ShowScreenAsync and GoBackAsync with Stack<ScreenId> history proven by 8 edit-mode tests; ScreenId enum provides type-safe identification; CurrentScreen and CanGoBack properties ready for presenter consumption; runtime presenter wiring deferred to S05
 - Notes: Screen manager should support forward navigation and back navigation.
 
 ### R011 — Stack-based popup system
@@ -157,7 +157,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S01
 - Supporting slices: M001/S02, M001/S03, M001/S04
-- Validation: unmapped
+- Validation: S01 — UniTask resolved at ad5ed25e82a3; compiles with zero errors; S02 — ISceneLoader returns UniTask; ScreenManager uses UniTask; UnitySceneLoader uses .ToUniTask(ct); MockSceneLoader returns UniTask.CompletedTask confirming interface contract; CancellationToken threaded through UnitySceneLoader calls
 - Notes: Install via UPM git URL.
 
 ### R015 — Edit-mode unit tests for presenters and core logic
@@ -168,7 +168,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S01
 - Supporting slices: M001/S02, M001/S03
-- Validation: unmapped
+- Validation: S01 — 6 MVPWiringTests pass; S02 — 8 ScreenManagerTests added; total 14/14 pass in batchmode; ScreenManager fully exercised without Unity runtime via MockSceneLoader; remains active for S03 popup tests
 - Notes: Mocked view interfaces enable presenter testing without Unity runtime.
 
 ### R016 — Demo screens proving end-to-end dependency flow
@@ -190,7 +190,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S01
 - Supporting slices: M001/S02, M001/S03
-- Validation: S01 — MockSampleView implements ISampleView with no Unity runtime; all 6 presenter tests run in edit-mode with no MonoBehaviour; active because S02/S03 layers not yet tested
+- Validation: S01 — MockSampleView in pure C#; all 6 presenter tests run without Unity runtime; S02 — MockSceneLoader and BlockingMockSceneLoader enable full ScreenManager testing with zero Unity dependency; ISceneLoader has no UnityEngine using; all 8 ScreenManager tests run in edit-mode; remains active for S03 popup layer
 - Notes: This is the litmus test for whether the MVP separation is actually working.
 
 ## Validated
@@ -275,18 +275,18 @@ Use it to track what is actively in scope, what has been validated by completed 
 | R003 | core-capability | validated | M001/S01 | none | S01 — 6/6 tests pass; interface-only dependency proven |
 | R004 | core-capability | active | M001/S01 | M001/S05 | S01 — UIFactory.CreateSamplePresenter() is the single wiring point; no scattered new SamplePresenter() |
 | R005 | constraint | validated | M001/S01 | M001/S02, S03, S04, S05 | S01 — all 6 tests pass via constructor injection; no DI framework |
-| R006 | constraint | active | M001/S01 | M001/S02, S03, S04, S05 | S01 — static guard passes; active for future slices |
+| R006 | constraint | active | M001/S01 | M001/S02, S03, S04, S05 | S01+S02 — static guard passes for all ScreenManagement core files; no static fields in any new S02 file |
 | R007 | core-capability | active | M001/S01 | M001/S05 | S01 — GameService plain C# class injected into SamplePresenter |
 | R008 | launchability | active | M001/S05 | M001/S02 | unmapped |
-| R009 | core-capability | active | M001/S02 | M001/S05 | unmapped |
-| R010 | primary-user-loop | active | M001/S02 | M001/S04, S05 | unmapped |
+| R009 | core-capability | active | M001/S02 | M001/S05 | S02 — UnitySceneLoader uses LoadSceneMode.Additive; sequencing proven by 8 tests; scenes registered in EditorBuildSettings |
+| R010 | primary-user-loop | active | M001/S02 | M001/S04, S05 | S02 — ShowScreenAsync + GoBackAsync + Stack<ScreenId> history; 8/8 tests pass; CurrentScreen + CanGoBack properties ready |
 | R011 | core-capability | active | M001/S03 | M001/S05 | unmapped |
 | R012 | core-capability | active | M001/S03 | M001/S04 | unmapped |
 | R013 | quality-attribute | active | M001/S04 | M001/S05 | unmapped |
-| R014 | constraint | active | M001/S01 | M001/S02, S03, S04 | S01 — UniTask resolved at ad5ed25e82a3; compiles with zero errors |
-| R015 | quality-attribute | active | M001/S01 | M001/S02, S03 | S01 — 6/6 edit-mode tests pass in batchmode CLI |
+| R014 | constraint | active | M001/S01 | M001/S02, S03, S04 | S01+S02 — UniTask in ISceneLoader, ScreenManager, UnitySceneLoader; CancellationToken threaded; MockSceneLoader returns UniTask.CompletedTask |
+| R015 | quality-attribute | active | M001/S01 | M001/S02, S03 | S01+S02 — 14/14 edit-mode tests pass; 8 ScreenManagerTests run without Unity runtime |
 | R016 | launchability | active | M001/S05 | none | unmapped |
-| R017 | quality-attribute | active | M001/S01 | M001/S02, S03 | S01 — MockSampleView in pure C#; all presenter tests run without Unity runtime |
+| R017 | quality-attribute | active | M001/S01 | M001/S02, S03 | S01+S02 — MockSceneLoader + BlockingMockSceneLoader; 14/14 tests run without Unity runtime; ISceneLoader has no UnityEngine |
 | R018 | differentiator | deferred | none | none | unmapped |
 | R019 | quality-attribute | deferred | none | none | unmapped |
 | R020 | anti-feature | out-of-scope | none | none | n/a |
