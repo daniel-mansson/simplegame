@@ -217,69 +217,69 @@ Use it to track what is actively in scope, what has been validated by completed 
 
 ### R023 — Core assembly is game-agnostic
 - Class: constraint
-- Status: active
+- Status: validated
 - Description: `SimpleGame.Core` sources contain zero references to game-specific types (`IMainMenuView`, `ISettingsView`, `IConfirmDialogView`, `GameService`, `UIFactory`, `ScreenId`, `PopupId`). Core is reusable in any Unity project.
 - Why it matters: The separation is meaningless if Core still knows about the game. Grep-verifiable.
 - Source: user
 - Primary owning slice: M002/S01
 - Supporting slices: M002/S02
-- Validation: unmapped
-- Notes: Grep command: `grep -r "IMainMenuView\|ISettingsView\|IConfirmDialogView\|GameService\|UIFactory\|ScreenId\|PopupId" Assets/Scripts/Core/` must return empty.
+- Validation: validated
+- Notes: Verified: `grep -rn "\bScreenId\b\|\bPopupId\b" Assets/Scripts/Core/ | grep -v "TScreenId\|TPopupId"` returns empty. `grep -r "IMainMenuView\|ISettingsView\|IConfirmDialogView\|GameService\|UIFactory" Assets/Scripts/Core/` returns empty. Word-boundary grep required — naive substring match hits TScreenId/TPopupId type params.
 
 ### R024 — Game code in dedicated assembly
 - Class: constraint
-- Status: active
+- Status: validated
 - Description: All SimpleGame-specific code lives under `Assets/Scripts/Game/` in `SimpleGame.Game.asmdef`. The assembly references Core but Core does not reference Game.
 - Why it matters: Enforces one-way dependency. Game depends on Core; Core is independent.
 - Source: user
 - Primary owning slice: M002/S02
 - Supporting slices: none
-- Validation: unmapped
-- Notes: One-way asmdef reference: `SimpleGame.Game` → `SimpleGame.Core`. Not the reverse.
+- Validation: validated
+- Notes: `SimpleGame.Game.asmdef` references `["SimpleGame.Core", "UniTask", "UnityEngine.UI"]`. `SimpleGame.Core.asmdef` references `["UniTask", "UnityEngine.UI"]` — no Game reference. One-way dependency confirmed.
 
 ### R025 — Feature cohesion within Game
 - Class: quality-attribute
-- Status: active
+- Status: validated
 - Description: Each game screen's interface, presenter, and view MonoBehaviour live in the same folder (e.g. `Game/MainMenu/` holds `IMainMenuView`, `MainMenuPresenter`, `MainMenuView`).
 - Why it matters: Interface next to implementation — no jumping between Core/MVP and Runtime/MVP to understand one screen.
 - Source: user
 - Primary owning slice: M002/S02
 - Supporting slices: none
-- Validation: unmapped
-- Notes: Cohesion over layers — group by feature, not by abstraction level.
+- Validation: validated
+- Notes: `Game/MainMenu/` contains IMainMenuView, MainMenuPresenter, MainMenuView. `Game/Settings/` contains ISettingsView, SettingsPresenter, SettingsView. `Game/Popup/` contains IConfirmDialogView, ConfirmDialogPresenter, ConfirmDialogView, UnityPopupContainer.
 
 ### R026 — Test assemblies mirror source structure
 - Class: quality-attribute
-- Status: active
+- Status: validated
 - Description: Two test assemblies: `SimpleGame.Tests.Core` (tests for framework types) and `SimpleGame.Tests.Game` (tests for game-specific types). `ISampleView`/`SamplePresenter` live in the Core test assembly as fixtures.
 - Why it matters: Test structure should reflect source structure — makes it obvious where to add tests for new code.
 - Source: user
 - Primary owning slice: M002/S03
 - Supporting slices: none
-- Validation: unmapped
-- Notes: `ISampleView` and `SamplePresenter` are test fixtures — they move out of runtime sources entirely.
+- Validation: validated
+- Notes: `SimpleGame.Tests.Core.dll` (32 tests) and `SimpleGame.Tests.Game.dll` (17 tests) confirmed in TestResults.xml. ISampleView/SamplePresenter defined inline in MVPWiringTests.cs — no runtime dependency.
 
 ### R027 — All 49 edit-mode tests pass after restructure
 - Class: quality-attribute
-- Status: active
+- Status: validated
 - Description: The restructure is a pure rename/move — no behavior changes. All 49 existing tests must still pass after the restructure.
 - Why it matters: Regression proof that the restructure didn't break anything.
 - Source: inferred
 - Primary owning slice: M002/S03
 - Supporting slices: M002/S01, M002/S02
-- Validation: unmapped
-- Notes: TestResults.xml must show total="49" passed="49" failed="0" after M002 completes.
+- Validation: validated
+- Notes: TestResults.xml: `result="Passed" total="49" passed="49" failed="0"`. SimpleGame.Tests.Core: 32 passed. SimpleGame.Tests.Game: 17 passed.
 
 ### R028 — ScreenManager and PopupManager are generic
 - Class: core-capability
-- Status: active
+- Status: validated
 - Description: `ScreenManager<TScreenId>` and `PopupManager<TPopupId>` use a type parameter for the ID type, removing any dependency on game-specific `ScreenId`/`PopupId` enums from Core.
 - Why it matters: Required for Core to be truly game-agnostic. Without this, Core still references game enum values.
 - Source: user
 - Primary owning slice: M002/S01
 - Supporting slices: none
-- Validation: unmapped
-- Notes: Use `where TScreenId : System.Enum` constraint (C# 7.3+, supported in Unity 6). `ScreenId` and `PopupId` move to `SimpleGame.Game`.
+- Validation: validated
+- Notes: Constraint is `where T : struct, System.Enum` — struct required for Nullable<T> support (.HasValue/.Value). System.Enum documents intent. GameBootstrapper uses ScreenManager<ScreenId>/PopupManager<PopupId>; Core tests use ScreenManager<TestScreenId>/PopupManager<TestPopupId>.
 
 ## Traceability
 
@@ -307,19 +307,18 @@ Use it to track what is actively in scope, what has been validated by completed 
 | R020 | anti-feature | out-of-scope | none | none | n/a |
 | R021 | constraint | out-of-scope | none | none | n/a |
 | R022 | anti-feature | out-of-scope | none | none | n/a |
-| R023 | constraint | active | M002/S01 | M002/S02 | unmapped |
-| R024 | constraint | active | M002/S02 | none | unmapped |
-| R025 | quality-attribute | active | M002/S02 | none | unmapped |
-| R026 | quality-attribute | active | M002/S03 | none | unmapped |
-| R027 | quality-attribute | active | M002/S03 | M002/S01, S02 | unmapped |
-| R028 | core-capability | active | M002/S01 | none | unmapped |
+| R023 | constraint | validated | M002/S01 | M002/S02 | M002 — grep guards pass; no game types in Core; word-boundary check on ScreenId/PopupId clean |
+| R024 | constraint | validated | M002/S02 | none | M002 — SimpleGame.Game.asmdef references Core; Core does not reference Game; one-way dependency confirmed |
+| R025 | quality-attribute | validated | M002/S02 | none | M002 — Game/MainMenu/, Game/Settings/, Game/Popup/ each contain interface+presenter+view |
+| R026 | quality-attribute | validated | M002/S03 | none | M002 — SimpleGame.Tests.Core (32 tests) + SimpleGame.Tests.Game (17 tests) in TestResults.xml |
+| R027 | quality-attribute | validated | M002/S03 | M002/S01, S02 | M002 — TestResults.xml result="Passed" total="49" passed="49" failed="0" |
+| R028 | core-capability | validated | M002/S01 | none | M002 — ScreenManager<TScreenId>/PopupManager<TPopupId> where T : struct, System.Enum; Core tests use TestScreenId/TestPopupId |
 
 ## Coverage Summary
 
-- Total requirements: 28 (15 active + 8 validated + 2 deferred + 3 out of scope)
-- Validated: 8 (R003, R005, R006, R011, R012, R013, R015, R017)
-- Active (M001, batchmode-verified, pending play-mode UAT): R001, R002, R004, R007, R008, R009, R010, R014, R016
-- Active (M002, unmapped — queued): R023, R024, R025, R026, R027, R028
+- Total requirements: 28 (9 active + 14 validated + 2 deferred + 3 out of scope)
+- Validated: 14 (R003, R005, R006, R011, R012, R013, R015, R017 from M001; R023, R024, R025, R026, R027, R028 from M002)
+- Active (batchmode-verified, pending play-mode UAT): R001, R002, R004, R007, R008, R009, R010, R014, R016
 - Deferred: R018, R019
 - Out of scope: R020, R021, R022
-- Unmapped active requirements: 6 (R023–R028, owned by M002)
+- Unmapped active requirements: 0
