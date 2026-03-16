@@ -28,7 +28,7 @@ namespace SimpleGame.Editor
             // Canvas — high sort order, overlay render mode
             var canvas = root.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 200;
+            canvas.sortingOrder = 400;
 
             // CanvasScaler for consistent sizing
             var scaler = root.AddComponent<CanvasScaler>();
