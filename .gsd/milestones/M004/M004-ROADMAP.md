@@ -53,7 +53,7 @@ This milestone is complete only when all are true:
 
 ## Slices
 
-- [ ] **S01: Game Session & Progression Services** `risk:medium` `depends:[]`
+- [x] **S01: Game Session & Progression Services** `risk:medium` `depends:[]`
   > After this: edit-mode tests prove GameSessionService holds level/score/outcome context and ProgressionService tracks level, advances on win, logs score. No UI yet — services are pure C# with full test coverage.
 
 - [ ] **S02: Main Menu — Level Display & Play Button** `risk:low` `depends:[S01]`
