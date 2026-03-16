@@ -2,10 +2,45 @@ using System;
 using System.Reflection;
 using NUnit.Framework;
 using SimpleGame.Core.MVP;
-using SimpleGame.Core.Services;
 
-namespace SimpleGame.Tests
+namespace SimpleGame.Tests.Core
 {
+    // ---------------------------------------------------------------------------
+    // Test fixtures: ISampleView / SamplePresenter (live here, not in runtime)
+    // ---------------------------------------------------------------------------
+
+    internal interface ISampleView : IView
+    {
+        event Action OnButtonClicked;
+        void UpdateLabel(string text);
+    }
+
+    internal class SamplePresenter : Presenter<ISampleView>
+    {
+        private readonly string _welcomeMessage;
+
+        public SamplePresenter(ISampleView view, string welcomeMessage) : base(view)
+        {
+            _welcomeMessage = welcomeMessage;
+        }
+
+        public override void Initialize()
+        {
+            View.OnButtonClicked += HandleButtonClicked;
+            View.UpdateLabel(_welcomeMessage);
+        }
+
+        public override void Dispose()
+        {
+            View.OnButtonClicked -= HandleButtonClicked;
+        }
+
+        private void HandleButtonClicked()
+        {
+            View.UpdateLabel(_welcomeMessage);
+        }
+    }
+
     // ---------------------------------------------------------------------------
     // MockSampleView: pure test double — no presenter or service references
     // ---------------------------------------------------------------------------
@@ -34,31 +69,13 @@ namespace SimpleGame.Tests
     [TestFixture]
     internal class MVPWiringTests
     {
-        private GameService _gameService;
-
-        [SetUp]
-        public void SetUp()
-        {
-            _gameService = new GameService();
-        }
+        private const string WelcomeMessage = "Welcome to Simple Game";
 
         [Test]
         public void PresenterCanBeConstructedWithMockView()
         {
             var view = new MockSampleView();
-            var presenter = new SamplePresenter(view, _gameService);
-
-            Assert.IsNotNull(presenter);
-            Assert.IsInstanceOf<SamplePresenter>(presenter);
-        }
-
-        [Test]
-        public void UIFactoryCreatesSamplePresenterWithService()
-        {
-            var factory = new UIFactory(_gameService);
-            var view = new MockSampleView();
-
-            var presenter = factory.CreateSamplePresenter(view);
+            var presenter = new SamplePresenter(view, WelcomeMessage);
 
             Assert.IsNotNull(presenter);
             Assert.IsInstanceOf<SamplePresenter>(presenter);
@@ -67,22 +84,20 @@ namespace SimpleGame.Tests
         [Test]
         public void PresenterInitializeSetsWelcomeLabel()
         {
-            var factory = new UIFactory(_gameService);
             var view = new MockSampleView();
-            var presenter = factory.CreateSamplePresenter(view);
+            var presenter = new SamplePresenter(view, WelcomeMessage);
 
             presenter.Initialize();
 
-            Assert.AreEqual(_gameService.GetWelcomeMessage(), view.LastLabelText,
-                "Initialize() must set the welcome label via the injected GameService");
+            Assert.AreEqual(WelcomeMessage, view.LastLabelText,
+                "Initialize() must set the welcome label");
         }
 
         [Test]
         public void PresenterRespondsToViewEvents()
         {
-            var factory = new UIFactory(_gameService);
             var view = new MockSampleView();
-            var presenter = factory.CreateSamplePresenter(view);
+            var presenter = new SamplePresenter(view, WelcomeMessage);
 
             presenter.Initialize();
             int callsAfterInit = view.UpdateLabelCallCount;
@@ -91,23 +106,21 @@ namespace SimpleGame.Tests
 
             Assert.Greater(view.UpdateLabelCallCount, callsAfterInit,
                 "Presenter must call UpdateLabel again when OnButtonClicked fires");
-            Assert.AreEqual(_gameService.GetWelcomeMessage(), view.LastLabelText,
-                "Label content after click must be the welcome message from GameService");
+            Assert.AreEqual(WelcomeMessage, view.LastLabelText,
+                "Label content after click must be the welcome message");
         }
 
         [Test]
         public void PresenterDisposeUnsubscribesFromViewEvents()
         {
-            var factory = new UIFactory(_gameService);
             var view = new MockSampleView();
-            var presenter = factory.CreateSamplePresenter(view);
+            var presenter = new SamplePresenter(view, WelcomeMessage);
 
             presenter.Initialize();
             presenter.Dispose();
 
             int callsAfterDispose = view.UpdateLabelCallCount;
 
-            // Trigger the event — disposed presenter must NOT respond
             view.SimulateButtonClick();
 
             Assert.AreEqual(callsAfterDispose, view.UpdateLabelCallCount,
@@ -129,22 +142,26 @@ namespace SimpleGame.Tests
                 Assert.IsFalse(
                     typeName.Contains("Presenter"),
                     $"MockSampleView field '{field.Name}' references a Presenter type: {typeName}");
-
-                Assert.IsFalse(
-                    typeName.Contains("GameService") || typeName.Contains("SimpleGame.Core.Services"),
-                    $"MockSampleView field '{field.Name}' references a Services type: {typeName}");
-
-                Assert.IsFalse(
-                    typeName.Contains("UIFactory"),
-                    $"MockSampleView field '{field.Name}' references UIFactory: {typeName}");
             }
 
-            // Verify MockSampleView does not inherit from any Presenter type
             var baseType = mockType.BaseType;
             Assert.IsFalse(
                 baseType != null &&
                 (baseType.Name.Contains("Presenter") || (baseType.FullName?.Contains("Presenter") ?? false)),
                 "MockSampleView must not inherit from any Presenter type");
+        }
+
+        [Test]
+        public void PresenterConstructedWithDifferentMessageRendersCorrectly()
+        {
+            const string customMessage = "Custom Welcome";
+            var view = new MockSampleView();
+            var presenter = new SamplePresenter(view, customMessage);
+
+            presenter.Initialize();
+
+            Assert.AreEqual(customMessage, view.LastLabelText,
+                "Presenter must render the injected message, not a hardcoded string");
         }
     }
 }

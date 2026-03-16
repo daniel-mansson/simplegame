@@ -1,4 +1,4 @@
-namespace SimpleGame.Core.PopupManagement
+namespace SimpleGame.Game
 {
     public enum PopupId
     {

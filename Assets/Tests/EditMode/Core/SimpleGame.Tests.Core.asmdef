@@ -1,8 +1,8 @@
 {
-  "name": "SimpleGame.Tests.EditMode",
-  "rootNamespace": "SimpleGame.Tests",
+  "name": "SimpleGame.Tests.Core",
+  "rootNamespace": "SimpleGame.Tests.Core",
   "references": [
-    "SimpleGame.Runtime",
+    "SimpleGame.Core",
     "UniTask",
     "UnityEngine.TestRunner",
     "UnityEditor.TestRunner"

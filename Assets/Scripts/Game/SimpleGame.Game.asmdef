@@ -1,8 +1,8 @@
 {
-  "name": "SimpleGame.Editor",
-  "rootNamespace": "SimpleGame.Editor",
-  "references": ["SimpleGame.Core", "SimpleGame.Game", "UnityEngine.UI", "UnityEditor.UI"],
-  "includePlatforms": ["Editor"],
+  "name": "SimpleGame.Game",
+  "rootNamespace": "SimpleGame.Game",
+  "references": ["SimpleGame.Core", "UniTask", "UnityEngine.UI"],
+  "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,
   "overrideReferences": false,

@@ -4,8 +4,17 @@ using Cysharp.Threading.Tasks;
 using NUnit.Framework;
 using SimpleGame.Core.ScreenManagement;
 
-namespace SimpleGame.Tests
+namespace SimpleGame.Tests.Core
 {
+    // ---------------------------------------------------------------------------
+    // TestScreenId: local test enum — replaces game-specific ScreenId in Core tests
+    // ---------------------------------------------------------------------------
+    internal enum TestScreenId
+    {
+        MainMenu,
+        Settings
+    }
+
     // ---------------------------------------------------------------------------
     // MockSceneLoader: pure test double — records all load/unload calls
     // ---------------------------------------------------------------------------
@@ -37,19 +46,19 @@ namespace SimpleGame.Tests
     internal class ScreenManagerTests
     {
         private MockSceneLoader _loader;
-        private ScreenManager _manager;
+        private ScreenManager<TestScreenId> _manager;
 
         [SetUp]
         public void SetUp()
         {
             _loader = new MockSceneLoader();
-            _manager = new ScreenManager(_loader);
+            _manager = new ScreenManager<TestScreenId>(_loader);
         }
 
         [Test]
         public void ShowScreenAsync_LoadsCorrectScene()
         {
-            _manager.ShowScreenAsync(ScreenId.MainMenu).Forget();
+            _manager.ShowScreenAsync(TestScreenId.MainMenu).Forget();
 
             Assert.Contains("MainMenu", _loader.LoadedScenes,
                 "ShowScreenAsync(MainMenu) must load the 'MainMenu' scene");
@@ -58,8 +67,8 @@ namespace SimpleGame.Tests
         [Test]
         public void ShowScreenAsync_UnloadsPreviousBeforeLoadingNext()
         {
-            _manager.ShowScreenAsync(ScreenId.MainMenu).Forget();
-            _manager.ShowScreenAsync(ScreenId.Settings).Forget();
+            _manager.ShowScreenAsync(TestScreenId.MainMenu).Forget();
+            _manager.ShowScreenAsync(TestScreenId.Settings).Forget();
 
             Assert.AreEqual(3, _loader.CallLog.Count,
                 $"Expected 3 operations (load MainMenu, unload MainMenu, load Settings) but got {_loader.CallLog.Count}: [{string.Join(", ", _loader.CallLog)}]");
@@ -71,18 +80,17 @@ namespace SimpleGame.Tests
         [Test]
         public void GoBackAsync_ReturnsToPreviousScreen()
         {
-            _manager.ShowScreenAsync(ScreenId.MainMenu).Forget();
-            _manager.ShowScreenAsync(ScreenId.Settings).Forget();
+            _manager.ShowScreenAsync(TestScreenId.MainMenu).Forget();
+            _manager.ShowScreenAsync(TestScreenId.Settings).Forget();
             _manager.GoBackAsync().Forget();
 
-            // After GoBack, MainMenu should have been loaded a second time
             int mainMenuLoadCount = 0;
             foreach (var scene in _loader.LoadedScenes)
                 if (scene == "MainMenu") mainMenuLoadCount++;
 
             Assert.AreEqual(2, mainMenuLoadCount,
                 "GoBackAsync must reload MainMenu after navigating back from Settings");
-            Assert.AreEqual(ScreenId.MainMenu, _manager.CurrentScreen,
+            Assert.AreEqual(TestScreenId.MainMenu, _manager.CurrentScreen,
                 "CurrentScreen must be MainMenu after GoBack");
         }
 
@@ -102,12 +110,12 @@ namespace SimpleGame.Tests
             Assert.IsNull(_manager.CurrentScreen,
                 "CurrentScreen must be null before any navigation");
 
-            _manager.ShowScreenAsync(ScreenId.MainMenu).Forget();
-            Assert.AreEqual(ScreenId.MainMenu, _manager.CurrentScreen,
+            _manager.ShowScreenAsync(TestScreenId.MainMenu).Forget();
+            Assert.AreEqual(TestScreenId.MainMenu, _manager.CurrentScreen,
                 "CurrentScreen must be MainMenu after ShowScreenAsync(MainMenu)");
 
-            _manager.ShowScreenAsync(ScreenId.Settings).Forget();
-            Assert.AreEqual(ScreenId.Settings, _manager.CurrentScreen,
+            _manager.ShowScreenAsync(TestScreenId.Settings).Forget();
+            Assert.AreEqual(TestScreenId.Settings, _manager.CurrentScreen,
                 "CurrentScreen must be Settings after ShowScreenAsync(Settings)");
         }
 
@@ -117,11 +125,11 @@ namespace SimpleGame.Tests
             Assert.IsFalse(_manager.CanGoBack,
                 "CanGoBack must be false on a fresh manager");
 
-            _manager.ShowScreenAsync(ScreenId.MainMenu).Forget();
+            _manager.ShowScreenAsync(TestScreenId.MainMenu).Forget();
             Assert.IsFalse(_manager.CanGoBack,
                 "CanGoBack must be false after first navigation (nothing in history yet)");
 
-            _manager.ShowScreenAsync(ScreenId.Settings).Forget();
+            _manager.ShowScreenAsync(TestScreenId.Settings).Forget();
             Assert.IsTrue(_manager.CanGoBack,
                 "CanGoBack must be true after navigating to a second screen");
 
@@ -133,33 +141,21 @@ namespace SimpleGame.Tests
         [Test]
         public void ShowScreenAsync_GuardsAgainstConcurrentNavigation()
         {
-            // Use a blocking loader to simulate in-progress navigation
             var blockingLoader = new BlockingMockSceneLoader();
-            var guardedManager = new ScreenManager(blockingLoader);
+            var guardedManager = new ScreenManager<TestScreenId>(blockingLoader);
 
-            // Start first navigation — loader is blocked, so _isNavigating stays true
             blockingLoader.IsBlocked = true;
-            var firstNav = guardedManager.ShowScreenAsync(ScreenId.MainMenu);
+            var firstNav = guardedManager.ShowScreenAsync(TestScreenId.MainMenu);
 
-            // Attempt second navigation while first is still "in progress"
-            // Because the mock is synchronous and IsBlocked stops it mid-flight,
-            // we test the guard by checking the _isNavigating side-effect:
-            // the guard must prevent any new load call from being added
             int loadsAfterFirst = blockingLoader.LoadCallCount;
-            blockingLoader.IsBlocked = false; // allow resolution
+            blockingLoader.IsBlocked = false;
 
-            // A second call while navigating should be a no-op
-            // Reset to simulate in-progress state directly
             var loader2 = new MockSceneLoader();
-            var manager2 = new ScreenManager(loader2);
+            var manager2 = new ScreenManager<TestScreenId>(loader2);
 
-            // Simulate: manually trigger guard by calling ShowScreenAsync twice quickly
-            // Since MockSceneLoader is synchronous, the first call completes before the second,
-            // so we verify the guard by checking the sequential non-interleaved call log
-            manager2.ShowScreenAsync(ScreenId.MainMenu).Forget();
-            manager2.ShowScreenAsync(ScreenId.Settings).Forget();
+            manager2.ShowScreenAsync(TestScreenId.MainMenu).Forget();
+            manager2.ShowScreenAsync(TestScreenId.Settings).Forget();
 
-            // Verify no interleaving: unload must come before load of Settings
             bool unloadBeforeLoad = false;
             int unloadIndex = -1, loadSettingsIndex = -1;
             for (int i = 0; i < loader2.CallLog.Count; i++)
@@ -172,14 +168,14 @@ namespace SimpleGame.Tests
 
             Assert.IsTrue(unloadBeforeLoad,
                 $"Navigation guard must ensure unload precedes load of next screen. CallLog: [{string.Join(", ", loader2.CallLog)}]");
-            _ = firstNav; // suppress unused warning
+            _ = firstNav;
             _ = loadsAfterFirst;
         }
 
         [Test]
         public void FirstShowScreen_DoesNotUnload()
         {
-            _manager.ShowScreenAsync(ScreenId.MainMenu).Forget();
+            _manager.ShowScreenAsync(TestScreenId.MainMenu).Forget();
 
             Assert.IsEmpty(_loader.UnloadedScenes,
                 "The first ShowScreenAsync call must not unload any scene (no previous screen)");

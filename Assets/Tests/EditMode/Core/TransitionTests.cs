@@ -6,14 +6,13 @@ using NUnit.Framework;
 using SimpleGame.Core.ScreenManagement;
 using SimpleGame.Core.TransitionManagement;
 
-namespace SimpleGame.Tests
+namespace SimpleGame.Tests.Core
 {
     // ---------------------------------------------------------------------------
     // MockTransitionPlayer: records "fadeOut"/"fadeIn" in a shared CallLog
     // ---------------------------------------------------------------------------
     internal class MockTransitionPlayer : ITransitionPlayer
     {
-        /// <summary>Ordered record of all FadeOutAsync / FadeInAsync calls made.</summary>
         public List<string> CallLog { get; } = new List<string>();
 
         public UniTask FadeOutAsync(CancellationToken ct = default)
@@ -58,7 +57,7 @@ namespace SimpleGame.Tests
         private MockSceneLoader _loader;
         private MockTransitionPlayer _transition;
         private MockInputBlocker _inputBlocker;
-        private ScreenManager _manager;
+        private ScreenManager<TestScreenId> _manager;
 
         [SetUp]
         public void SetUp()
@@ -66,42 +65,27 @@ namespace SimpleGame.Tests
             _loader = new MockSceneLoader();
             _transition = new MockTransitionPlayer();
             _inputBlocker = new MockInputBlocker();
-            _manager = new ScreenManager(_loader, _transition, _inputBlocker);
+            _manager = new ScreenManager<TestScreenId>(_loader, _transition, _inputBlocker);
         }
 
-        // -----------------------------------------------------------------------
-        // Test 1: Correct call ordering — fadeOut before unload, fadeIn after load
-        // -----------------------------------------------------------------------
         [Test]
         public void ShowScreenAsync_WithTransition_CallsFadeOutBeforeUnloadAndFadeInAfterLoad()
         {
-            // Navigate to MainMenu first so there is a screen to unload on next nav
-            _manager.ShowScreenAsync(ScreenId.MainMenu).Forget();
-
-            // Reset logs to isolate the second navigation
+            _manager.ShowScreenAsync(TestScreenId.MainMenu).Forget();
             _transition.CallLog.Clear();
             _loader.CallLog.Clear();
 
-            _manager.ShowScreenAsync(ScreenId.Settings).Forget();
+            _manager.ShowScreenAsync(TestScreenId.Settings).Forget();
 
-            // Build a merged call log: transition events + scene loader events in order
-            // Because all mocks are synchronous, the interleaved order is deterministic.
-            // Expected: fadeOut → unload:MainMenu → load:Settings → fadeIn
-            var merged = new List<string>(_transition.CallLog);
-            // We need to verify ordering by inspecting the combined sequence.
-            // Use a combined log that records all operations in order.
-            // Re-run with a merged-log approach:
-            var loader2 = new MockSceneLoader();
             var mergedLog = new List<string>();
-
             var transition2 = new MergedLogTransitionPlayer(mergedLog);
-            var loaderWrapper = new MergedLogSceneLoader(mergedLog, loader2);
+            var loaderWrapper = new MergedLogSceneLoader(mergedLog, new MockSceneLoader());
 
-            var manager2 = new ScreenManager(loaderWrapper, transition2, new MockInputBlocker());
-            manager2.ShowScreenAsync(ScreenId.MainMenu).Forget();
-            mergedLog.Clear(); // clear first nav
+            var manager2 = new ScreenManager<TestScreenId>(loaderWrapper, transition2, new MockInputBlocker());
+            manager2.ShowScreenAsync(TestScreenId.MainMenu).Forget();
+            mergedLog.Clear();
 
-            manager2.ShowScreenAsync(ScreenId.Settings).Forget();
+            manager2.ShowScreenAsync(TestScreenId.Settings).Forget();
 
             Assert.AreEqual(4, mergedLog.Count,
                 $"Expected 4 operations (fadeOut, unload:MainMenu, load:Settings, fadeIn) but got {mergedLog.Count}: [{string.Join(", ", mergedLog)}]");
@@ -111,13 +95,10 @@ namespace SimpleGame.Tests
             Assert.AreEqual("fadeIn",            mergedLog[3], $"[3] must be fadeIn. Log: [{string.Join(", ", mergedLog)}]");
         }
 
-        // -----------------------------------------------------------------------
-        // Test 2: Input is blocked for the duration and unblocked after completion
-        // -----------------------------------------------------------------------
         [Test]
         public void ShowScreenAsync_WithTransition_BlocksAndUnblocksInput()
         {
-            _manager.ShowScreenAsync(ScreenId.MainMenu).Forget();
+            _manager.ShowScreenAsync(TestScreenId.MainMenu).Forget();
 
             Assert.AreEqual(1, _inputBlocker.BlockCallCount,
                 "Block() must be called exactly once during transition navigation");
@@ -127,9 +108,6 @@ namespace SimpleGame.Tests
                 "IsBlocked must be false after navigation completes (balanced Block/Unblock)");
         }
 
-        // -----------------------------------------------------------------------
-        // Test 3: GoBackAsync plays the same orchestration sequence
-        // -----------------------------------------------------------------------
         [Test]
         public void GoBackAsync_WithTransition_PlaysFullTransitionSequence()
         {
@@ -139,20 +117,18 @@ namespace SimpleGame.Tests
             var loader = new MergedLogSceneLoader(mergedLog, loaderBase);
             var inputBlocker = new MockInputBlocker();
 
-            var manager = new ScreenManager(loader, transition, inputBlocker);
+            var manager = new ScreenManager<TestScreenId>(loader, transition, inputBlocker);
 
-            // Navigate to MainMenu, then Settings (so GoBack has somewhere to return to)
-            manager.ShowScreenAsync(ScreenId.MainMenu).Forget();
-            manager.ShowScreenAsync(ScreenId.Settings).Forget();
+            manager.ShowScreenAsync(TestScreenId.MainMenu).Forget();
+            manager.ShowScreenAsync(TestScreenId.Settings).Forget();
             mergedLog.Clear();
             int blockCountBeforeBack = inputBlocker.BlockCallCount;
             int unblockCountBeforeBack = inputBlocker.UnblockCallCount;
 
             manager.GoBackAsync().Forget();
 
-            // Expected: fadeOut → unload:Settings → load:MainMenu → fadeIn
             Assert.AreEqual(4, mergedLog.Count,
-                $"GoBackAsync must produce 4 operations (fadeOut, unload:Settings, load:MainMenu, fadeIn). Log: [{string.Join(", ", mergedLog)}]");
+                $"GoBackAsync must produce 4 operations. Log: [{string.Join(", ", mergedLog)}]");
             Assert.AreEqual("fadeOut",         mergedLog[0], $"[0] must be fadeOut. Log: [{string.Join(", ", mergedLog)}]");
             Assert.AreEqual("unload:Settings", mergedLog[1], $"[1] must be unload:Settings. Log: [{string.Join(", ", mergedLog)}]");
             Assert.AreEqual("load:MainMenu",   mergedLog[2], $"[2] must be load:MainMenu. Log: [{string.Join(", ", mergedLog)}]");
@@ -166,47 +142,37 @@ namespace SimpleGame.Tests
                 "IsBlocked must be false after GoBackAsync completes");
         }
 
-        // -----------------------------------------------------------------------
-        // Test 4: Null transition player — identical behavior to original
-        // -----------------------------------------------------------------------
         [Test]
         public void ShowScreenAsync_WithoutTransition_BehavesIdentically()
         {
             var loader = new MockSceneLoader();
-            var manager = new ScreenManager(loader); // null transition player
+            var manager = new ScreenManager<TestScreenId>(loader);
 
-            manager.ShowScreenAsync(ScreenId.MainMenu).Forget();
-            manager.ShowScreenAsync(ScreenId.Settings).Forget();
+            manager.ShowScreenAsync(TestScreenId.MainMenu).Forget();
+            manager.ShowScreenAsync(TestScreenId.Settings).Forget();
 
-            // Original behavior: load:MainMenu, unload:MainMenu, load:Settings
             Assert.AreEqual(3, loader.CallLog.Count,
                 $"Without transition player, call log must match original behavior. Log: [{string.Join(", ", loader.CallLog)}]");
             Assert.AreEqual("load:MainMenu",   loader.CallLog[0]);
             Assert.AreEqual("unload:MainMenu", loader.CallLog[1]);
             Assert.AreEqual("load:Settings",   loader.CallLog[2]);
 
-            // No transition or input-blocker side-effects
             Assert.AreEqual(0, _transition.CallLog.Count,
                 "Transition player must not be called when ScreenManager has null transition");
             Assert.AreEqual(0, _inputBlocker.BlockCallCount,
                 "Input blocker must not be called when ScreenManager has null transition");
         }
 
-        // -----------------------------------------------------------------------
-        // Test 5: Exception during load — Unblock() still called (finally block)
-        // -----------------------------------------------------------------------
         [Test]
         public void ShowScreenAsync_WithTransition_UnblocksInputOnException()
         {
             var throwingLoader = new ThrowingSceneLoader();
             var transition = new MockTransitionPlayer();
             var inputBlocker = new MockInputBlocker();
-            var manager = new ScreenManager(throwingLoader, transition, inputBlocker);
+            var manager = new ScreenManager<TestScreenId>(throwingLoader, transition, inputBlocker);
 
-            // The load throws; UniTask exception will be swallowed by Forget() but the
-            // synchronous execution up to the throw + finally still runs.
             Assert.Throws<InvalidOperationException>(() =>
-                manager.ShowScreenAsync(ScreenId.MainMenu).GetAwaiter().GetResult(),
+                manager.ShowScreenAsync(TestScreenId.MainMenu).GetAwaiter().GetResult(),
                 "ShowScreenAsync must propagate the InvalidOperationException from the scene loader");
 
             Assert.AreEqual(1, inputBlocker.BlockCallCount,
@@ -219,7 +185,7 @@ namespace SimpleGame.Tests
     }
 
     // ---------------------------------------------------------------------------
-    // Helpers: merged-log wrappers so a single ordered list captures all events
+    // Helpers: merged-log wrappers for interleaved-ordering tests
     // ---------------------------------------------------------------------------
 
     internal class MergedLogTransitionPlayer : ITransitionPlayer

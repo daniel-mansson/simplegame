@@ -1,4 +1,4 @@
-namespace SimpleGame.Core.ScreenManagement
+namespace SimpleGame.Game
 {
     public enum ScreenId
     {

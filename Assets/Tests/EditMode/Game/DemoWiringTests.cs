@@ -3,11 +3,14 @@ using System.Reflection;
 using Cysharp.Threading.Tasks;
 using NUnit.Framework;
 using SimpleGame.Core.MVP;
-using SimpleGame.Core.PopupManagement;
-using SimpleGame.Core.ScreenManagement;
-using SimpleGame.Core.Services;
+using SimpleGame.Game;
+using SimpleGame.Game.Boot;
+using SimpleGame.Game.MainMenu;
+using SimpleGame.Game.Popup;
+using SimpleGame.Game.Services;
+using SimpleGame.Game.Settings;
 
-namespace SimpleGame.Tests
+namespace SimpleGame.Tests.Game
 {
     // ---------------------------------------------------------------------------
     // MockMainMenuView: pure test double — no presenter or service references
@@ -334,7 +337,7 @@ namespace SimpleGame.Tests
                     $"{mockType.Name} field '{field.Name}' references a Presenter type: {typeName}");
 
                 Assert.IsFalse(
-                    typeName.Contains("GameService") || typeName.Contains("SimpleGame.Core.Services"),
+                    typeName.Contains("GameService") || typeName.Contains("SimpleGame.Game.Services"),
                     $"{mockType.Name} field '{field.Name}' references a Services type: {typeName}");
 
                 Assert.IsFalse(

@@ -1,7 +1,9 @@
-using SimpleGame.Runtime.Boot;
-using SimpleGame.Runtime.MVP;
-using SimpleGame.Runtime.PopupManagement;
-using SimpleGame.Runtime.TransitionManagement;
+using SimpleGame.Core.Unity.PopupManagement;
+using SimpleGame.Core.Unity.TransitionManagement;
+using SimpleGame.Game.Boot;
+using SimpleGame.Game.MainMenu;
+using SimpleGame.Game.Popup;
+using SimpleGame.Game.Settings;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -256,7 +258,6 @@ public static class SceneSetup
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    /// <summary>Creates a full-screen screen-space Canvas with a CanvasScaler.</summary>
     private static void SetStretchRect(RectTransform rect)
     {
         rect.anchorMin = Vector2.zero;
@@ -265,10 +266,6 @@ public static class SceneSetup
         rect.anchoredPosition = Vector2.zero;
     }
 
-    /// <summary>
-    /// Wires a serialized field on a component using SerializedObject,
-    /// so Unity correctly persists the reference in the scene file.
-    /// </summary>
     private static void WireSerializedField(Component component, string fieldName, Object value)
     {
         var so = new SerializedObject(component);

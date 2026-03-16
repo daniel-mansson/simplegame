@@ -4,22 +4,30 @@ using Cysharp.Threading.Tasks;
 using NUnit.Framework;
 using SimpleGame.Core.PopupManagement;
 
-namespace SimpleGame.Tests
+namespace SimpleGame.Tests.Core
 {
+    // ---------------------------------------------------------------------------
+    // TestPopupId: local test enum — replaces game-specific PopupId in Core tests
+    // ---------------------------------------------------------------------------
+    internal enum TestPopupId
+    {
+        TestPopup
+    }
+
     // ---------------------------------------------------------------------------
     // MockPopupContainer: pure test double — records all show/hide calls
     // ---------------------------------------------------------------------------
-    internal class MockPopupContainer : IPopupContainer
+    internal class MockPopupContainer : IPopupContainer<TestPopupId>
     {
         public List<string> CallLog { get; } = new List<string>();
 
-        public UniTask ShowPopupAsync(PopupId popupId, CancellationToken ct = default)
+        public UniTask ShowPopupAsync(TestPopupId popupId, CancellationToken ct = default)
         {
             CallLog.Add($"show:{popupId}");
             return UniTask.CompletedTask;
         }
 
-        public UniTask HidePopupAsync(PopupId popupId, CancellationToken ct = default)
+        public UniTask HidePopupAsync(TestPopupId popupId, CancellationToken ct = default)
         {
             CallLog.Add($"hide:{popupId}");
             return UniTask.CompletedTask;
@@ -31,15 +39,9 @@ namespace SimpleGame.Tests
     // ---------------------------------------------------------------------------
     internal class MockInputBlocker : IInputBlocker
     {
-        /// <summary>Current reference count (Block increments, Unblock decrements, floor 0).</summary>
         public int BlockCount { get; private set; }
-
-        /// <summary>Total number of Block() calls made.</summary>
         public int BlockCallCount { get; private set; }
-
-        /// <summary>Total number of Unblock() calls made.</summary>
         public int UnblockCallCount { get; private set; }
-
         public bool IsBlocked => BlockCount > 0;
 
         public void Block()
@@ -64,23 +66,23 @@ namespace SimpleGame.Tests
     {
         private MockPopupContainer _container;
         private MockInputBlocker _inputBlocker;
-        private PopupManager _manager;
+        private PopupManager<TestPopupId> _manager;
 
         [SetUp]
         public void SetUp()
         {
             _container = new MockPopupContainer();
             _inputBlocker = new MockInputBlocker();
-            _manager = new PopupManager(_container, _inputBlocker);
+            _manager = new PopupManager<TestPopupId>(_container, _inputBlocker);
         }
 
         [Test]
         public void ShowPopupAsync_PushesPopupOntoStack()
         {
-            _manager.ShowPopupAsync(PopupId.ConfirmDialog).Forget();
+            _manager.ShowPopupAsync(TestPopupId.TestPopup).Forget();
 
-            Assert.AreEqual(PopupId.ConfirmDialog, _manager.TopPopup,
-                "TopPopup must be ConfirmDialog after ShowPopupAsync(ConfirmDialog)");
+            Assert.AreEqual(TestPopupId.TestPopup, _manager.TopPopup,
+                "TopPopup must be TestPopup after ShowPopupAsync(TestPopup)");
             Assert.AreEqual(1, _manager.PopupCount,
                 "PopupCount must be 1 after a single ShowPopupAsync call");
         }
@@ -88,16 +90,16 @@ namespace SimpleGame.Tests
         [Test]
         public void ShowPopupAsync_CallsContainerShowPopup()
         {
-            _manager.ShowPopupAsync(PopupId.ConfirmDialog).Forget();
+            _manager.ShowPopupAsync(TestPopupId.TestPopup).Forget();
 
-            Assert.Contains("show:ConfirmDialog", _container.CallLog,
-                $"CallLog must contain 'show:ConfirmDialog'. Actual: [{string.Join(", ", _container.CallLog)}]");
+            Assert.Contains("show:TestPopup", _container.CallLog,
+                $"CallLog must contain 'show:TestPopup'. Actual: [{string.Join(", ", _container.CallLog)}]");
         }
 
         [Test]
         public void ShowPopupAsync_BlocksInput()
         {
-            _manager.ShowPopupAsync(PopupId.ConfirmDialog).Forget();
+            _manager.ShowPopupAsync(TestPopupId.TestPopup).Forget();
 
             Assert.AreEqual(1, _inputBlocker.BlockCallCount,
                 "Block() must be called exactly once after a single ShowPopupAsync");
@@ -108,7 +110,7 @@ namespace SimpleGame.Tests
         [Test]
         public void DismissPopupAsync_PopsTopPopup()
         {
-            _manager.ShowPopupAsync(PopupId.ConfirmDialog).Forget();
+            _manager.ShowPopupAsync(TestPopupId.TestPopup).Forget();
             _manager.DismissPopupAsync().Forget();
 
             Assert.IsNull(_manager.TopPopup,
@@ -120,17 +122,17 @@ namespace SimpleGame.Tests
         [Test]
         public void DismissPopupAsync_CallsContainerHidePopup()
         {
-            _manager.ShowPopupAsync(PopupId.ConfirmDialog).Forget();
+            _manager.ShowPopupAsync(TestPopupId.TestPopup).Forget();
             _manager.DismissPopupAsync().Forget();
 
-            Assert.Contains("hide:ConfirmDialog", _container.CallLog,
-                $"CallLog must contain 'hide:ConfirmDialog'. Actual: [{string.Join(", ", _container.CallLog)}]");
+            Assert.Contains("hide:TestPopup", _container.CallLog,
+                $"CallLog must contain 'hide:TestPopup'. Actual: [{string.Join(", ", _container.CallLog)}]");
         }
 
         [Test]
         public void DismissPopupAsync_UnblocksInputWhenStackEmpty()
         {
-            _manager.ShowPopupAsync(PopupId.ConfirmDialog).Forget();
+            _manager.ShowPopupAsync(TestPopupId.TestPopup).Forget();
             _manager.DismissPopupAsync().Forget();
 
             Assert.IsFalse(_inputBlocker.IsBlocked,
@@ -142,9 +144,8 @@ namespace SimpleGame.Tests
         [Test]
         public void DismissPopupAsync_KeepsInputBlockedWhenPopupsRemain()
         {
-            // Show two popups then dismiss one — one remains so input stays blocked
-            _manager.ShowPopupAsync(PopupId.ConfirmDialog).Forget();
-            _manager.ShowPopupAsync(PopupId.ConfirmDialog).Forget();
+            _manager.ShowPopupAsync(TestPopupId.TestPopup).Forget();
+            _manager.ShowPopupAsync(TestPopupId.TestPopup).Forget();
             _manager.DismissPopupAsync().Forget();
 
             Assert.IsTrue(_inputBlocker.IsBlocked,
@@ -168,8 +169,8 @@ namespace SimpleGame.Tests
         [Test]
         public void DismissAllAsync_ClearsEntireStack()
         {
-            _manager.ShowPopupAsync(PopupId.ConfirmDialog).Forget();
-            _manager.ShowPopupAsync(PopupId.ConfirmDialog).Forget();
+            _manager.ShowPopupAsync(TestPopupId.TestPopup).Forget();
+            _manager.ShowPopupAsync(TestPopupId.TestPopup).Forget();
             _manager.DismissAllAsync().Forget();
 
             Assert.AreEqual(0, _manager.PopupCount,
@@ -191,7 +192,7 @@ namespace SimpleGame.Tests
             Assert.IsFalse(_manager.HasActivePopup,
                 "HasActivePopup must be false on a fresh manager");
 
-            _manager.ShowPopupAsync(PopupId.ConfirmDialog).Forget();
+            _manager.ShowPopupAsync(TestPopupId.TestPopup).Forget();
             Assert.IsTrue(_manager.HasActivePopup,
                 "HasActivePopup must be true after ShowPopupAsync");
 
@@ -203,14 +204,9 @@ namespace SimpleGame.Tests
         [Test]
         public void ShowPopupAsync_GuardsAgainstConcurrentOperation()
         {
-            // Since MockPopupContainer is synchronous, each ShowPopupAsync completes fully
-            // (including _isOperating reset) before the next begins. Verify that sequential
-            // calls produce a well-ordered, non-interleaved CallLog — same approach as
-            // ScreenManagerTests.ShowScreenAsync_GuardsAgainstConcurrentNavigation.
-            _manager.ShowPopupAsync(PopupId.ConfirmDialog).Forget();
-            _manager.ShowPopupAsync(PopupId.ConfirmDialog).Forget();
+            _manager.ShowPopupAsync(TestPopupId.TestPopup).Forget();
+            _manager.ShowPopupAsync(TestPopupId.TestPopup).Forget();
 
-            // Both complete sequentially; CallLog must have exactly 2 "show:" entries
             int showCount = 0;
             foreach (var entry in _container.CallLog)
                 if (entry.StartsWith("show:")) showCount++;
@@ -220,10 +216,6 @@ namespace SimpleGame.Tests
             Assert.AreEqual(2, _manager.PopupCount,
                 "PopupCount must be 2 after two sequential show calls");
 
-            // Verify the _isOperating guard fires by checking that a dismiss interleaved
-            // during an in-flight show is not possible: confirm show always precedes stack push
-            // (CallLog entry present iff PopupCount reflects the push).
-            // With synchronous mocks: show entries and stack count stay in sync.
             Assert.AreEqual(showCount, _manager.PopupCount,
                 "CallLog show entries must match PopupCount — guard ensures atomic push");
         }
@@ -231,7 +223,6 @@ namespace SimpleGame.Tests
         [Test]
         public void InputBlocker_NestedBlockUnblock()
         {
-            // Block twice, unblock once: still blocked
             _inputBlocker.Block();
             _inputBlocker.Block();
             _inputBlocker.Unblock();
@@ -241,7 +232,6 @@ namespace SimpleGame.Tests
             Assert.AreEqual(1, _inputBlocker.BlockCount,
                 "BlockCount must be 1 after 2 Block() and 1 Unblock()");
 
-            // Unblock again: now unblocked
             _inputBlocker.Unblock();
 
             Assert.IsFalse(_inputBlocker.IsBlocked,
@@ -253,7 +243,6 @@ namespace SimpleGame.Tests
         [Test]
         public void InputBlocker_BlockUnblockBlock_Sequence()
         {
-            // Block, unblock, block: blocked with count 1
             _inputBlocker.Block();
             _inputBlocker.Unblock();
             _inputBlocker.Block();
@@ -268,5 +257,4 @@ namespace SimpleGame.Tests
                 "UnblockCallCount must be 1 (one Unblock() call total)");
         }
     }
-
 }
