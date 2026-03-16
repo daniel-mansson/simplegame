@@ -59,7 +59,7 @@ This milestone is complete only when all are true:
 - [x] **S02: Main Menu — Level Display & Play Button** `risk:low` `depends:[S01]`
   > After this: MainMenuPresenter reads current level from ProgressionService, view shows "Level N", Play button sets session context and returns ScreenId.InGame. Edit-mode tests prove the wiring.
 
-- [ ] **S03: InGame Scene — Gameplay & Outcome Flow** `risk:high` `depends:[S01,S02]`
+- [x] **S03: InGame Scene — Gameplay & Outcome Flow** `risk:high` `depends:[S01,S02]`
   > After this: InGame scene exists with InGameSceneController. Score counter increments, Win calls progression service, Lose sets outcome. Scene controller returns ScreenId.MainMenu (win or back) or retries (lose+retry). Edit-mode tests prove the full RunAsync flow. InGame scene has play-from-editor fallback.
 
 - [ ] **S04: Win & Lose Popups** `risk:medium` `depends:[S03]`

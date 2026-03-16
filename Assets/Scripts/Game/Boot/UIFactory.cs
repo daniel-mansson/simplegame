@@ -1,3 +1,4 @@
+using SimpleGame.Game.InGame;
 using SimpleGame.Game.MainMenu;
 using SimpleGame.Game.Popup;
 using SimpleGame.Game.Services;
@@ -31,6 +32,11 @@ namespace SimpleGame.Game.Boot
         public ConfirmDialogPresenter CreateConfirmDialogPresenter(IConfirmDialogView view)
         {
             return new ConfirmDialogPresenter(view);
+        }
+
+        public InGamePresenter CreateInGamePresenter(IInGameView view)
+        {
+            return new InGamePresenter(view, _session);
         }
     }
 }
