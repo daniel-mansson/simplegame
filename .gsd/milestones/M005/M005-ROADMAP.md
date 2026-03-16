@@ -6,24 +6,19 @@
 
 - Screen transitions use a 0.3s fade-to-black driven by LitMotion, not a manual while loop
 - Transition visual lives in a self-contained prefab asset
-- Swapping the prefab changes the transition without code changes
-- `ITransitionPlayer` interface is unchanged
+- `ITransitionPlayer` interface is unchanged — zero signature changes
 - All existing edit-mode tests pass (98+ tests)
 - Full game loop works in play mode with transitions
 
 ## Key Risks / Unknowns
 
-- LitMotion assembly references in SimpleGame.Core.asmdef — need `LitMotion` and `LitMotion.Extensions` added without breaking existing compilation
-- Boot scene prefab extraction — inline objects must be cleanly replaced by the prefab instance
+This is straightforward work. No major unknowns — LitMotion is installed, the API surface is known, the interface stays unchanged.
 
-## Proof Strategy
-
-- LitMotion asmdef wiring → retire in S01 by proving compilation succeeds with LitMotion imports in UnityTransitionPlayer
-- Boot scene prefab extraction → retire in S01 by proving play-mode transitions work with the prefab in Boot scene
+- `SimpleGame.Core.asmdef` needs LitMotion assembly references added — low risk but must compile cleanly
 
 ## Verification Classes
 
-- Contract verification: all 98+ edit-mode tests pass; ITransitionPlayer interface unchanged
+- Contract verification: all 98+ edit-mode tests pass; `ITransitionPlayer` interface unchanged; `UnityTransitionPlayer.cs` contains no `while` loops and imports `LitMotion`
 - Integration verification: play-mode screen transitions work (fade visible during navigation)
 - Operational verification: none
 - UAT / human verification: visual confirmation that fade looks correct in play mode
@@ -32,12 +27,13 @@
 
 This milestone is complete only when all are true:
 
-- `UnityTransitionPlayer` uses LitMotion `BindToAlpha`/`ToUniTask()` — no manual while loop
-- Transition prefab exists as a standalone asset in the project
-- Boot scene references the prefab (placed or instantiated)
+- `UnityTransitionPlayer` uses `LMotion.Create().BindToAlpha().ToUniTask()` — no manual while loop
+- Transition prefab exists as `Assets/Prefabs/TransitionOverlay.prefab`
+- Boot scene contains an instance of the prefab (or references it)
 - `ITransitionPlayer` interface has zero changes
 - All 98+ edit-mode tests pass
 - Play-mode screen navigation shows 0.3s fade-to-black transitions
+- SceneSetup editor script creates the transition from prefab
 
 ## Requirement Coverage
 
@@ -49,16 +45,17 @@ This milestone is complete only when all are true:
 ## Slices
 
 - [ ] **S01: Prefab transition player with LitMotion** `risk:low` `depends:[]`
-  > After this: Screen transitions use a 0.3s fade-to-black driven by LitMotion via a self-contained prefab in Boot scene. All 98+ tests pass. The prefab can be swapped to change the transition look.
+  > After this: Screen transitions use a 0.3s fade-to-black driven by LitMotion via a self-contained prefab in Boot scene. All 98+ tests pass. User can swap the prefab to change the transition look.
 
 ## Boundary Map
 
 ### S01
 
 Produces:
-- `Assets/Prefabs/TransitionOverlay.prefab` — self-contained transition prefab (Canvas + CanvasGroup + UnityTransitionPlayer MonoBehaviour)
-- `UnityTransitionPlayer.cs` rewritten to use `LMotion.Create().BindToAlpha().ToUniTask()` instead of manual while loop
-- `SimpleGame.Core.asmdef` updated with LitMotion assembly references
+- `Assets/Prefabs/TransitionOverlay.prefab` — self-contained transition prefab (Canvas + CanvasGroup + Image + UnityTransitionPlayer MonoBehaviour)
+- `Assets/Scripts/Core/Unity/TransitionManagement/UnityTransitionPlayer.cs` — rewritten to use `LMotion.Create(from, to, duration).BindToAlpha(canvasGroup).ToUniTask(ct)` for both FadeOutAsync and FadeInAsync
+- `Assets/Scripts/Core/SimpleGame.Core.asmdef` — updated with `"LitMotion"` and `"LitMotion.Extensions"` references
+- `Assets/Editor/SceneSetup.cs` — updated to instantiate the transition prefab instead of building inline objects
 
 Consumes:
 - `ITransitionPlayer` interface (unchanged)
