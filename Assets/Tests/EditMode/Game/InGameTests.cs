@@ -1,10 +1,13 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
 using NUnit.Framework;
+using SimpleGame.Core.PopupManagement;
 using SimpleGame.Game;
 using SimpleGame.Game.Boot;
 using SimpleGame.Game.InGame;
+using SimpleGame.Game.Popup;
 using SimpleGame.Game.Services;
 
 namespace SimpleGame.Tests.Game
@@ -183,6 +186,9 @@ namespace SimpleGame.Tests.Game
         private ProgressionService _progression;
         private GameSessionService _session;
         private UIFactory _factory;
+        private MockPopupContainerForInGame _popupContainer;
+        private MockInputBlockerForInGame _inputBlocker;
+        private PopupManager<PopupId> _popupManager;
 
         [SetUp]
         public void SetUp()
@@ -191,69 +197,96 @@ namespace SimpleGame.Tests.Game
             _progression = new ProgressionService();
             _session = new GameSessionService();
             _factory = new UIFactory(_gameService, _progression, _session);
+            _popupContainer = new MockPopupContainerForInGame();
+            _inputBlocker = new MockInputBlockerForInGame();
+            _popupManager = new PopupManager<PopupId>(_popupContainer, _inputBlocker);
         }
 
         [Test]
-        public async Task RunAsync_WinClicked_ReturnsMainMenu()
+        public async Task RunAsync_WinClicked_ShowsWinPopupAndReturnsMainMenu()
         {
             var go = new UnityEngine.GameObject("InGameCtrl");
             var ctrl = go.AddComponent<InGameSceneController>();
             _session.ResetForNewGame(1);
-            ctrl.Initialize(_factory, _progression, _session);
+            ctrl.Initialize(_factory, _progression, _session, _popupManager);
 
             var view = new MockInGameView();
-            ctrl.SetViewForTesting(view);
+            var winView = new MockWinDialogView();
+            ctrl.SetViewsForTesting(view, winDialogView: winView);
 
             var task = ctrl.RunAsync().AsTask();
+            view.SimulateScoreClicked(); // score = 1
             view.SimulateWinClicked();
+
+            // Win popup should now be shown — continue it
+            winView.SimulateContinueClicked();
 
             var result = await task;
             Assert.AreEqual(ScreenId.MainMenu, result);
             Assert.AreEqual(GameOutcome.Win, _session.Outcome);
+            Assert.AreEqual(2, _progression.CurrentLevel);
+            Assert.AreEqual("Score: 1", winView.LastScoreText);
 
             UnityEngine.Object.DestroyImmediate(go);
         }
 
         [Test]
-        public async Task RunAsync_LoseClicked_ReturnsMainMenu()
+        public async Task RunAsync_LoseClicked_BackReturnsMainMenu()
         {
             var go = new UnityEngine.GameObject("InGameCtrl");
             var ctrl = go.AddComponent<InGameSceneController>();
             _session.ResetForNewGame(1);
-            ctrl.Initialize(_factory, _progression, _session);
+            ctrl.Initialize(_factory, _progression, _session, _popupManager);
 
             var view = new MockInGameView();
-            ctrl.SetViewForTesting(view);
+            var loseView = new MockLoseDialogView();
+            ctrl.SetViewsForTesting(view, loseDialogView: loseView);
 
             var task = ctrl.RunAsync().AsTask();
             view.SimulateLoseClicked();
 
+            // Lose popup shown — choose Back
+            loseView.SimulateBackClicked();
+
             var result = await task;
             Assert.AreEqual(ScreenId.MainMenu, result);
             Assert.AreEqual(GameOutcome.Lose, _session.Outcome);
+            Assert.AreEqual(1, _progression.CurrentLevel, "Level should not advance on lose");
 
             UnityEngine.Object.DestroyImmediate(go);
         }
 
         [Test]
-        public async Task RunAsync_WinClicked_RegistersWinAndAdvancesLevel()
+        public async Task RunAsync_LoseRetryThenWin_AdvancesLevel()
         {
             var go = new UnityEngine.GameObject("InGameCtrl");
             var ctrl = go.AddComponent<InGameSceneController>();
             _session.ResetForNewGame(1);
-            ctrl.Initialize(_factory, _progression, _session);
+            ctrl.Initialize(_factory, _progression, _session, _popupManager);
 
             var view = new MockInGameView();
-            ctrl.SetViewForTesting(view);
+            var winView = new MockWinDialogView();
+            var loseView = new MockLoseDialogView();
+            ctrl.SetViewsForTesting(view, winView, loseView);
 
             var task = ctrl.RunAsync().AsTask();
+
+            // First attempt: score some, then lose
             view.SimulateScoreClicked(); // score = 1
             view.SimulateScoreClicked(); // score = 2
-            view.SimulateWinClicked();
-            await task;
+            view.SimulateLoseClicked();
+            loseView.SimulateRetryClicked(); // retry
 
-            Assert.AreEqual(2, _progression.CurrentLevel, "RegisterWin should advance level from 1 to 2");
-            Assert.AreEqual(2, _session.CurrentScore, "Session score should be 2");
+            // Second attempt: score should be reset, win
+            Assert.AreEqual(0, _session.CurrentScore, "Score should reset on retry");
+            view.SimulateScoreClicked(); // score = 1
+            view.SimulateWinClicked();
+            winView.SimulateContinueClicked();
+
+            var result = await task;
+            Assert.AreEqual(ScreenId.MainMenu, result);
+            Assert.AreEqual(2, _progression.CurrentLevel, "Level should advance after retry + win");
+            Assert.AreEqual(1, _session.CurrentScore, "Final score should be 1 from second attempt");
 
             UnityEngine.Object.DestroyImmediate(go);
         }
@@ -263,22 +296,40 @@ namespace SimpleGame.Tests.Game
         {
             var go = new UnityEngine.GameObject("InGameCtrl");
             var ctrl = go.AddComponent<InGameSceneController>();
-            // Don't call _session.ResetForNewGame — simulates playing from editor
-            ctrl.Initialize(_factory, _progression, _session);
+            ctrl.Initialize(_factory, _progression, _session, _popupManager);
 
             var view = new MockInGameView();
-            ctrl.SetViewForTesting(view);
+            var winView = new MockWinDialogView();
+            ctrl.SetViewsForTesting(view, winDialogView: winView);
 
             var task = ctrl.RunAsync().AsTask();
 
-            // The default level should have been used (1)
             Assert.AreEqual("Level 1", view.LastLevelLabelText,
                 "Play-from-editor should use default level when session has no level set");
 
             view.SimulateWinClicked();
+            winView.SimulateContinueClicked();
             await task;
 
             UnityEngine.Object.DestroyImmediate(go);
         }
+    }
+
+    // ---------------------------------------------------------------------------
+    // Mock infrastructure for InGame scene controller tests
+    // ---------------------------------------------------------------------------
+    internal class MockPopupContainerForInGame : IPopupContainer<PopupId>
+    {
+        public UniTask ShowPopupAsync(PopupId popupId, CancellationToken ct = default)
+            => UniTask.CompletedTask;
+
+        public UniTask HidePopupAsync(PopupId popupId, CancellationToken ct = default)
+            => UniTask.CompletedTask;
+    }
+
+    internal class MockInputBlockerForInGame : IInputBlocker
+    {
+        public void Block() { }
+        public void Unblock() { }
     }
 }

@@ -38,5 +38,15 @@ namespace SimpleGame.Game.Boot
         {
             return new InGamePresenter(view, _session);
         }
+
+        public WinDialogPresenter CreateWinDialogPresenter(IWinDialogView view)
+        {
+            return new WinDialogPresenter(view);
+        }
+
+        public LoseDialogPresenter CreateLoseDialogPresenter(ILoseDialogView view)
+        {
+            return new LoseDialogPresenter(view);
+        }
     }
 }

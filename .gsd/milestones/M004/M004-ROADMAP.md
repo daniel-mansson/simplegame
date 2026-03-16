@@ -62,7 +62,7 @@ This milestone is complete only when all are true:
 - [x] **S03: InGame Scene — Gameplay & Outcome Flow** `risk:high` `depends:[S01,S02]`
   > After this: InGame scene exists with InGameSceneController. Score counter increments, Win calls progression service, Lose sets outcome. Scene controller returns ScreenId.MainMenu (win or back) or retries (lose+retry). Edit-mode tests prove the full RunAsync flow. InGame scene has play-from-editor fallback.
 
-- [ ] **S04: Win & Lose Popups** `risk:medium` `depends:[S03]`
+- [x] **S04: Win & Lose Popups** `risk:medium` `depends:[S03]`
   > After this: WinDialog and LoseDialog are new PopupId entries with views/presenters. Win popup shows score + level with Continue. Lose popup shows score + level with Retry/Back. Both wired into PopupManager. Edit-mode tests prove popup presenter behavior.
 
 - [ ] **S05: Full Loop Integration & Polish** `risk:low` `depends:[S04]`
