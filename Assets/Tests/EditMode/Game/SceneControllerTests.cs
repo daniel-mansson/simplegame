@@ -52,6 +52,8 @@ namespace SimpleGame.Tests.Game
     internal class SceneControllerTests
     {
         private GameService _gameService;
+        private ProgressionService _progression;
+        private GameSessionService _session;
         private UIFactory _factory;
         private MockPopupContainerGame _popupContainer;
         private MockInputBlockerGame _inputBlocker;
@@ -61,7 +63,9 @@ namespace SimpleGame.Tests.Game
         public void SetUp()
         {
             _gameService = new GameService();
-            _factory = new UIFactory(_gameService);
+            _progression = new ProgressionService();
+            _session = new GameSessionService();
+            _factory = new UIFactory(_gameService, _progression, _session);
             _popupContainer = new MockPopupContainerGame();
             _inputBlocker = new MockInputBlockerGame();
             _popupManager = new PopupManager<PopupId>(_popupContainer, _inputBlocker);
@@ -205,6 +209,28 @@ namespace SimpleGame.Tests.Game
 
             Assert.AreEqual(ScreenId.Settings, result,
                 "Cancelling the popup must allow the loop to continue");
+
+            UnityEngine.Object.DestroyImmediate(go);
+        }
+
+        [Test]
+        public async System.Threading.Tasks.Task MainMenuSceneController_RunAsync_PlayClicked_ReturnsInGame()
+        {
+            var go = new GameObject("MainMenuCtrl");
+            var ctrl = go.AddComponent<MainMenuSceneController>();
+            ctrl.Initialize(_factory, _popupManager);
+
+            var mmView = new MockMainMenuView();
+            var cdView = new MockConfirmDialogView();
+            ctrl.SetViewsForTesting(mmView, cdView);
+
+            var task = ctrl.RunAsync().AsTask();
+            mmView.SimulatePlayClicked();
+
+            var result = await task;
+
+            Assert.AreEqual(ScreenId.InGame, result,
+                "Clicking Play must cause RunAsync to return ScreenId.InGame");
 
             UnityEngine.Object.DestroyImmediate(go);
         }

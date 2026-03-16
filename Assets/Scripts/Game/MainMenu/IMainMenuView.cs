@@ -7,6 +7,8 @@ namespace SimpleGame.Game.MainMenu
     {
         event Action OnSettingsClicked;
         event Action OnPopupClicked;
+        event Action OnPlayClicked;
         void UpdateTitle(string text);
+        void UpdateLevelDisplay(string text);
     }
 }

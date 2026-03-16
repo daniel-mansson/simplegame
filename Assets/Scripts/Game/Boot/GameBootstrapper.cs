@@ -36,6 +36,8 @@ namespace SimpleGame.Game.Boot
 
             // --- Build infrastructure ---
             var gameService = new GameService();
+            var progressionService = new ProgressionService();
+            var sessionService = new GameSessionService();
 
             var inputBlocker = FindFirstObjectByType<UnityInputBlocker>();
             var transitionPlayer = FindFirstObjectByType<UnityTransitionPlayer>();
@@ -44,7 +46,7 @@ namespace SimpleGame.Game.Boot
 
             _screenManager = new ScreenManager<ScreenId>(sceneLoader, transitionPlayer, inputBlocker);
             _popupManager = new PopupManager<PopupId>(popupContainer, inputBlocker);
-            _uiFactory = new UIFactory(gameService);
+            _uiFactory = new UIFactory(gameService, progressionService, sessionService);
 
             Debug.Log("[GameBootstrapper] Infrastructure ready. Starting navigation loop.");
 
@@ -118,6 +120,7 @@ namespace SimpleGame.Game.Boot
                 if (!scene.isLoaded) continue;
                 if (scene.name == nameof(ScreenId.MainMenu)) return ScreenId.MainMenu;
                 if (scene.name == nameof(ScreenId.Settings)) return ScreenId.Settings;
+                if (scene.name == nameof(ScreenId.InGame)) return ScreenId.InGame;
             }
             return null;
         }

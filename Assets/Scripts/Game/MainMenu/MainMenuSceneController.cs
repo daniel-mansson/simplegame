@@ -78,6 +78,9 @@ namespace SimpleGame.Game.MainMenu
                     if (action == MainMenuAction.Settings)
                         return ScreenId.Settings;
 
+                    if (action == MainMenuAction.Play)
+                        return ScreenId.InGame;
+
                     if (action == MainMenuAction.Popup)
                         await HandleConfirmPopupAsync(ct);
                 }

@@ -56,7 +56,7 @@ This milestone is complete only when all are true:
 - [x] **S01: Game Session & Progression Services** `risk:medium` `depends:[]`
   > After this: edit-mode tests prove GameSessionService holds level/score/outcome context and ProgressionService tracks level, advances on win, logs score. No UI yet — services are pure C# with full test coverage.
 
-- [ ] **S02: Main Menu — Level Display & Play Button** `risk:low` `depends:[S01]`
+- [x] **S02: Main Menu — Level Display & Play Button** `risk:low` `depends:[S01]`
   > After this: MainMenuPresenter reads current level from ProgressionService, view shows "Level N", Play button sets session context and returns ScreenId.InGame. Edit-mode tests prove the wiring.
 
 - [ ] **S03: InGame Scene — Gameplay & Outcome Flow** `risk:high` `depends:[S01,S02]`

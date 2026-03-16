@@ -8,15 +8,19 @@ namespace SimpleGame.Game.Boot
     public class UIFactory
     {
         private readonly GameService _gameService;
+        private readonly ProgressionService _progression;
+        private readonly GameSessionService _session;
 
-        public UIFactory(GameService gameService)
+        public UIFactory(GameService gameService, ProgressionService progression, GameSessionService session)
         {
             _gameService = gameService;
+            _progression = progression;
+            _session = session;
         }
 
         public MainMenuPresenter CreateMainMenuPresenter(IMainMenuView view)
         {
-            return new MainMenuPresenter(view);
+            return new MainMenuPresenter(view, _progression, _session);
         }
 
         public SettingsPresenter CreateSettingsPresenter(ISettingsView view)

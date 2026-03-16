@@ -20,9 +20,12 @@ namespace SimpleGame.Tests.Game
     {
         public event Action OnSettingsClicked;
         public event Action OnPopupClicked;
+        public event Action OnPlayClicked;
 
         public string LastTitleText { get; private set; }
         public int UpdateTitleCallCount { get; private set; }
+        public string LastLevelDisplayText { get; private set; }
+        public int UpdateLevelDisplayCallCount { get; private set; }
 
         public void UpdateTitle(string text)
         {
@@ -30,8 +33,15 @@ namespace SimpleGame.Tests.Game
             UpdateTitleCallCount++;
         }
 
+        public void UpdateLevelDisplay(string text)
+        {
+            LastLevelDisplayText = text;
+            UpdateLevelDisplayCallCount++;
+        }
+
         public void SimulateSettingsClicked() => OnSettingsClicked?.Invoke();
         public void SimulatePopupClicked() => OnPopupClicked?.Invoke();
+        public void SimulatePlayClicked() => OnPlayClicked?.Invoke();
     }
 
     // ---------------------------------------------------------------------------
@@ -81,13 +91,17 @@ namespace SimpleGame.Tests.Game
     internal class DemoWiringTests
     {
         private GameService _gameService;
+        private ProgressionService _progression;
+        private GameSessionService _session;
         private UIFactory _factory;
 
         [SetUp]
         public void SetUp()
         {
             _gameService = new GameService();
-            _factory = new UIFactory(_gameService);
+            _progression = new ProgressionService();
+            _session = new GameSessionService();
+            _factory = new UIFactory(_gameService, _progression, _session);
         }
 
         // --- Construction tests ---
@@ -136,6 +150,32 @@ namespace SimpleGame.Tests.Game
                 "Initialize() must set a non-empty title on the MainMenu view");
             Assert.Greater(view.UpdateTitleCallCount, 0,
                 "Initialize() must call UpdateTitle at least once");
+        }
+
+        [Test]
+        public void MainMenuPresenter_Initialize_SetsLevelDisplay()
+        {
+            var view = new MockMainMenuView();
+            var presenter = _factory.CreateMainMenuPresenter(view);
+
+            presenter.Initialize();
+
+            Assert.AreEqual("Level 1", view.LastLevelDisplayText,
+                "Initialize() must set level display to 'Level 1' (progression starts at 1)");
+            Assert.Greater(view.UpdateLevelDisplayCallCount, 0,
+                "Initialize() must call UpdateLevelDisplay at least once");
+        }
+
+        [Test]
+        public void MainMenuPresenter_Initialize_ReflectsAdvancedLevel()
+        {
+            _progression.RegisterWin(0); // advance to level 2
+            var view = new MockMainMenuView();
+            var presenter = _factory.CreateMainMenuPresenter(view);
+
+            presenter.Initialize();
+
+            Assert.AreEqual("Level 2", view.LastLevelDisplayText);
         }
 
         [Test]
@@ -194,6 +234,39 @@ namespace SimpleGame.Tests.Game
 
             var result = await task;
             Assert.AreEqual(MainMenuAction.Popup, result);
+        }
+
+        [Test]
+        public async Task MainMenuPresenter_WaitForAction_PlayClicked_ResolvesPlay()
+        {
+            var view = new MockMainMenuView();
+            var presenter = _factory.CreateMainMenuPresenter(view);
+            presenter.Initialize();
+
+            var task = presenter.WaitForAction().AsTask();
+            view.SimulatePlayClicked();
+
+            var result = await task;
+            Assert.AreEqual(MainMenuAction.Play, result);
+        }
+
+        [Test]
+        public async Task MainMenuPresenter_PlayClicked_SetsSessionContext()
+        {
+            var view = new MockMainMenuView();
+            var presenter = _factory.CreateMainMenuPresenter(view);
+            presenter.Initialize();
+
+            var task = presenter.WaitForAction().AsTask();
+            view.SimulatePlayClicked();
+            await task;
+
+            Assert.AreEqual(1, _session.CurrentLevelId,
+                "Play must set session level to progression's current level");
+            Assert.AreEqual(0, _session.CurrentScore,
+                "Play must reset session score to 0");
+            Assert.AreEqual(GameOutcome.None, _session.Outcome,
+                "Play must reset session outcome to None");
         }
 
         [Test]
@@ -319,6 +392,7 @@ namespace SimpleGame.Tests.Game
             {
                 view.SimulateSettingsClicked();
                 view.SimulatePopupClicked();
+                view.SimulatePlayClicked();
             }, "Firing view events after Dispose() must not throw");
         }
 
