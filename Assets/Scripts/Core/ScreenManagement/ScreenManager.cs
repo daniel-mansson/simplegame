@@ -15,7 +15,7 @@ namespace SimpleGame.Core.ScreenManagement
     /// fade-out / fade-in animations with input blocked for the duration. When null,
     /// behavior is identical to the original implementation.
     /// </summary>
-    public class ScreenManager<TScreenId> where TScreenId : System.Enum
+    public class ScreenManager<TScreenId> where TScreenId : struct, System.Enum
     {
         private readonly ISceneLoader _sceneLoader;
         private readonly ITransitionPlayer _transitionPlayer;

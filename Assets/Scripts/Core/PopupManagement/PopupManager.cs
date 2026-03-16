@@ -9,7 +9,7 @@ namespace SimpleGame.Core.PopupManagement
     /// and unblocks it once the stack is empty. Guards against concurrent
     /// operations with the _isOperating flag (no-op on re-entrant calls).
     /// </summary>
-    public class PopupManager<TPopupId> where TPopupId : System.Enum
+    public class PopupManager<TPopupId> where TPopupId : struct, System.Enum
     {
         private readonly IPopupContainer<TPopupId> _container;
         private readonly IInputBlocker _inputBlocker;
