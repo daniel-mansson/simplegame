@@ -7,9 +7,9 @@ namespace SimpleGame.Core.PopupManagement
     /// Handles the actual loading, display, and hiding of popup views.
     /// Mirrors ISceneLoader — pure async contract with no Unity types.
     /// </summary>
-    public interface IPopupContainer
+    public interface IPopupContainer<TPopupId>
     {
-        UniTask ShowPopupAsync(PopupId popupId, CancellationToken ct = default);
-        UniTask HidePopupAsync(PopupId popupId, CancellationToken ct = default);
+        UniTask ShowPopupAsync(TPopupId popupId, CancellationToken ct = default);
+        UniTask HidePopupAsync(TPopupId popupId, CancellationToken ct = default);
     }
 }

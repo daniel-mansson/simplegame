@@ -9,15 +9,15 @@ namespace SimpleGame.Core.PopupManagement
     /// and unblocks it once the stack is empty. Guards against concurrent
     /// operations with the _isOperating flag (no-op on re-entrant calls).
     /// </summary>
-    public class PopupManager
+    public class PopupManager<TPopupId> where TPopupId : System.Enum
     {
-        private readonly IPopupContainer _container;
+        private readonly IPopupContainer<TPopupId> _container;
         private readonly IInputBlocker _inputBlocker;
-        private readonly Stack<PopupId> _stack = new Stack<PopupId>();
+        private readonly Stack<TPopupId> _stack = new Stack<TPopupId>();
         private bool _isOperating;
 
         /// <summary>The popup at the top of the stack, or null if none are open.</summary>
-        public PopupId? TopPopup => _stack.Count > 0 ? _stack.Peek() : (PopupId?)null;
+        public TPopupId? TopPopup => _stack.Count > 0 ? _stack.Peek() : (TPopupId?)null;
 
         /// <summary>Number of popups currently on the stack.</summary>
         public int PopupCount => _stack.Count;
@@ -25,7 +25,7 @@ namespace SimpleGame.Core.PopupManagement
         /// <summary>True when at least one popup is open.</summary>
         public bool HasActivePopup => _stack.Count > 0;
 
-        public PopupManager(IPopupContainer container, IInputBlocker inputBlocker)
+        public PopupManager(IPopupContainer<TPopupId> container, IInputBlocker inputBlocker)
         {
             _container = container;
             _inputBlocker = inputBlocker;
@@ -35,7 +35,7 @@ namespace SimpleGame.Core.PopupManagement
         /// Shows a popup, blocking input and pushing it onto the stack.
         /// No-ops if an operation is already in progress.
         /// </summary>
-        public async UniTask ShowPopupAsync(PopupId popupId, CancellationToken ct = default)
+        public async UniTask ShowPopupAsync(TPopupId popupId, CancellationToken ct = default)
         {
             if (_isOperating)
                 return;

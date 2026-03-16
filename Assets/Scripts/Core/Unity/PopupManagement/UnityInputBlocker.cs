@@ -2,7 +2,7 @@ using System;
 using SimpleGame.Core.PopupManagement;
 using UnityEngine;
 
-namespace SimpleGame.Runtime.PopupManagement
+namespace SimpleGame.Core.Unity.PopupManagement
 {
     /// <summary>
     /// Unity implementation of IInputBlocker. Uses a CanvasGroup's

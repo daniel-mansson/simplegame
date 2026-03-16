@@ -15,16 +15,16 @@ namespace SimpleGame.Core.ScreenManagement
     /// fade-out / fade-in animations with input blocked for the duration. When null,
     /// behavior is identical to the original implementation.
     /// </summary>
-    public class ScreenManager
+    public class ScreenManager<TScreenId> where TScreenId : System.Enum
     {
         private readonly ISceneLoader _sceneLoader;
         private readonly ITransitionPlayer _transitionPlayer;
         private readonly IInputBlocker _inputBlocker;
-        private readonly Stack<ScreenId> _history = new Stack<ScreenId>();
-        private ScreenId? _currentScreen;
+        private readonly Stack<TScreenId> _history = new Stack<TScreenId>();
+        private TScreenId? _currentScreen;
         private bool _isNavigating;
 
-        public ScreenId? CurrentScreen => _currentScreen;
+        public TScreenId? CurrentScreen => _currentScreen;
         public bool CanGoBack => _history.Count > 0;
 
         public ScreenManager(ISceneLoader sceneLoader,
@@ -44,7 +44,7 @@ namespace SimpleGame.Core.ScreenManagement
         /// When a transition player is present: blocks input, plays fade-out,
         /// performs the scene swap, plays fade-in, then unblocks input (in finally).
         /// </summary>
-        public async UniTask ShowScreenAsync(ScreenId screenId, CancellationToken ct = default)
+        public async UniTask ShowScreenAsync(TScreenId screenId, CancellationToken ct = default)
         {
             if (_isNavigating)
                 return;

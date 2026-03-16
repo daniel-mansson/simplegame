@@ -3,7 +3,7 @@ using Cysharp.Threading.Tasks;
 using SimpleGame.Core.TransitionManagement;
 using UnityEngine;
 
-namespace SimpleGame.Runtime.TransitionManagement
+namespace SimpleGame.Core.Unity.TransitionManagement
 {
     /// <summary>
     /// Unity implementation of <see cref="ITransitionPlayer"/>.

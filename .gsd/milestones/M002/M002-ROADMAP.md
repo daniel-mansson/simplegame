@@ -51,7 +51,7 @@ This milestone is complete only when all are true:
 
 ## Slices
 
-- [ ] **S01: Core assembly restructure + generic managers** `risk:high` `depends:[]`
+- [x] **S01: Core assembly restructure + generic managers** `risk:high` `depends:[]`
   > After this: `SimpleGame.Core.asmdef` compiles; `ScreenManager<TScreenId>` and `PopupManager<TPopupId>` exist; Core sources contain no game-specific type references (grep verifiable); Core-layer tests (ScreenManagerTests, PopupManagerTests, TransitionTests, base MVPWiringTests) updated and passing.
 
 - [ ] **S02: Game assembly + feature cohesion** `risk:medium` `depends:[S01]`

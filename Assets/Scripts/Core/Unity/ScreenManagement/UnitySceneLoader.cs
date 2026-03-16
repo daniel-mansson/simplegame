@@ -3,7 +3,7 @@ using Cysharp.Threading.Tasks;
 using SimpleGame.Core.ScreenManagement;
 using UnityEngine.SceneManagement;
 
-namespace SimpleGame.Runtime.ScreenManagement
+namespace SimpleGame.Core.Unity.ScreenManagement
 {
     /// <summary>
     /// Production implementation of ISceneLoader that delegates to Unity's
