@@ -54,10 +54,10 @@ This milestone is complete only when all are true:
 - [x] **S01: Core assembly restructure + generic managers** `risk:high` `depends:[]`
   > After this: `SimpleGame.Core.asmdef` compiles; `ScreenManager<TScreenId>` and `PopupManager<TPopupId>` exist; Core sources contain no game-specific type references (grep verifiable); Core-layer tests (ScreenManagerTests, PopupManagerTests, TransitionTests, base MVPWiringTests) updated and passing.
 
-- [ ] **S02: Game assembly + feature cohesion** `risk:medium` `depends:[S01]`
+- [x] **S02: Game assembly + feature cohesion** `risk:medium` `depends:[S01]`
   > After this: `SimpleGame.Game.asmdef` compiles; all game-specific code (screens, presenters, views, boot, factory, service) lives under `Assets/Scripts/Game/` with each screen's interface+presenter+view co-located; `SimpleGame.Editor.asmdef` updated; project compiles end-to-end.
 
-- [ ] **S03: Test assembly split + full verification** `risk:low` `depends:[S02]`
+- [x] **S03: Test assembly split + full verification** `risk:low` `depends:[S02]`
   > After this: two test assemblies (`SimpleGame.Tests.Core`, `SimpleGame.Tests.Game`) compile and all 49 tests pass; `ISampleView`/`SamplePresenter` live in Core test assembly as fixtures; static guard clean; batchmode test run produces `TestResults.xml` with total="49" passed="49" failed="0".
 
 ## Boundary Map
