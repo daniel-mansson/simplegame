@@ -329,7 +329,9 @@ namespace SimpleGame.Tests.Game
 
     internal class MockInputBlockerForInGame : IInputBlocker
     {
-        public void Block() { }
-        public void Unblock() { }
+        private int _blockCount;
+        public bool IsBlocked => _blockCount > 0;
+        public void Block() => _blockCount++;
+        public void Unblock() => _blockCount = System.Math.Max(0, _blockCount - 1);
     }
 }
