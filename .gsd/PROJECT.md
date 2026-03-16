@@ -10,11 +10,9 @@ A proven, testable UI architecture where views are fully independent, presenters
 
 ## Current State
 
-**M004 complete.** Full game loop working: Main menu shows current level → Play → InGame scene with score counter + win/lose → Win popup (continue → menu with level advanced) / Lose popup (retry or back). 98/98 edit-mode tests passing. All code compiles clean.
+**M005 complete.** Transition system upgraded: LitMotion tweening replaces manual while-loop, transition overlay lives in a self-contained swappable prefab. 98/98 tests passing.
 
-**M001–M003 complete.** MVP pattern, screen management, popup system, transitions, input blocking, assembly separation, SceneController architecture, boot-from-any-scene — all proven and tested.
-
-**M005 in progress.** Prefab-based transition system with LitMotion tweening.
+**M001–M004 complete.** MVP pattern, screen management, popup system, transitions, input blocking, assembly separation, SceneController architecture, boot-from-any-scene, full game loop — all proven and tested.
 
 ## Architecture / Key Patterns
 
@@ -45,4 +43,4 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 - [x] M002: Assembly Restructure — Core/Game separation, generic managers, feature-cohesive folders
 - [x] M003: SceneController Architecture — async control flow, linear scene controllers, boot-from-any-scene
 - [x] M004: Game Loop — meta-progression, context passing, InGame scene, win/lose flow, full menu→play→outcome→menu loop
-- [ ] M005: Prefab-Based Transitions — LitMotion tweening, prefab-driven transition visuals, extensible for future complex transitions
+- [x] M005: Prefab-Based Transitions — LitMotion tweening, prefab-driven transition visuals, extensible for future complex transitions

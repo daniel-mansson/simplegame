@@ -44,7 +44,7 @@ This milestone is complete only when all are true:
 
 ## Slices
 
-- [ ] **S01: Prefab transition player with LitMotion** `risk:low` `depends:[]`
+- [x] **S01: Prefab transition player with LitMotion** `risk:low` `depends:[]`
   > After this: Screen transitions use a 0.3s fade-to-black driven by LitMotion via a self-contained prefab in Boot scene. All 98+ tests pass. User can swap the prefab to change the transition look.
 
 ## Boundary Map

@@ -307,14 +307,14 @@ Use it to track what is actively in scope, what has been validated by completed 
 
 ### R044 — Prefab-based transition with LitMotion tweening
 - Class: quality-attribute
-- Status: active
+- Status: validated
 - Description: Transition visuals live in a self-contained prefab. The prefab's MonoBehaviour implements ITransitionPlayer using LitMotion for tweening. Swapping the prefab changes the transition look without touching callers or the API. First implementation: 0.3s fade-to-black via CanvasGroup alpha.
 - Why it matters: Current hand-rolled while-loop fade is brittle and non-extensible. Future transitions will use images, animations, and shaders — the prefab must own all visual details. LitMotion replaces manual tweening for consistency and correctness.
 - Source: user
 - Primary owning slice: M005/S01
 - Supporting slices: none
-- Validation: unmapped
-- Notes: ITransitionPlayer interface unchanged. R013 (fade transitions) stays validated — this upgrades the implementation, not the capability contract.
+- Validation: validated
+- Notes: UnityTransitionPlayer uses LMotion.Create().BindToAlpha().ToUniTask(). Prefab at Assets/Prefabs/TransitionOverlay.prefab. 98/98 tests pass. ITransitionPlayer unchanged.
 
 ## Out of Scope
 
@@ -397,13 +397,13 @@ Use it to track what is actively in scope, what has been validated by completed 
 | R041 | continuity | deferred | none | none | unmapped |
 | R042 | core-capability | deferred | none | none | unmapped |
 | R043 | anti-feature | out-of-scope | none | none | n/a |
-| R044 | quality-attribute | active | M005/S01 | none | unmapped |
+| R044 | quality-attribute | validated | M005/S01 | none | validated |
 
 ## Coverage Summary
 
 - Total requirements: 44
-- Active: 10
-- Validated: 26
+- Active: 9
+- Validated: 27
 - Deferred: 4
 - Out of scope: 4
 - Unmapped active requirements: 0

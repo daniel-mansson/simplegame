@@ -1,5 +1,7 @@
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using LitMotion;
+using LitMotion.Extensions;
 using SimpleGame.Core.TransitionManagement;
 using UnityEngine;
 
@@ -7,8 +9,12 @@ namespace SimpleGame.Core.Unity.TransitionManagement
 {
     /// <summary>
     /// Unity implementation of <see cref="ITransitionPlayer"/>.
-    /// Uses a <see cref="CanvasGroup"/> to fade a full-screen overlay in and out.
-    /// Place this component on a high-sort-order Canvas in the persistent scene (wired in S05).
+    /// Uses a <see cref="CanvasGroup"/> to fade a full-screen overlay in and out,
+    /// driven by LitMotion tweening.
+    ///
+    /// This component lives on a self-contained transition prefab. The prefab owns
+    /// all visual elements (Canvas, CanvasGroup, Image, etc.). Swapping the prefab
+    /// changes the transition look without touching callers or the API.
     ///
     /// Input blocking is NOT performed here — that is <c>IInputBlocker</c>'s responsibility.
     /// <c>blocksRaycasts</c> is explicitly kept <c>false</c> so the overlay never steals input.
@@ -29,14 +35,9 @@ namespace SimpleGame.Core.Unity.TransitionManagement
             _canvasGroup.alpha = 0f;
             _canvasGroup.gameObject.SetActive(true);
 
-            float elapsed = 0f;
-            while (elapsed < _fadeDuration)
-            {
-                elapsed += Time.deltaTime;
-                _canvasGroup.alpha = Mathf.Clamp01(elapsed / _fadeDuration);
-                _canvasGroup.blocksRaycasts = false;
-                await UniTask.Yield(ct);
-            }
+            await LMotion.Create(0f, 1f, _fadeDuration)
+                .BindToAlpha(_canvasGroup)
+                .ToUniTask(cancellationToken: ct);
 
             _canvasGroup.alpha = 1f;
             _canvasGroup.blocksRaycasts = false;
@@ -52,14 +53,9 @@ namespace SimpleGame.Core.Unity.TransitionManagement
             _canvasGroup.blocksRaycasts = false;
             _canvasGroup.alpha = 1f;
 
-            float elapsed = 0f;
-            while (elapsed < _fadeDuration)
-            {
-                elapsed += Time.deltaTime;
-                _canvasGroup.alpha = Mathf.Clamp01(1f - (elapsed / _fadeDuration));
-                _canvasGroup.blocksRaycasts = false;
-                await UniTask.Yield(ct);
-            }
+            await LMotion.Create(1f, 0f, _fadeDuration)
+                .BindToAlpha(_canvasGroup)
+                .ToUniTask(cancellationToken: ct);
 
             _canvasGroup.alpha = 0f;
             _canvasGroup.blocksRaycasts = false;

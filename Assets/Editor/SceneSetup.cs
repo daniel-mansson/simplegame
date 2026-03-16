@@ -88,19 +88,15 @@ public static class SceneSetup
         // Wire the CanvasGroup serialized field via SerializedObject
         WireSerializedField(inputBlocker, "_canvasGroup", inputBlockerCanvasGroup);
 
-        // Transition Canvas (sort order 200) — starts inactive
-        CreateFullScreenCanvas("TransitionOverlay", 200, out var transitionCanvas);
-        var transitionCanvasGroup = transitionCanvas.gameObject.AddComponent<CanvasGroup>();
-        transitionCanvasGroup.blocksRaycasts = false;
-        transitionCanvasGroup.alpha = 0f;
-        var overlayImage = transitionCanvas.gameObject.AddComponent<Image>();
-        overlayImage.color = Color.black;
-        overlayImage.rectTransform.anchorMin = Vector2.zero;
-        overlayImage.rectTransform.anchorMax = Vector2.one;
-        overlayImage.rectTransform.sizeDelta = Vector2.zero;
-        var transitionPlayer = transitionCanvas.gameObject.AddComponent<UnityTransitionPlayer>();
-        WireSerializedField(transitionPlayer, "_canvasGroup", transitionCanvasGroup);
-        transitionCanvas.gameObject.SetActive(false);
+        // Transition overlay — instantiate from prefab (starts inactive)
+        var transitionPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/TransitionOverlay.prefab");
+        if (transitionPrefab == null)
+        {
+            Debug.LogError("[SceneSetup] TransitionOverlay.prefab not found at Assets/Prefabs/TransitionOverlay.prefab. Run Tools/Setup/Create Transition Prefab first.");
+            return;
+        }
+        var transitionInstance = (GameObject)PrefabUtility.InstantiatePrefab(transitionPrefab);
+        transitionInstance.SetActive(false);
 
         // Popup Canvas (sort order 300)
         CreateFullScreenCanvas("PopupCanvas", 300, out var popupCanvas);

@@ -1,7 +1,7 @@
 {
   "name": "SimpleGame.Core",
   "rootNamespace": "SimpleGame.Core",
-  "references": ["UniTask", "UnityEngine.UI"],
+  "references": ["UniTask", "UnityEngine.UI", "LitMotion", "LitMotion.Extensions"],
   "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,

@@ -1,6 +1,6 @@
 ﻿<Solution>
-  <Project Path="SimpleGame.Tests.Game.csproj" />
   <Project Path="SimpleGame.Game.csproj" />
+  <Project Path="SimpleGame.Tests.Game.csproj" />
   <Project Path="SimpleGame.Core.csproj" />
   <Project Path="SimpleGame.Tests.Core.csproj" />
   <Project Path="SimpleGame.Editor.csproj" />

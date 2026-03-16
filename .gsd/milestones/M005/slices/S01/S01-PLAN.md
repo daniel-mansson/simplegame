@@ -24,7 +24,7 @@
 
 ## Tasks
 
-- [ ] **T01: Rewrite UnityTransitionPlayer with LitMotion and extract prefab** `est:45m`
+- [x] **T01: Rewrite UnityTransitionPlayer with LitMotion and extract prefab** `est:45m`
   - Why: This is the entire slice — rewrite the MonoBehaviour to use LitMotion, add asmdef references, create the prefab via editor script, update SceneSetup to instantiate from prefab
   - Files: `Assets/Scripts/Core/Unity/TransitionManagement/UnityTransitionPlayer.cs`, `Assets/Scripts/Core/SimpleGame.Core.asmdef`, `Assets/Editor/SceneSetup.cs`
   - Do: Add LitMotion/LitMotion.Extensions refs to Core asmdef → rewrite FadeOutAsync/FadeInAsync to use `LMotion.Create(0f, 1f, _fadeDuration).BindToAlpha(_canvasGroup).ToUniTask(ct)` → create editor script to produce prefab asset → update SceneSetup to instantiate prefab → run tests → verify in play mode
