@@ -43,7 +43,7 @@ namespace SimpleGame.Game.Boot
             _sessionService = new GameSessionService();
 
             var inputBlocker = FindFirstObjectByType<UnityInputBlocker>();
-            var transitionPlayer = FindFirstObjectByType<UnityTransitionPlayer>();
+            var transitionPlayer = FindFirstObjectByType<UnityTransitionPlayer>(FindObjectsInactive.Include);
             var popupContainer = FindFirstObjectByType<UnityPopupContainer>();
             var sceneLoader = new UnitySceneLoader();
 
