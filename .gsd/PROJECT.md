@@ -44,3 +44,4 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 ## Milestone Sequence
 
 - [x] M001: MVP UI Architecture Foundation — S01 ✅ · S02 ✅ · S03 ✅ · S04 ✅ · S05 ✅ · M001-SUMMARY ✅ (pending play-mode UAT)
+- [ ] M002: Assembly Restructure — Core/Game Separation — split into game-agnostic Core assembly and game-specific Game assembly; generic ScreenManager/PopupManager; feature cohesion in Game; split test assemblies
