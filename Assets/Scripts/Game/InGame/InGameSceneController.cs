@@ -140,7 +140,7 @@ namespace SimpleGame.Game.InGame
             {
                 await _popupManager.ShowPopupAsync(PopupId.WinDialog, ct);
                 await winPresenter.WaitForContinue();
-                await _popupManager.DismissPopupAsync(ct);
+                // Popup stays open — ScreenManager dismisses it behind the transition
             }
             finally
             {
@@ -159,7 +159,12 @@ namespace SimpleGame.Game.InGame
             {
                 await _popupManager.ShowPopupAsync(PopupId.LoseDialog, ct);
                 var choice = await losePresenter.WaitForChoice();
-                await _popupManager.DismissPopupAsync(ct);
+                if (choice == LoseDialogChoice.Retry)
+                {
+                    // Retry stays in-scene — dismiss popup normally
+                    await _popupManager.DismissPopupAsync(ct);
+                }
+                // Back leaves popup open — ScreenManager dismisses it behind the transition
                 return choice;
             }
             finally

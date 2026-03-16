@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
@@ -14,12 +15,17 @@ namespace SimpleGame.Core.ScreenManagement
     /// When <see cref="ITransitionPlayer"/> is injected, navigation is bracketed by
     /// fade-out / fade-in animations with input blocked for the duration. When null,
     /// behavior is identical to the original implementation.
+    ///
+    /// When <c>onBeforeSceneUnload</c> is provided, it is called after fade-out
+    /// completes (screen is black) but before the scene is unloaded. Use this to
+    /// dismiss popups behind the transition so they don't visibly snap shut.
     /// </summary>
     public class ScreenManager<TScreenId> where TScreenId : struct, System.Enum
     {
         private readonly ISceneLoader _sceneLoader;
         private readonly ITransitionPlayer _transitionPlayer;
         private readonly IInputBlocker _inputBlocker;
+        private readonly Func<CancellationToken, UniTask> _onBeforeSceneUnload;
         private readonly Stack<TScreenId> _history = new Stack<TScreenId>();
         private TScreenId? _currentScreen;
         private bool _isNavigating;
@@ -29,11 +35,13 @@ namespace SimpleGame.Core.ScreenManagement
 
         public ScreenManager(ISceneLoader sceneLoader,
                              ITransitionPlayer transitionPlayer = null,
-                             IInputBlocker inputBlocker = null)
+                             IInputBlocker inputBlocker = null,
+                             Func<CancellationToken, UniTask> onBeforeSceneUnload = null)
         {
             _sceneLoader = sceneLoader;
             _transitionPlayer = transitionPlayer;
             _inputBlocker = inputBlocker;
+            _onBeforeSceneUnload = onBeforeSceneUnload;
         }
 
         /// <summary>
@@ -67,6 +75,9 @@ namespace SimpleGame.Core.ScreenManagement
             {
                 if (_transitionPlayer != null)
                     await _transitionPlayer.FadeOutAsync(ct);
+
+                if (_onBeforeSceneUnload != null)
+                    await _onBeforeSceneUnload(ct);
 
                 if (_currentScreen.HasValue)
                 {
@@ -114,6 +125,9 @@ namespace SimpleGame.Core.ScreenManagement
 
                 if (_transitionPlayer != null)
                     await _transitionPlayer.FadeOutAsync(ct);
+
+                if (_onBeforeSceneUnload != null)
+                    await _onBeforeSceneUnload(ct);
 
                 if (_currentScreen.HasValue)
                     await _sceneLoader.UnloadSceneAsync(_currentScreen.Value.ToString(), ct);

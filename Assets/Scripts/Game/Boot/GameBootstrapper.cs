@@ -47,8 +47,9 @@ namespace SimpleGame.Game.Boot
             var popupContainer = FindFirstObjectByType<UnityPopupContainer>();
             var sceneLoader = new UnitySceneLoader();
 
-            _screenManager = new ScreenManager<ScreenId>(sceneLoader, transitionPlayer, inputBlocker);
             _popupManager = new PopupManager<PopupId>(popupContainer, inputBlocker);
+            _screenManager = new ScreenManager<ScreenId>(sceneLoader, transitionPlayer, inputBlocker,
+                onBeforeSceneUnload: _popupManager.DismissAllAsync);
             _uiFactory = new UIFactory(gameService, _progressionService, _sessionService);
 
             Debug.Log("[GameBootstrapper] Infrastructure ready. Starting navigation loop.");
