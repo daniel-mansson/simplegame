@@ -65,7 +65,7 @@ This milestone is complete only when all are true:
 - [x] **S04: Win & Lose Popups** `risk:medium` `depends:[S03]`
   > After this: WinDialog and LoseDialog are new PopupId entries with views/presenters. Win popup shows score + level with Continue. Lose popup shows score + level with Retry/Back. Both wired into PopupManager. Edit-mode tests prove popup presenter behavior.
 
-- [ ] **S05: Full Loop Integration & Polish** `risk:low` `depends:[S04]`
+- [x] **S05: Full Loop Integration & Polish** `risk:low` `depends:[S04]`
   > After this: GameBootstrapper handles InGame case. UIFactory creates all new presenters. UnityPopupContainer wires win/lose popups. Boot scene has popup GameObjects. Complete loop works in play mode: Menu (Level 1) → Play → InGame → score up → Win → popup → Menu (Level 2). Lose → popup → Retry → Win → Level 3.
 
 ## Boundary Map

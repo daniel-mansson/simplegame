@@ -4,6 +4,7 @@ using SimpleGame.Core.ScreenManagement;
 using SimpleGame.Core.Unity.PopupManagement;
 using SimpleGame.Core.Unity.ScreenManagement;
 using SimpleGame.Core.Unity.TransitionManagement;
+using SimpleGame.Game.InGame;
 using SimpleGame.Game.MainMenu;
 using SimpleGame.Game.Popup;
 using SimpleGame.Game.Services;
@@ -29,6 +30,8 @@ namespace SimpleGame.Game.Boot
         private ScreenManager<ScreenId> _screenManager;
         private PopupManager<PopupId> _popupManager;
         private UIFactory _uiFactory;
+        private ProgressionService _progressionService;
+        private GameSessionService _sessionService;
 
         private async UniTaskVoid Start()
         {
@@ -36,8 +39,8 @@ namespace SimpleGame.Game.Boot
 
             // --- Build infrastructure ---
             var gameService = new GameService();
-            var progressionService = new ProgressionService();
-            var sessionService = new GameSessionService();
+            _progressionService = new ProgressionService();
+            _sessionService = new GameSessionService();
 
             var inputBlocker = FindFirstObjectByType<UnityInputBlocker>();
             var transitionPlayer = FindFirstObjectByType<UnityTransitionPlayer>();
@@ -46,7 +49,7 @@ namespace SimpleGame.Game.Boot
 
             _screenManager = new ScreenManager<ScreenId>(sceneLoader, transitionPlayer, inputBlocker);
             _popupManager = new PopupManager<PopupId>(popupContainer, inputBlocker);
-            _uiFactory = new UIFactory(gameService, progressionService, sessionService);
+            _uiFactory = new UIFactory(gameService, _progressionService, _sessionService);
 
             Debug.Log("[GameBootstrapper] Infrastructure ready. Starting navigation loop.");
 
@@ -97,6 +100,19 @@ namespace SimpleGame.Game.Boot
                             return;
                         }
                         ctrl.Initialize(_uiFactory);
+                        var next = await ctrl.RunAsync();
+                        await _screenManager.ShowScreenAsync(next);
+                        break;
+                    }
+                    case ScreenId.InGame:
+                    {
+                        var ctrl = FindFirstObjectByType<InGameSceneController>();
+                        if (ctrl == null)
+                        {
+                            Debug.LogError("[GameBootstrapper] InGameSceneController not found in scene.");
+                            return;
+                        }
+                        ctrl.Initialize(_uiFactory, _progressionService, _sessionService, _popupManager);
                         var next = await ctrl.RunAsync();
                         await _screenManager.ShowScreenAsync(next);
                         break;
