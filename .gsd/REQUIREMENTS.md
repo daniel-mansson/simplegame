@@ -14,7 +14,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S01
 - Supporting slices: M001/S02, M001/S03, M001/S04, M001/S05, M004/S01-S04
-- Validation: M001 — 3 view interfaces + 3 presenters + 3 view MonoBehaviours; 49/49 tests; static guard clean; pending play-mode UAT
+- Validation: M001 — 3 view interfaces + 3 presenters + 3 view MonoBehaviours; M004 — 6 additional view interfaces + 6 presenters + 6 views; 98/98 tests; static guard clean
 - Notes: Presenters must not be MonoBehaviours. Views must not know about presenters or models.
 
 ### R002 — View independence (no backward refs to systems/services)
@@ -25,7 +25,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S01
 - Supporting slices: M001/S05, M004/S02-S04
-- Validation: M001 — 3 MockXxxViewHasNoPresenterReference reflection tests pass; view MonoBehaviours grep clean; pending UAT
+- Validation: M001 — 3 MockXxxViewHasNoPresenterReference reflection tests pass; M004 — 6 new views follow same pattern; view MonoBehaviours grep clean
 - Notes: This constraint is stricter than typical MVP — views don't even have a SetPresenter method.
 
 ### R004 — Central UI factory for presenter construction
@@ -36,7 +36,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S01
 - Supporting slices: M001/S05, M004/S02-S04
-- Validation: M001 — UIFactory 3 Create methods; GameBootstrapper sole caller; 17 DemoWiringTests pass; pending UAT
+- Validation: M001 — UIFactory 3 Create methods; M004 — UIFactory extended with CreateInGamePresenter, CreateWinDialogPresenter, CreateLoseDialogPresenter; 98/98 tests pass
 - Notes: M004 will extend UIFactory with new Create methods for InGame and popup presenters.
 
 ### R007 — Model layer with domain services/systems
@@ -47,7 +47,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S01
 - Supporting slices: M001/S05, M004/S01
-- Validation: M001 — GameService constructed in GameBootstrapper, injected through UIFactory; pending UAT
+- Validation: M001 — GameService constructed in GameBootstrapper; M004 — GameSessionService + ProgressionService as real domain services; 12 service tests pass
 - Notes: M004 adds GameSessionService and ProgressionService as real domain services.
 
 ### R008 — Boot scene → main scene initialization flow
@@ -58,7 +58,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S05
 - Supporting slices: M001/S02, M004/S05
-- Validation: M001 — Boot.unity at index 0; GameBootstrapper wires full chain; pending UAT
+- Validation: M001 — Boot.unity at index 0; GameBootstrapper wires full chain; M004 — GameBootstrapper handles MainMenu + Settings + InGame
 
 ### R009 — Hybrid scene management (persistent + additive scenes)
 - Class: core-capability
@@ -68,7 +68,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S02
 - Supporting slices: M001/S05, M004/S03
-- Validation: M001 — Boot persistent; MainMenu/Settings additive; pending UAT
+- Validation: M001 — Boot persistent; MainMenu/Settings additive; M004 — InGame additive; 4 scenes total
 
 ### R010 — Screen navigation between full screens
 - Class: primary-user-loop
@@ -78,7 +78,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S02
 - Supporting slices: M001/S04, M001/S05, M004/S02, M004/S03
-- Validation: M001 — ShowScreenAsync + GoBack + presenter lifecycle; 49/49 tests; pending UAT
+- Validation: M001 — ShowScreenAsync + GoBack + presenter lifecycle; M004 — InGame navigation + full loop; 98/98 tests
 
 ### R014 — UniTask async/await for async operations
 - Class: constraint
@@ -98,132 +98,9 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M001/S05
 - Supporting slices: M004/S05
-- Validation: M001 — 3 scenes; full chain; 49/49 tests; pending UAT
+- Validation: M001 — 3 scenes; full chain; M004 — 4 scenes with working game loop; 98/98 tests
 - Notes: M004 upgrades the demo from navigation showcase to working game loop.
 
-### R029 — Game session context via shared service
-- Class: core-capability
-- Status: active
-- Description: A GameSessionService holds the current game context (level ID, accumulated score, game outcome). Scene controllers read from it to configure themselves. The service mediates context passing between scenes without changing the RunAsync signature.
-- Why it matters: Keeps the ISceneController interface clean. Context flows through the service layer, not method parameters. Receiver scenes are responsible for reading what they need.
-- Source: user
-- Primary owning slice: M004/S01
-- Supporting slices: M004/S02, M004/S03, M004/S04
-- Validation: unmapped
-- Notes: User explicitly chose service-mediated context over RunAsync params.
-
-### R030 — Progression service with in-memory level tracking
-- Class: core-capability
-- Status: active
-- Description: A ProgressionService tracks the player's current level (starting at 1). On win, it advances the level and logs the score. State is in-memory only — resets on app restart.
-- Why it matters: Proves domain services can own game state and mutate it based on gameplay outcomes. The main menu reads from this service to display current progress.
-- Source: user
-- Primary owning slice: M004/S01
-- Supporting slices: M004/S02, M004/S03
-- Validation: unmapped
-- Notes: No disk persistence — explicitly deferred by user.
-
-### R031 — Main menu displays current level and has Play button
-- Class: primary-user-loop
-- Status: active
-- Description: The main menu shows the current level from ProgressionService and has a Play button that sets the session context (level ID) and navigates to InGame.
-- Why it matters: The main menu is the hub — it must reflect game state and initiate gameplay.
-- Source: user
-- Primary owning slice: M004/S02
-- Supporting slices: none
-- Validation: unmapped
-
-### R032 — InGame scene receives level ID and is self-sufficient
-- Class: core-capability
-- Status: active
-- Description: The InGame scene controller reads the level ID from GameSessionService and configures the scene accordingly. It is responsible for loading/setting up everything needed for that level.
-- Why it matters: Proves the context-passing pattern and scene self-sufficiency.
-- Source: user
-- Primary owning slice: M004/S03
-- Supporting slices: none
-- Validation: unmapped
-- Notes: For this milestone, "configuring based on level" means displaying the level ID — not loading different assets.
-
-### R033 — InGame gameplay — score counter + win/lose triggers
-- Class: primary-user-loop
-- Status: active
-- Description: InGame scene has a score display, a button to increment the score, a Win button, and a Lose button.
-- Why it matters: Minimal but complete gameplay loop — user can take actions and trigger outcomes.
-- Source: user
-- Primary owning slice: M004/S03
-- Supporting slices: none
-- Validation: unmapped
-
-### R034 — Win popup with score + level, returns to main menu
-- Class: primary-user-loop
-- Status: active
-- Description: Winning triggers a win popup that displays the achieved score and level completed. A continue button returns the player to the main menu. The progression service registers the win before the popup shows.
-- Why it matters: Proves outcome → service → UI feedback → navigation chain.
-- Source: user
-- Primary owning slice: M004/S04
-- Supporting slices: M004/S03
-- Validation: unmapped
-
-### R035 — Lose popup with score + level, retry/back options
-- Class: primary-user-loop
-- Status: active
-- Description: Losing triggers a lose popup showing score and level. Retry resets the score and replays the same level. Back returns to the main menu without advancing.
-- Why it matters: Proves branching outcome flow — retry loops within the scene, back navigates out.
-- Source: user
-- Primary owning slice: M004/S04
-- Supporting slices: M004/S03
-- Validation: unmapped
-
-### R036 — Progression service logs score on win and advances level
-- Class: core-capability
-- Status: active
-- Description: When the player wins, the progression service receives the score, logs it (Debug.Log), and advances the current level counter.
-- Why it matters: Domain logic lives in the service, not in the presenter or scene controller.
-- Source: user
-- Primary owning slice: M004/S03
-- Supporting slices: M004/S01
-- Validation: unmapped
-
-### R037 — Play-from-editor bootstrapping for InGame scene
-- Class: launchability
-- Status: active
-- Description: InGame scene works when played directly from the editor. The scene controller has a fallback/default configuration (e.g. a serialized field for default level ID) so it can bootstrap without the full menu flow.
-- Why it matters: Developer workflow — shouldn't have to navigate from menu every time to test InGame.
-- Source: user
-- Primary owning slice: M004/S03
-- Supporting slices: none
-- Validation: unmapped
-- Notes: Keep it simple — serialized field on scene controller for default level.
-
-### R038 — Full game loop — menu → play → outcome → menu reflects progress
-- Class: primary-user-loop
-- Status: active
-- Description: Complete loop works end-to-end: main menu shows level → play → score up → win or lose → outcome popup → menu reflects new state.
-- Why it matters: The milestone's reason for existing — proving the architecture carries a real game loop.
-- Source: inferred
-- Primary owning slice: M004/S05
-- Supporting slices: M004/S01-S04
-- Validation: unmapped
-
-### R039 — New popup types (WinDialog, LoseDialog) with distinct views/presenters
-- Class: core-capability
-- Status: active
-- Description: WinDialog and LoseDialog are new PopupId entries with their own view interfaces, view MonoBehaviours, and presenters. They are distinct from ConfirmDialog — not reused.
-- Why it matters: Win/lose will look and behave very differently from generic confirmations. User explicitly chose new popups for clearly different dialogs.
-- Source: user
-- Primary owning slice: M004/S04
-- Supporting slices: none
-- Validation: unmapped
-
-### R040 — Edit-mode tests for new presenters, services, and scene controllers
-- Class: quality-attribute
-- Status: active
-- Description: All new types (services, presenters, scene controllers) get edit-mode unit tests following the established pattern — mock views, constructor injection, no Unity runtime.
-- Why it matters: Continues the quality bar established in M001-M003.
-- Source: inferred
-- Primary owning slice: M004/S01
-- Supporting slices: M004/S02, M004/S03, M004/S04, M004/S05
-- Validation: unmapped
 
 ## Validated
 
@@ -311,6 +188,78 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Validated by: M002 — ScreenManager<TScreenId>/PopupManager<TPopupId> where T : struct, System.Enum
 - Proof: Core tests use TestScreenId/TestPopupId; Game uses ScreenId/PopupId
 
+### R029 — Game session context via shared service
+- Class: core-capability
+- Status: validated
+- Validated by: M004 — GameSessionService holds level/score/outcome; 7 edit-mode tests pass; InGameSceneController reads from it; MainMenuPresenter writes to it
+- Proof: TestResults.xml testcasecount="98" passed="98" — GameSessionServiceTests (7/7 pass)
+
+### R030 — Progression service with in-memory level tracking
+- Class: core-capability
+- Status: validated
+- Validated by: M004 — ProgressionService tracks level, advances on win, logs score; 5 edit-mode tests pass
+- Proof: TestResults.xml — ProgressionServiceTests (5/5 pass); Debug.Log "[ProgressionService] Level N complete"
+
+### R031 — Main menu displays current level and has Play button
+- Class: primary-user-loop
+- Status: validated
+- Validated by: M004 — MainMenuPresenter reads CurrentLevel, displays "Level N", Play sets session context; DemoWiringTests prove wiring
+- Proof: TestResults.xml — DemoWiringTests (25/25 pass)
+
+### R032 — InGame scene receives level ID and is self-sufficient
+- Class: core-capability
+- Status: validated
+- Validated by: M004 — InGameSceneController reads level from GameSessionService; fallback via _defaultLevelId; 4 controller tests pass
+- Proof: TestResults.xml — InGameSceneControllerTests (4/4 pass)
+
+### R033 — InGame gameplay — score counter + win/lose triggers
+- Class: primary-user-loop
+- Status: validated
+- Validated by: M004 — InGamePresenter has score increment, win, lose actions; 10 edit-mode tests pass
+- Proof: TestResults.xml — InGamePresenterTests (10/10 pass)
+
+### R034 — Win popup with score + level, returns to main menu
+- Class: primary-user-loop
+- Status: validated
+- Validated by: M004 — WinDialogPresenter shows score + level, WaitForContinue resolves on click; 4 tests pass
+- Proof: TestResults.xml — WinDialogPresenterTests (4/4 pass)
+
+### R035 — Lose popup with score + level, retry/back options
+- Class: primary-user-loop
+- Status: validated
+- Validated by: M004 — LoseDialogPresenter Retry/Back flow proven by 5 tests; InGameSceneController retry creates fresh presenter
+- Proof: TestResults.xml — LoseDialogPresenterTests (5/5 pass)
+
+### R036 — Progression service logs score on win and advances level
+- Class: core-capability
+- Status: validated
+- Validated by: M004 — InGameSceneController calls RegisterWin(score); ProgressionService logs and advances level; tested in both service and controller tests
+- Proof: TestResults.xml — ProgressionServiceTests (5/5) + InGameSceneControllerTests (4/4)
+
+### R037 — Play-from-editor bootstrapping for InGame scene
+- Class: launchability
+- Status: validated
+- Validated by: M004 — InGameSceneController has serialized _defaultLevelId; BootInjector loads Boot if missing; tested in InGameSceneControllerTests
+- Proof: TestResults.xml — InGameSceneControllerTests (4/4 pass)
+
+### R038 — Full game loop — menu → play → outcome → menu reflects progress
+- Class: primary-user-loop
+- Status: validated
+- Validated by: M004 — GameBootstrapper handles ScreenId.InGame; full loop wired; 98/98 tests; play-mode UAT confirmed
+- Proof: TestResults.xml testcasecount="98" passed="98"; play-mode UAT
+
+### R039 — New popup types (WinDialog, LoseDialog) with distinct views/presenters
+- Class: core-capability
+- Status: validated
+- Validated by: M004 — WinDialog and LoseDialog are PopupId entries with own view interfaces, views, and presenters; UnityPopupContainer wires both; 9 popup tests pass
+- Proof: TestResults.xml — WinDialogPresenterTests (4/4) + LoseDialogPresenterTests (5/5)
+
+### R040 — Edit-mode tests for new presenters, services, and scene controllers
+- Class: quality-attribute
+- Status: validated
+- Validated by: M004 — 98/98 edit-mode tests pass; all new types covered
+- Proof: TestResults.xml testcasecount="98" passed="98" failed="0"
+
 ## Deferred
 
 ### R018 — View preview tool
@@ -355,6 +304,17 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Supporting slices: none
 - Validation: unmapped
 - Notes: Architecture supports it — InGame reads level ID from service. Real content loading deferred.
+
+### R044 — Prefab-based transition with LitMotion tweening
+- Class: quality-attribute
+- Status: active
+- Description: Transition visuals live in a self-contained prefab. The prefab's MonoBehaviour implements ITransitionPlayer using LitMotion for tweening. Swapping the prefab changes the transition look without touching callers or the API. First implementation: 0.3s fade-to-black via CanvasGroup alpha.
+- Why it matters: Current hand-rolled while-loop fade is brittle and non-extensible. Future transitions will use images, animations, and shaders — the prefab must own all visual details. LitMotion replaces manual tweening for consistency and correctness.
+- Source: user
+- Primary owning slice: M005/S01
+- Supporting slices: none
+- Validation: unmapped
+- Notes: ITransitionPlayer interface unchanged. R013 (fade transitions) stays validated — this upgrades the implementation, not the capability contract.
 
 ## Out of Scope
 
@@ -422,27 +382,28 @@ Use it to track what is actively in scope, what has been validated by completed 
 | R026 | quality-attribute | validated | M002/S03 | none | validated |
 | R027 | quality-attribute | validated | M002/S03 | M002/S01-S02 | validated |
 | R028 | core-capability | validated | M002/S01 | none | validated |
-| R029 | core-capability | active | M004/S01 | M004/S02-S04 | unmapped |
-| R030 | core-capability | active | M004/S01 | M004/S02-S03 | unmapped |
-| R031 | primary-user-loop | active | M004/S02 | none | unmapped |
-| R032 | core-capability | active | M004/S03 | none | unmapped |
-| R033 | primary-user-loop | active | M004/S03 | none | unmapped |
-| R034 | primary-user-loop | active | M004/S04 | M004/S03 | unmapped |
-| R035 | primary-user-loop | active | M004/S04 | M004/S03 | unmapped |
-| R036 | core-capability | active | M004/S03 | M004/S01 | unmapped |
-| R037 | launchability | active | M004/S03 | none | unmapped |
-| R038 | primary-user-loop | active | M004/S05 | M004/S01-S04 | unmapped |
-| R039 | core-capability | active | M004/S04 | none | unmapped |
-| R040 | quality-attribute | active | M004/S01 | M004/S02-S05 | unmapped |
+| R029 | core-capability | validated | M004/S01 | M004/S02-S04 | validated M004 |
+| R030 | core-capability | validated | M004/S01 | M004/S02-S03 | validated M004 |
+| R031 | primary-user-loop | validated | M004/S02 | none | validated M004 |
+| R032 | core-capability | validated | M004/S03 | none | validated M004 |
+| R033 | primary-user-loop | validated | M004/S03 | none | validated M004 |
+| R034 | primary-user-loop | validated | M004/S04 | M004/S03 | validated M004 |
+| R035 | primary-user-loop | validated | M004/S04 | M004/S03 | validated M004 |
+| R036 | core-capability | validated | M004/S03 | M004/S01 | validated M004 |
+| R037 | launchability | validated | M004/S03 | none | validated M004 |
+| R038 | primary-user-loop | validated | M004/S05 | M004/S01-S04 | validated M004 |
+| R039 | core-capability | validated | M004/S04 | none | validated M004 |
+| R040 | quality-attribute | validated | M004/S01 | M004/S02-S05 | validated M004 |
 | R041 | continuity | deferred | none | none | unmapped |
 | R042 | core-capability | deferred | none | none | unmapped |
 | R043 | anti-feature | out-of-scope | none | none | n/a |
+| R044 | quality-attribute | active | M005/S01 | none | unmapped |
 
 ## Coverage Summary
 
-- Total requirements: 43
-- Active: 21
-- Validated: 14
+- Total requirements: 44
+- Active: 10
+- Validated: 26
 - Deferred: 4
 - Out of scope: 4
 - Unmapped active requirements: 0
