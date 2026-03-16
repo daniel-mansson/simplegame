@@ -348,9 +348,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 1730989237}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4e0a0588bdf9c794b94479d4c15757ba, type: 3}
+  m_Script: {fileID: 11500000, guid: e739170bc4080b6419cc71d688d407a1, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: SimpleGame.Runtime::SimpleGame.Runtime.MVP.SettingsView
+  m_EditorClassIdentifier: SimpleGame.Game::SimpleGame.Game.Settings.SettingsView
   _backButton: {fileID: 821045431}
   _titleText: {fileID: 1812683445}
 --- !u!114 &1730989239

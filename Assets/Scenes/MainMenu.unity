@@ -548,9 +548,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 1730989237}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0b8f46d6b56a0934ebfcedd739c6f7ed, type: 3}
+  m_Script: {fileID: 11500000, guid: 4bf43909a63951748950e097980791bd, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: SimpleGame.Runtime::SimpleGame.Runtime.MVP.MainMenuView
+  m_EditorClassIdentifier: SimpleGame.Game::SimpleGame.Game.MainMenu.MainMenuView
   _settingsButton: {fileID: 1061680071}
   _popupButton: {fileID: 821045431}
   _titleText: {fileID: 1812683445}

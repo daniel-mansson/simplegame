@@ -228,9 +228,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 254322031}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a9dddffd0d2edc34e9ef9a672165581e, type: 3}
+  m_Script: {fileID: 11500000, guid: 9e8baa74eeedb214abf32ac68ebdf912, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: SimpleGame.Runtime::SimpleGame.Runtime.PopupManagement.UnityInputBlocker
+  m_EditorClassIdentifier: SimpleGame.Core.Unity.PopupManagement::SimpleGame.Core.Unity.PopupManagement.UnityInputBlocker
   _canvasGroup: {fileID: 254322033}
 --- !u!225 &254322033
 CanvasGroup:
@@ -752,9 +752,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 1184709343}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2e7e9bff948370a49813c45b4bc3ce8e, type: 3}
+  m_Script: {fileID: 11500000, guid: 079e12c4be5d1af489a8be3c450c8713, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: SimpleGame.Runtime::SimpleGame.Runtime.Boot.GameBootstrapper
+  m_EditorClassIdentifier: SimpleGame.Game::SimpleGame.Game.Boot.GameBootstrapper
 --- !u!4 &1184709345
 Transform:
   m_ObjectHideFlags: 0
@@ -891,9 +891,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 1730989237}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c6d6634a6a467534d8a33e1c655e56a5, type: 3}
+  m_Script: {fileID: 11500000, guid: 71b5b82264919a5419df79f24eaaf5ac, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: SimpleGame.Runtime::SimpleGame.Runtime.PopupManagement.UnityPopupContainer
+  m_EditorClassIdentifier: SimpleGame.Game::SimpleGame.Game.Popup.UnityPopupContainer
   _confirmDialogPopup: {fileID: 1812683444}
 --- !u!114 &1730989239
 MonoBehaviour:
@@ -1075,9 +1075,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 1812683444}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e2f510e813917d04e82351d616ee2ad6, type: 3}
+  m_Script: {fileID: 11500000, guid: 301287871145698409c9c1b8d9b22406, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: SimpleGame.Runtime::SimpleGame.Runtime.MVP.ConfirmDialogView
+  m_EditorClassIdentifier: SimpleGame.Game::SimpleGame.Game.Popup.ConfirmDialogView
   _confirmButton: {fileID: 950795391}
   _cancelButton: {fileID: 1061680074}
   _messageText: {fileID: 821045431}
@@ -1263,9 +1263,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 2020853441}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 47094d37b94138af30c3eac3b2af3875, type: 3}
+  m_Script: {fileID: 11500000, guid: 63b84c4937f2b714791716c39f6aadba, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: SimpleGame.Runtime::SimpleGame.Runtime.TransitionManagement.UnityTransitionPlayer
+  m_EditorClassIdentifier: SimpleGame.Core.Unity.TransitionManagement::SimpleGame.Core.Unity.TransitionManagement.UnityTransitionPlayer
   _canvasGroup: {fileID: 2020853445}
   _fadeDuration: 0.3
 --- !u!114 &2020853443
