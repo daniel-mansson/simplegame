@@ -175,7 +175,15 @@ public static class SceneSetup
     {
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
+        // Camera — each game scene owns its camera so scene transitions are clean
+        var cam = CreateSceneCamera("MainMenuCamera");
+
         CreateFullScreenCanvas("Canvas", 0, out var canvas);
+
+        // Switch to ScreenSpaceCamera so this canvas renders through the scene camera
+        canvas.renderMode = RenderMode.ScreenSpaceCamera;
+        canvas.worldCamera = cam;
+        canvas.planeDistance = 1f;
 
         // Title text
         var titleGO = new GameObject("TitleText");
@@ -213,6 +221,12 @@ public static class SceneSetup
         WireSerializedField(mainMenuView, "_popupButton", popupButtonGO.GetComponent<Button>());
         WireSerializedField(mainMenuView, "_titleText", titleText);
 
+        // MainMenuSceneController — drives the scene's async control flow
+        var sceneControllerGO = new GameObject("MainMenuSceneController");
+        var mainMenuController = sceneControllerGO.AddComponent<MainMenuSceneController>();
+        WireSerializedField(mainMenuController, "_mainMenuView", mainMenuView);
+        // _confirmDialogView lives in Boot scene — discovered at runtime; not wired here
+
         bool saved = EditorSceneManager.SaveScene(scene, MainMenuPath);
         Debug.Log(saved ? "[SceneSetup] MainMenu scene saved: " + MainMenuPath : "[SceneSetup] ERROR saving MainMenu scene.");
     }
@@ -223,7 +237,15 @@ public static class SceneSetup
     {
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
+        // Camera — each game scene owns its camera so scene transitions are clean
+        var cam = CreateSceneCamera("SettingsCamera");
+
         CreateFullScreenCanvas("Canvas", 0, out var canvas);
+
+        // Switch to ScreenSpaceCamera so this canvas renders through the scene camera
+        canvas.renderMode = RenderMode.ScreenSpaceCamera;
+        canvas.worldCamera = cam;
+        canvas.planeDistance = 1f;
 
         // Title text
         var titleGO = new GameObject("TitleText");
@@ -252,6 +274,11 @@ public static class SceneSetup
         WireSerializedField(settingsView, "_backButton", backButtonGO.GetComponent<Button>());
         WireSerializedField(settingsView, "_titleText", titleText);
 
+        // SettingsSceneController — drives the scene's async control flow
+        var sceneControllerGO = new GameObject("SettingsSceneController");
+        var settingsController = sceneControllerGO.AddComponent<SettingsSceneController>();
+        WireSerializedField(settingsController, "_settingsView", settingsView);
+
         bool saved = EditorSceneManager.SaveScene(scene, SettingsPath);
         Debug.Log(saved ? "[SceneSetup] Settings scene saved: " + SettingsPath : "[SceneSetup] ERROR saving Settings scene.");
     }
@@ -265,6 +292,9 @@ public static class SceneSetup
         rect.sizeDelta = Vector2.zero;
         rect.anchoredPosition = Vector2.zero;
     }
+
+    private static Camera CreateSceneCamera(string name)
+        => SceneSetupHelpers.CreateSceneCamera(name);
 
     private static void WireSerializedField(Component component, string fieldName, Object value)
     {
@@ -295,6 +325,21 @@ public static class SceneSetup
 /// </summary>
 internal class SceneSetupHelpers
 {
+    internal static Camera CreateSceneCamera(string name)
+    {
+        var go = new GameObject(name);
+        var cam = go.AddComponent<Camera>();
+        cam.clearFlags = CameraClearFlags.SolidColor;
+        cam.backgroundColor = Color.black;
+        cam.orthographic = true;
+        cam.orthographicSize = 5f;
+        cam.nearClipPlane = 0.1f;
+        cam.farClipPlane = 100f;
+        cam.depth = 0;
+        go.transform.position = new Vector3(0f, 0f, -10f);
+        return cam;
+    }
+
     internal static void CreateFullScreenCanvas(string name, int sortOrder, out Canvas result)
     {
         var go = new GameObject(name);

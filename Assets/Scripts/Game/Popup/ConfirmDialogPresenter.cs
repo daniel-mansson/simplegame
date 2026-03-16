@@ -1,4 +1,3 @@
-using System;
 using Cysharp.Threading.Tasks;
 using SimpleGame.Core.MVP;
 
@@ -6,29 +5,37 @@ namespace SimpleGame.Game.Popup
 {
     public class ConfirmDialogPresenter : Presenter<IConfirmDialogView>
     {
-        private readonly Func<UniTask> _dismissCallback;
+        private UniTaskCompletionSource<bool> _confirmTcs;
 
-        public ConfirmDialogPresenter(IConfirmDialogView view, Func<UniTask> dismissCallback) : base(view)
-        {
-            _dismissCallback = dismissCallback;
-        }
+        public ConfirmDialogPresenter(IConfirmDialogView view) : base(view) { }
 
         public override void Initialize()
         {
-            View.OnConfirmClicked += HandleDismiss;
-            View.OnCancelClicked += HandleDismiss;
+            View.OnConfirmClicked += HandleConfirm;
+            View.OnCancelClicked += HandleCancel;
             View.UpdateMessage("Are you sure?");
         }
 
         public override void Dispose()
         {
-            View.OnConfirmClicked -= HandleDismiss;
-            View.OnCancelClicked -= HandleDismiss;
+            View.OnConfirmClicked -= HandleConfirm;
+            View.OnCancelClicked -= HandleCancel;
+            _confirmTcs?.TrySetCanceled();
+            _confirmTcs = null;
         }
 
-        private void HandleDismiss()
+        /// <summary>
+        /// Returns a task that resolves true when the user confirms, false when they cancel.
+        /// Each call resets the completion source — any previous pending task is cancelled.
+        /// </summary>
+        public UniTask<bool> WaitForConfirmation()
         {
-            _dismissCallback().Forget();
+            _confirmTcs?.TrySetCanceled();
+            _confirmTcs = new UniTaskCompletionSource<bool>();
+            return _confirmTcs.Task;
         }
+
+        private void HandleConfirm() => _confirmTcs?.TrySetResult(true);
+        private void HandleCancel() => _confirmTcs?.TrySetResult(false);
     }
 }

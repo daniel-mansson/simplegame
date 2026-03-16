@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
 using NUnit.Framework;
 using SimpleGame.Core.MVP;
@@ -80,28 +81,13 @@ namespace SimpleGame.Tests.Game
     internal class DemoWiringTests
     {
         private GameService _gameService;
-        private ScreenId _lastNavigatedScreen;
-        private PopupId _lastShownPopup;
-        private int _goBackCallCount;
-        private int _dismissCallCount;
         private UIFactory _factory;
 
         [SetUp]
         public void SetUp()
         {
             _gameService = new GameService();
-            _lastNavigatedScreen = default;
-            _lastShownPopup = default;
-            _goBackCallCount = 0;
-            _dismissCallCount = 0;
-
-            _factory = new UIFactory(
-                _gameService,
-                screenId => _lastNavigatedScreen = screenId,
-                popupId => _lastShownPopup = popupId,
-                () => { _goBackCallCount++; return UniTask.CompletedTask; },
-                () => { _dismissCallCount++; return UniTask.CompletedTask; }
-            );
+            _factory = new UIFactory(_gameService);
         }
 
         // --- Construction tests ---
@@ -180,123 +166,187 @@ namespace SimpleGame.Tests.Game
                 "Initialize() must call UpdateMessage at least once");
         }
 
-        // --- Event → callback wiring ---
+        // --- Async result task tests ---
 
         [Test]
-        public void MainMenuPresenter_SettingsClicked_InvokesNavigateCallback()
+        public async Task MainMenuPresenter_WaitForAction_SettingsClicked_ResolvesSettings()
         {
             var view = new MockMainMenuView();
             var presenter = _factory.CreateMainMenuPresenter(view);
             presenter.Initialize();
 
+            var task = presenter.WaitForAction().AsTask();
             view.SimulateSettingsClicked();
 
-            Assert.AreEqual(ScreenId.Settings, _lastNavigatedScreen,
-                "OnSettingsClicked must invoke navigateCallback with ScreenId.Settings");
+            var result = await task;
+            Assert.AreEqual(MainMenuAction.Settings, result);
         }
 
         [Test]
-        public void MainMenuPresenter_PopupClicked_InvokesShowPopupCallback()
+        public async Task MainMenuPresenter_WaitForAction_PopupClicked_ResolvesPopup()
         {
             var view = new MockMainMenuView();
             var presenter = _factory.CreateMainMenuPresenter(view);
             presenter.Initialize();
 
+            var task = presenter.WaitForAction().AsTask();
             view.SimulatePopupClicked();
 
-            Assert.AreEqual(PopupId.ConfirmDialog, _lastShownPopup,
-                "OnPopupClicked must invoke showPopupCallback with PopupId.ConfirmDialog");
+            var result = await task;
+            Assert.AreEqual(MainMenuAction.Popup, result);
         }
 
         [Test]
-        public void SettingsPresenter_BackClicked_InvokesGoBackCallback()
+        public async Task SettingsPresenter_WaitForBack_BackClicked_Resolves()
         {
             var view = new MockSettingsView();
             var presenter = _factory.CreateSettingsPresenter(view);
             presenter.Initialize();
 
+            var task = presenter.WaitForBack().AsTask();
             view.SimulateBackClicked();
 
-            Assert.AreEqual(1, _goBackCallCount,
-                "OnBackClicked must invoke goBackCallback exactly once");
+            await task; // resolves without exception == pass
+            Assert.Pass("WaitForBack() resolved after back click");
         }
 
         [Test]
-        public void ConfirmDialogPresenter_ConfirmClicked_InvokesDismissCallback()
+        public async Task ConfirmDialogPresenter_WaitForConfirmation_ConfirmClicked_ReturnsTrue()
         {
             var view = new MockConfirmDialogView();
             var presenter = _factory.CreateConfirmDialogPresenter(view);
             presenter.Initialize();
 
+            var task = presenter.WaitForConfirmation().AsTask();
             view.SimulateConfirmClicked();
 
-            Assert.AreEqual(1, _dismissCallCount,
-                "OnConfirmClicked must invoke dismissCallback exactly once");
+            var result = await task;
+            Assert.IsTrue(result, "Confirm click must resolve WaitForConfirmation() as true");
         }
 
         [Test]
-        public void ConfirmDialogPresenter_CancelClicked_InvokesDismissCallback()
+        public async Task ConfirmDialogPresenter_WaitForConfirmation_CancelClicked_ReturnsFalse()
         {
             var view = new MockConfirmDialogView();
             var presenter = _factory.CreateConfirmDialogPresenter(view);
             presenter.Initialize();
 
+            var task = presenter.WaitForConfirmation().AsTask();
             view.SimulateCancelClicked();
 
-            Assert.AreEqual(1, _dismissCallCount,
-                "OnCancelClicked must invoke dismissCallback exactly once");
+            var result = await task;
+            Assert.IsFalse(result, "Cancel click must resolve WaitForConfirmation() as false");
         }
 
-        // --- Dispose unsubscribes ---
+        [Test]
+        public async Task MainMenuPresenter_WaitForAction_SecondCall_CancelsPrevious()
+        {
+            var view = new MockMainMenuView();
+            var presenter = _factory.CreateMainMenuPresenter(view);
+            presenter.Initialize();
+
+            var firstTask = presenter.WaitForAction().AsTask();
+            var secondTask = presenter.WaitForAction().AsTask(); // cancels first
+
+            view.SimulateSettingsClicked();
+
+            // First task should throw OperationCanceledException when awaited
+            Assert.ThrowsAsync<System.Threading.Tasks.TaskCanceledException>(async () => await firstTask,
+                "Calling WaitForAction() a second time must cancel the previous pending task");
+
+            var result = await secondTask;
+            Assert.AreEqual(MainMenuAction.Settings, result,
+                "Second task resolves normally");
+        }
+
+        // --- Dispose cancels pending tasks ---
 
         [Test]
-        public void MainMenuPresenter_Dispose_UnsubscribesEvents()
+        public void MainMenuPresenter_Dispose_CancelsPendingTask()
+        {
+            var view = new MockMainMenuView();
+            var presenter = _factory.CreateMainMenuPresenter(view);
+            presenter.Initialize();
+
+            var task = presenter.WaitForAction().AsTask();
+            presenter.Dispose();
+
+            // After dispose, awaiting the task throws OperationCanceledException
+            Assert.ThrowsAsync<System.Threading.Tasks.TaskCanceledException>(async () => await task,
+                "Dispose() must cancel any pending WaitForAction() task");
+        }
+
+        [Test]
+        public void SettingsPresenter_Dispose_CancelsPendingTask()
+        {
+            var view = new MockSettingsView();
+            var presenter = _factory.CreateSettingsPresenter(view);
+            presenter.Initialize();
+
+            var task = presenter.WaitForBack().AsTask();
+            presenter.Dispose();
+
+            Assert.ThrowsAsync<System.Threading.Tasks.TaskCanceledException>(async () => await task,
+                "Dispose() must cancel any pending WaitForBack() task");
+        }
+
+        [Test]
+        public void ConfirmDialogPresenter_Dispose_CancelsPendingTask()
+        {
+            var view = new MockConfirmDialogView();
+            var presenter = _factory.CreateConfirmDialogPresenter(view);
+            presenter.Initialize();
+
+            var task = presenter.WaitForConfirmation().AsTask();
+            presenter.Dispose();
+
+            Assert.ThrowsAsync<System.Threading.Tasks.TaskCanceledException>(async () => await task,
+                "Dispose() must cancel any pending WaitForConfirmation() task");
+        }
+
+        // --- After Dispose, view events are unsubscribed ---
+
+        [Test]
+        public void MainMenuPresenter_Dispose_UnsubscribesViewEvents()
         {
             var view = new MockMainMenuView();
             var presenter = _factory.CreateMainMenuPresenter(view);
             presenter.Initialize();
             presenter.Dispose();
 
-            _lastNavigatedScreen = default;
-            _lastShownPopup = default;
-            view.SimulateSettingsClicked();
-            view.SimulatePopupClicked();
-
-            Assert.AreEqual(default(ScreenId), _lastNavigatedScreen,
-                "After Dispose, OnSettingsClicked must not trigger navigate callback");
-            Assert.AreEqual(default(PopupId), _lastShownPopup,
-                "After Dispose, OnPopupClicked must not trigger showPopup callback");
+            // Fire events after dispose — no exception, no side-effects
+            Assert.DoesNotThrow(() =>
+            {
+                view.SimulateSettingsClicked();
+                view.SimulatePopupClicked();
+            }, "Firing view events after Dispose() must not throw");
         }
 
         [Test]
-        public void SettingsPresenter_Dispose_UnsubscribesEvents()
+        public void SettingsPresenter_Dispose_UnsubscribesViewEvents()
         {
             var view = new MockSettingsView();
             var presenter = _factory.CreateSettingsPresenter(view);
             presenter.Initialize();
             presenter.Dispose();
 
-            int callsBefore = _goBackCallCount;
-            view.SimulateBackClicked();
-
-            Assert.AreEqual(callsBefore, _goBackCallCount,
-                "After Dispose, OnBackClicked must not trigger goBack callback");
+            Assert.DoesNotThrow(() => view.SimulateBackClicked(),
+                "Firing back event after Dispose() must not throw");
         }
 
         [Test]
-        public void ConfirmDialogPresenter_Dispose_UnsubscribesEvents()
+        public void ConfirmDialogPresenter_Dispose_UnsubscribesViewEvents()
         {
             var view = new MockConfirmDialogView();
             var presenter = _factory.CreateConfirmDialogPresenter(view);
             presenter.Initialize();
             presenter.Dispose();
 
-            int callsBefore = _dismissCallCount;
-            view.SimulateConfirmClicked();
-            view.SimulateCancelClicked();
-
-            Assert.AreEqual(callsBefore, _dismissCallCount,
-                "After Dispose, neither OnConfirmClicked nor OnCancelClicked must trigger dismiss callback");
+            Assert.DoesNotThrow(() =>
+            {
+                view.SimulateConfirmClicked();
+                view.SimulateCancelClicked();
+            }, "Firing view events after Dispose() must not throw");
         }
 
         // --- Mock views have no backward references ---

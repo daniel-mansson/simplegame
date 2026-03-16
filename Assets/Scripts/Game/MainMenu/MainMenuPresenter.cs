@@ -1,21 +1,13 @@
-using System;
+using Cysharp.Threading.Tasks;
 using SimpleGame.Core.MVP;
 
 namespace SimpleGame.Game.MainMenu
 {
     public class MainMenuPresenter : Presenter<IMainMenuView>
     {
-        private readonly Action<ScreenId> _navigateCallback;
-        private readonly Action<PopupId> _showPopupCallback;
+        private UniTaskCompletionSource<MainMenuAction> _actionTcs;
 
-        public MainMenuPresenter(
-            IMainMenuView view,
-            Action<ScreenId> navigateCallback,
-            Action<PopupId> showPopupCallback) : base(view)
-        {
-            _navigateCallback = navigateCallback;
-            _showPopupCallback = showPopupCallback;
-        }
+        public MainMenuPresenter(IMainMenuView view) : base(view) { }
 
         public override void Initialize()
         {
@@ -28,16 +20,22 @@ namespace SimpleGame.Game.MainMenu
         {
             View.OnSettingsClicked -= HandleSettingsClicked;
             View.OnPopupClicked -= HandlePopupClicked;
+            _actionTcs?.TrySetCanceled();
+            _actionTcs = null;
         }
 
-        private void HandleSettingsClicked()
+        /// <summary>
+        /// Returns a task that resolves with the action the user took.
+        /// Each call resets the completion source — any previous pending task is cancelled.
+        /// </summary>
+        public UniTask<MainMenuAction> WaitForAction()
         {
-            _navigateCallback(ScreenId.Settings);
+            _actionTcs?.TrySetCanceled();
+            _actionTcs = new UniTaskCompletionSource<MainMenuAction>();
+            return _actionTcs.Task;
         }
 
-        private void HandlePopupClicked()
-        {
-            _showPopupCallback(PopupId.ConfirmDialog);
-        }
+        private void HandleSettingsClicked() => _actionTcs?.TrySetResult(MainMenuAction.Settings);
+        private void HandlePopupClicked() => _actionTcs?.TrySetResult(MainMenuAction.Popup);
     }
 }

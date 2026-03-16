@@ -37,6 +37,15 @@ namespace SimpleGame.Core.ScreenManagement
         }
 
         /// <summary>
+        /// Registers a screen as the current screen without loading it. Used when
+        /// the scene is already present (e.g. boot-injection into a running session).
+        /// </summary>
+        public void AdoptScreen(TScreenId screenId)
+        {
+            _currentScreen = screenId;
+        }
+
+        /// <summary>
         /// Navigates to the specified screen. Unloads the current screen (pushing
         /// it onto the history stack) before loading the new one. No-ops if a
         /// navigation is already in progress.

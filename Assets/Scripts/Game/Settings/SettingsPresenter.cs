@@ -1,4 +1,3 @@
-using System;
 using Cysharp.Threading.Tasks;
 using SimpleGame.Core.MVP;
 
@@ -6,12 +5,9 @@ namespace SimpleGame.Game.Settings
 {
     public class SettingsPresenter : Presenter<ISettingsView>
     {
-        private readonly Func<UniTask> _goBackCallback;
+        private UniTaskCompletionSource _backTcs;
 
-        public SettingsPresenter(ISettingsView view, Func<UniTask> goBackCallback) : base(view)
-        {
-            _goBackCallback = goBackCallback;
-        }
+        public SettingsPresenter(ISettingsView view) : base(view) { }
 
         public override void Initialize()
         {
@@ -22,11 +18,21 @@ namespace SimpleGame.Game.Settings
         public override void Dispose()
         {
             View.OnBackClicked -= HandleBackClicked;
+            _backTcs?.TrySetCanceled();
+            _backTcs = null;
         }
 
-        private void HandleBackClicked()
+        /// <summary>
+        /// Returns a task that resolves when the user presses back.
+        /// Each call resets the completion source — any previous pending task is cancelled.
+        /// </summary>
+        public UniTask WaitForBack()
         {
-            _goBackCallback().Forget();
+            _backTcs?.TrySetCanceled();
+            _backTcs = new UniTaskCompletionSource();
+            return _backTcs.Task;
         }
+
+        private void HandleBackClicked() => _backTcs?.TrySetResult();
     }
 }
