@@ -102,170 +102,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Notes: M004 upgrades the demo from navigation showcase to working game loop.
 
 
-### R045 — Main screen shows environment with restorable objects, balance, play, settings
-- Class: primary-user-loop
-- Status: active
-- Description: Main screen shows current environment with restorable objects (text stubs), golden piece balance, play button with current level, and settings entry. The main screen IS the meta world — no separate scene.
-- Why it matters: Central hub of the game — the player sees their world, spends currency, and launches levels from here.
-- Source: user
-- Primary owning slice: M006/S05
-- Supporting slices: M006/S06
-- Validation: unmapped
-- Notes: Reworks existing MainMenu scene. Tap object = spend one golden piece for one restoration step, no confirmation.
 
-### R046 — Stub gameplay with hearts and piece counter
-- Class: primary-user-loop
-- Status: active
-- Description: Stub gameplay screen: level ID, piece counter (N/total), place-correct button, place-incorrect button (costs 1 heart), hearts display (3 per level). Win when all pieces placed, lose when 0 hearts.
-- Why it matters: Proves the gameplay flow without real puzzle rendering. Real mechanics come later.
-- Source: user
-- Primary owning slice: M006/S03
-- Supporting slices: M006/S04
-- Validation: unmapped
-- Notes: Core gameplay is deliberately minimal — just an ID, a counter, correct/incorrect buttons. No board, tray, or neighbor logic.
-
-### R047 — Meta world data model via ScriptableObjects
-- Class: core-capability
-- Status: active
-- Description: WorldData → EnvironmentData → RestorableObjectData via ScriptableObjects. Flat structure (not tree). Each object has: name, totalSteps, costPerStep, blockedBy list (references to other RestorableObjectData). An environment contains many objects.
-- Why it matters: Defines the meta-progression structure that drives long-term engagement.
-- Source: user
-- Primary owning slice: M006/S01
-- Supporting slices: M006/S05, M006/S06
-- Validation: unmapped
-- Notes: ScriptableObjects are new to this project. Test data: 2 environments, 4+ objects.
-
-### R048 — Golden puzzle pieces earned on level complete, spent on object restoration
-- Class: primary-user-loop
-- Status: active
-- Description: Golden puzzle pieces earned on level complete, spent on main screen to restore objects. One tap on unblocked object = one step of progress at costPerStep golden pieces.
-- Why it matters: Core economy loop connecting gameplay to meta progression.
-- Source: user
-- Primary owning slice: M006/S02
-- Supporting slices: M006/S04, M006/S05
-- Validation: unmapped
-- Notes: Balance persists via IMetaSaveService.
-
-### R049 — Meta progression persists via PlayerPrefs
-- Class: continuity
-- Status: active
-- Description: Meta progression (per-object restoration progress, golden piece balance, current environment) persists via interface-backed storage with PlayerPrefs implementation internally. Survives app restart.
-- Why it matters: Players must not lose meta progress between sessions.
-- Source: user
-- Primary owning slice: M006/S01
-- Supporting slices: M006/S02
-- Validation: unmapped
-- Notes: Interface-backed so implementation can be swapped to file/cloud later.
-
-### R050 — Environment unlocking with 1–3 simultaneous availability
-- Class: core-capability
-- Status: active
-- Description: 1–3 environments available simultaneously. All must complete (all objects restored) before the next milestone unlocks. Mostly linear with occasional parallel branches.
-- Why it matters: Provides pacing and progression structure for the meta world.
-- Source: user
-- Primary owning slice: M006/S06
-- Supporting slices: M006/S01
-- Validation: unmapped
-- Notes: Environment unlock logic lives in MetaProgressionService.
-
-### R051 — LevelComplete popup with golden piece reward
-- Class: primary-user-loop
-- Status: active
-- Description: LevelComplete popup shows golden pieces earned, continue button returns to main screen.
-- Why it matters: Reward feedback loop — player sees what they earned.
-- Source: user
-- Primary owning slice: M006/S04
-- Supporting slices: none
-- Validation: unmapped
-- Notes: Reworks existing WinDialog.
-
-### R052 — LevelFailed popup with retry/ad/quit
-- Class: primary-user-loop
-- Status: active
-- Description: LevelFailed popup offers retry, watch-ad stub (grants extra heart/continue), quit back to main screen.
-- Why it matters: Fail state must offer recovery paths — monetization hook.
-- Source: user
-- Primary owning slice: M006/S04
-- Supporting slices: none
-- Validation: unmapped
-- Notes: Reworks existing LoseDialog.
-
-### R053 — Rewarded ad stub popup
-- Class: integration
-- Status: active
-- Description: Rewarded ad stub popup: simulates ad viewing with text UI ("Watching ad..."), grants reward (heart or golden pieces) on close.
-- Why it matters: UI must exist for the ad flow even before real SDK integration.
-- Source: user
-- Primary owning slice: M006/S04
-- Supporting slices: none
-- Validation: unmapped
-- Notes: Tappable stub — not just an interface.
-
-### R054 — IAP purchase stub popup
-- Class: integration
-- Status: active
-- Description: IAP purchase stub popup: simulates purchase confirmation with text UI ("Buy X for $Y?"), confirms on tap.
-- Why it matters: UI must exist for the IAP flow even before real SDK integration.
-- Source: user
-- Primary owning slice: M006/S04
-- Supporting slices: none
-- Validation: unmapped
-- Notes: Tappable stub — not just an interface.
-
-### R055 — Object restored celebration popup
-- Class: quality-attribute
-- Status: active
-- Description: Celebration popup fires when a restorable object's restoration completes (all steps done).
-- Why it matters: Reward moment for meta-progression milestones.
-- Source: user
-- Primary owning slice: M006/S05
-- Supporting slices: none
-- Validation: unmapped
-- Notes: Text stub — real animations/effects come later.
-
-### R056 — Interstitial ad stub debug log
-- Class: integration
-- Status: active
-- Description: Debug log fires at win/lose indicating an interstitial ad could be shown here. No UI, just a log.
-- Why it matters: Marks the integration point for future real ad SDK.
-- Source: user
-- Primary owning slice: M006/S03
-- Supporting slices: none
-- Validation: unmapped
-- Notes: Will later fire with a certain interval on lose/win.
-
-### R057 — Heart system: 3 per level, incorrect costs 1, 0 = fail
-- Class: core-capability
-- Status: active
-- Description: Player has 3 hearts per level. Each incorrect placement costs 1 heart. 0 hearts triggers fail state.
-- Why it matters: Core difficulty mechanic and monetization lever.
-- Source: user
-- Primary owning slice: M006/S02
-- Supporting slices: M006/S03
-- Validation: unmapped
-- Notes: Hearts reset per level. No persistence across levels.
-
-### R058 — Full navigable flow end-to-end
-- Class: launchability
-- Status: active
-- Description: Full flow navigable: main screen → play → win/lose → earn golden pieces → spend on objects → restore → unlock environments → repeat.
-- Why it matters: Proves the entire game skeleton works before real content is added.
-- Source: user
-- Primary owning slice: M006/S06
-- Supporting slices: M006/S01-S05
-- Validation: unmapped
-- Notes: Integration verification in play mode.
-
-### R059 — All views are text-box stubs
-- Class: constraint
-- Status: active
-- Description: All new views use simple text boxes with info. No real art, rendering, or animations. Manual visual work comes later.
-- Why it matters: Keeps this milestone focused on flow and data, not visuals.
-- Source: user
-- Primary owning slice: M006/S03
-- Supporting slices: M006/S04, M006/S05
-- Validation: unmapped
-- Notes: User will manually fix visuals in all scenes after this milestone.
 
 ## Deferred
 
@@ -354,6 +191,96 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Validation: unmapped
 
 ## Validated
+
+### R045 — Main screen shows environment with restorable objects, balance, play, settings
+- Class: primary-user-loop
+- Status: validated
+- Validated by: M006 — MainMenuPresenter shows environment name, objects with progress/blocked/complete, golden piece balance, play button with level, settings. 25 DemoWiringTests pass.
+- Proof: MainMenuPresenter + MainMenuView + ObjectDisplayData; DemoWiringTests (25/25 pass)
+
+### R046 — Stub gameplay with hearts and piece counter
+- Class: primary-user-loop
+- Status: validated
+- Validated by: M006 — InGamePresenter has piece counter, PlaceCorrect/PlaceIncorrect, hearts display, auto-win/lose. 14 presenter + 4 controller tests pass.
+- Proof: InGamePresenter + InGameView + InGameSceneController; InGameTests (18/18 pass)
+
+### R047 — Meta world data model via ScriptableObjects
+- Class: core-capability
+- Status: validated
+- Validated by: M006 — WorldData → EnvironmentData → RestorableObjectData as SOs with blocked-by. 3 environments, 5+ objects. 18 MetaProgressionService tests pass.
+- Proof: Assets/Data/*.asset; MetaProgressionServiceTests (18/18 pass)
+
+### R048 — Golden puzzle pieces earned on level complete, spent on object restoration
+- Class: primary-user-loop
+- Status: validated
+- Validated by: M006 — InGameSceneController earns on win. MainMenuPresenter spends per costPerStep on tap. 15 GoldenPieceService + 25 DemoWiringTests pass.
+- Proof: GoldenPieceService + MainMenuPresenter; GoldenPieceServiceTests (15/15) + DemoWiringTests (25/25)
+
+### R049 — Meta progression persists via PlayerPrefs
+- Class: continuity
+- Status: validated
+- Validated by: M006 — IMetaSaveService + PlayerPrefsMetaSaveService with JSON. Reload-then-merge pattern for multi-service persistence. Round-trip tests pass.
+- Proof: PlayerPrefsMetaSaveService + MetaSaveData; MetaProgressionServiceTests persistence tests
+
+### R050 — Environment unlocking with 1–3 simultaneous availability
+- Class: core-capability
+- Status: validated
+- Validated by: M006 — GetCurrentEnvironment finds first non-complete. NextEnvironment button shown when complete + hasNext. 3 environments in WorldData.
+- Proof: MainMenuSceneController + MainMenuPresenter; environment navigation tested
+
+### R051 — LevelComplete popup with golden piece reward
+- Class: primary-user-loop
+- Status: validated
+- Validated by: M006 — LevelCompletePresenter shows score, level, golden pieces. Continue returns to main. 4 tests pass.
+- Proof: LevelCompletePresenter; PopupTests (4/4 LevelComplete pass)
+
+### R052 — LevelFailed popup with retry/ad/quit
+- Class: primary-user-loop
+- Status: validated
+- Validated by: M006 — LevelFailedPresenter offers Retry/WatchAd/Quit. InGameSceneController handles all three. 6 tests pass.
+- Proof: LevelFailedPresenter + LevelFailedChoice; PopupTests (6/6 LevelFailed pass)
+
+### R053 — Rewarded ad stub popup
+- Class: integration
+- Status: validated
+- Validated by: M006 — RewardedAdPresenter + RewardedAdView with Watch/Skip, Debug.Log on watch. 5 tests pass.
+- Proof: RewardedAdPresenter; PopupTests (5/5 RewardedAd pass)
+
+### R054 — IAP purchase stub popup
+- Class: integration
+- Status: validated
+- Validated by: M006 — IAPPurchasePresenter + IAPPurchaseView with Purchase/Cancel, Debug.Log on purchase. 5 tests pass.
+- Proof: IAPPurchasePresenter; PopupTests (5/5 IAPPurchase pass)
+
+### R055 — Object restored celebration popup
+- Class: quality-attribute
+- Status: validated
+- Validated by: M006 — ObjectRestoredPresenter + ObjectRestoredView. MainMenuSceneController shows popup on completion. 4 tests pass.
+- Proof: ObjectRestoredPresenter; PopupTests (4/4 ObjectRestored pass)
+
+### R056 — Interstitial ad stub debug log
+- Class: integration
+- Status: validated
+- Validated by: M006 — InGamePresenter logs "[Ads] Interstitial ad opportunity" at both win and lose.
+- Proof: InGamePresenter HandlePlaceCorrect/HandlePlaceIncorrect; tested in InGameTests
+
+### R057 — Heart system: 3 per level, incorrect costs 1, 0 = fail
+- Class: core-capability
+- Status: validated
+- Validated by: M006 — HeartService Reset(3)/UseHeart/IsAlive. InGamePresenter auto-loses at 0 hearts. 12 + 14 tests pass.
+- Proof: HeartServiceTests (12/12) + InGameTests presenter tests
+
+### R058 — Full navigable flow end-to-end
+- Class: launchability
+- Status: validated
+- Validated by: M006 — GameBootstrapper constructs all services. Full flow wired: MainMenu→InGame→Win/Lose→Popups→MainMenu. SceneSetup creates all scenes.
+- Proof: GameBootstrapper + SceneSetup.cs + all SceneControllerTests
+
+### R059 — All views are text-box stubs
+- Class: constraint
+- Status: validated
+- Validated by: M006 — All views use uGUI Text + Button. Dynamic object buttons in MainMenuView. No art, no animations.
+- Proof: All *View.cs files use UnityEngine.UI.Text and UnityEngine.UI.Button only
 
 ### R003 — Interface-per-view for presenter dependency
 - Class: core-capability
@@ -593,21 +520,21 @@ Use it to track what is actively in scope, what has been validated by completed 
 | R042 | core-capability | deferred | none | none | unmapped |
 | R043 | anti-feature | out-of-scope | none | none | n/a |
 | R044 | quality-attribute | validated | M005/S01 | none | validated |
-| R045 | primary-user-loop | active | M006/S05 | M006/S06 | unmapped |
-| R046 | primary-user-loop | active | M006/S03 | M006/S04 | unmapped |
-| R047 | core-capability | active | M006/S01 | M006/S05, M006/S06 | unmapped |
-| R048 | primary-user-loop | active | M006/S02 | M006/S04, M006/S05 | unmapped |
-| R049 | continuity | active | M006/S01 | M006/S02 | unmapped |
-| R050 | core-capability | active | M006/S06 | M006/S01 | unmapped |
-| R051 | primary-user-loop | active | M006/S04 | none | unmapped |
-| R052 | primary-user-loop | active | M006/S04 | none | unmapped |
-| R053 | integration | active | M006/S04 | none | unmapped |
-| R054 | integration | active | M006/S04 | none | unmapped |
-| R055 | quality-attribute | active | M006/S05 | none | unmapped |
-| R056 | integration | active | M006/S03 | none | unmapped |
-| R057 | core-capability | active | M006/S02 | M006/S03 | unmapped |
-| R058 | launchability | active | M006/S06 | M006/S01-S05 | unmapped |
-| R059 | constraint | active | M006/S03 | M006/S04, M006/S05 | unmapped |
+| R045 | primary-user-loop | validated | M006/S05 | M006/S06 | validated M006 |
+| R046 | primary-user-loop | validated | M006/S03 | M006/S04 | validated M006 |
+| R047 | core-capability | validated | M006/S01 | M006/S05, M006/S06 | validated M006 |
+| R048 | primary-user-loop | validated | M006/S02 | M006/S04, M006/S05 | validated M006 |
+| R049 | continuity | validated | M006/S01 | M006/S02 | validated M006 |
+| R050 | core-capability | validated | M006/S06 | M006/S01 | validated M006 |
+| R051 | primary-user-loop | validated | M006/S04 | none | validated M006 |
+| R052 | primary-user-loop | validated | M006/S04 | none | validated M006 |
+| R053 | integration | validated | M006/S04 | none | validated M006 |
+| R054 | integration | validated | M006/S04 | none | validated M006 |
+| R055 | quality-attribute | validated | M006/S05 | none | validated M006 |
+| R056 | integration | validated | M006/S03 | none | validated M006 |
+| R057 | core-capability | validated | M006/S02 | M006/S03 | validated M006 |
+| R058 | launchability | validated | M006/S06 | M006/S01-S05 | validated M006 |
+| R059 | constraint | validated | M006/S03 | M006/S04, M006/S05 | validated M006 |
 | R060 | core-capability | deferred | none | none | unmapped |
 | R061 | quality-attribute | deferred | none | none | unmapped |
 | R062 | integration | deferred | none | none | unmapped |
@@ -621,8 +548,9 @@ Use it to track what is actively in scope, what has been validated by completed 
 ## Coverage Summary
 
 - Total requirements: 68
-- Active: 24
-- Validated: 27
+- Active: 9
+- Validated: 42
 - Deferred: 13
 - Out of scope: 4
 - Unmapped active requirements: 0
+- Note: Some validated/deferred requirements (R018, R019, R041, R042, R044) have traceability table entries only — no full body section.

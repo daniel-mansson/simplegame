@@ -121,70 +121,70 @@ Six slices assembled the full game skeleton in dependency order:
 ## Cross-Slice Verification
 
 **Main screen shows current environment with restorable objects, golden piece balance, play button, settings entry**
-— MainMenuPresenter.Initialize() calls View.UpdateEnvironmentName, UpdateBalance, UpdateLevelDisplay, and UpdateObjects with ObjectDisplayData[]. MainMenuView creates dynamic buttons per object. 25 DemoWiringTests verify. ✅
+— MainMenuPresenter.Initialize() calls View.UpdateEnvironmentName, UpdateBalance, UpdateLevelDisplay, and UpdateObjects with ObjectDisplayData[]. MainMenuView creates dynamic buttons per object. 25 DemoWiringTests verify. PASS
 
 **Stub gameplay screen has piece counter, place-correct/place-incorrect buttons, hearts display, win/lose conditions**
-— InGamePresenter manages piece counter (N/total), PlaceCorrect/PlaceIncorrect handlers, hearts display via IHeartService. Auto-win at totalPieces, auto-lose at 0 hearts. 14 presenter tests verify. ✅
+— InGamePresenter manages piece counter (N/total), PlaceCorrect/PlaceIncorrect handlers, hearts display via IHeartService. Auto-win at totalPieces, auto-lose at 0 hearts. 14 presenter tests verify. PASS
 
 **LevelComplete popup shows golden pieces earned, continues to main screen**
-— LevelCompletePresenter.Initialize(score, level, goldenPiecesEarned) updates view. WaitForContinue resolves on click. 4 tests verify. ✅
+— LevelCompletePresenter.Initialize(score, level, goldenPiecesEarned) updates view. WaitForContinue resolves on click. 4 tests verify. PASS
 
 **LevelFailed popup offers retry, watch-ad stub, quit**
-— LevelFailedPresenter exposes WaitForChoice returning LevelFailedChoice (Retry, WatchAd, Quit). 6 tests verify. ✅
+— LevelFailedPresenter exposes WaitForChoice returning LevelFailedChoice (Retry, WatchAd, Quit). 6 tests verify. PASS
 
 **Rewarded ad and IAP purchase stub popups are tappable and functional**
-— RewardedAdPresenter (Watch/Skip) and IAPPurchasePresenter (Purchase/Cancel) are full presenter+view stacks. 10 tests verify. ✅
+— RewardedAdPresenter (Watch/Skip) and IAPPurchasePresenter (Purchase/Cancel) are full presenter+view stacks. 10 tests verify. PASS
 
 **Object-restored celebration popup fires when restoration completes**
-— MainMenuPresenter resolves ObjectRestored action when an object reaches totalSteps. MainMenuSceneController shows ObjectRestoredPresenter popup. 4 tests verify. ✅
+— MainMenuPresenter resolves ObjectRestored action when an object reaches totalSteps. MainMenuSceneController shows ObjectRestoredPresenter popup. 4 tests verify. PASS
 
 **One tap on an unblocked object spends one golden piece for one restoration step**
-— MainMenuPresenter.HandleObjectTapped validates not-blocked, not-complete, sufficient balance, then calls TrySpend and TryRestoreStep. DemoWiringTests verify. ✅
+— MainMenuPresenter.HandleObjectTapped validates not-blocked, not-complete, sufficient balance, then calls TrySpend and TryRestoreStep. DemoWiringTests verify. PASS
 
 **Blocked objects visible but not tappable until dependencies restored**
-— ObjectDisplayData.IsBlocked set by MetaProgressionService.IsBlocked(). MainMenuView creates disabled buttons (interactable=false). Presenter rejects taps. ✅
+— ObjectDisplayData.IsBlocked set by MetaProgressionService.IsBlocked(). MainMenuView creates disabled buttons (interactable=false). Presenter rejects taps. PASS
 
-**Completing all objects in an environment unlocks the next (1–3 environments available simultaneously)**
-— GetCurrentEnvironment() finds first non-complete. SetNextEnvironmentVisible shown when complete + hasNext. WorldData has 3 environments. ✅
+**Completing all objects in an environment unlocks the next (1-3 environments available simultaneously)**
+— GetCurrentEnvironment() finds first non-complete. SetNextEnvironmentVisible shown when complete + hasNext. WorldData has 3 environments. PASS
 
 **Meta progression persists via PlayerPrefs across play-mode restarts**
-— PlayerPrefsMetaSaveService uses JSON serialization. Reload-then-merge save pattern. Round-trip tests pass. ✅
+— PlayerPrefsMetaSaveService uses JSON serialization. Reload-then-merge save pattern. Round-trip tests pass. PASS
 
 **Full flow navigable end-to-end in play mode**
-— GameBootstrapper constructs all services. MainMenu → InGame → popup flows → MainMenu. SceneSetup creates all scenes. ✅
+— GameBootstrapper constructs all services. MainMenu to InGame to popup flows to MainMenu. SceneSetup creates all scenes. PASS
 
 **Debug log fires at win/lose indicating interstitial ad could trigger**
-— InGamePresenter logs "[Ads] Interstitial ad opportunity" at auto-win and auto-lose. ✅
+— InGamePresenter logs "[Ads] Interstitial ad opportunity" at auto-win and auto-lose. PASS
 
 **Core framework patterns unchanged**
-— No changes to Assets/Scripts/Core/. ScreenManager, PopupManager, ITransitionPlayer unchanged. ✅
+— No changes to Assets/Scripts/Core/. ScreenManager, PopupManager, ITransitionPlayer unchanged. PASS
 
 **All existing 98 tests still pass + new tests for all new services and presenters**
-— 164+ edit-mode tests passing. 116 new/reworked game tests plus existing core tests. ✅
+— 164+ edit-mode tests passing. 116 new/reworked game tests plus existing core tests. PASS
 
 **ConfirmDialog reworked for game use**
-— ConfirmDialogPresenter takes custom message. Used for "Reset all progress?" confirmation. ✅
+— ConfirmDialogPresenter takes custom message. Used for "Reset all progress?" confirmation. PASS
 
 **SceneSetup.cs updated to create all new scene content programmatically**
-— Creates Boot (6 popups, WorldData), MainMenu (environment, balance, objects, buttons), InGame (hearts, pieces, buttons), Settings. ✅
+— Creates Boot (6 popups, WorldData), MainMenu (environment, balance, objects, buttons), InGame (hearts, pieces, buttons), Settings. PASS
 
 ## Requirement Changes
 
-- R045: active → validated — MainMenuPresenter shows environment, objects, balance, play, settings. 25 DemoWiringTests pass.
-- R046: active → validated — InGamePresenter has piece counter, hearts, auto-win/lose. 18 tests pass.
-- R047: active → validated — WorldData/EnvironmentData/RestorableObjectData SOs with blocked-by. 18 tests pass.
-- R048: active → validated — Golden pieces earned on win, spent on tap-to-restore. 15+25 tests pass.
-- R049: active → validated — IMetaSaveService + PlayerPrefsMetaSaveService with JSON. Round-trip tests pass.
-- R050: active → validated — GetCurrentEnvironment finds first non-complete, NextEnvironment advances. 3 environments.
-- R051: active → validated — LevelComplete shows score/level/golden pieces + Continue. 4 tests pass.
-- R052: active → validated — LevelFailed offers Retry/WatchAd/Quit. 6 tests pass.
-- R053: active → validated — RewardedAd stub popup with Watch/Skip. 5 tests pass.
-- R054: active → validated — IAPPurchase stub popup with Purchase/Cancel. 5 tests pass.
-- R055: active → validated — ObjectRestored popup fires on completion. 4 tests pass.
-- R056: active → validated — "[Ads] Interstitial ad opportunity" Debug.Log at win and lose.
-- R057: active → validated — HeartService: Reset(3), UseHeart, IsAlive. 12+14 tests pass.
-- R058: active → validated — Full flow wired end-to-end. All controllers + SceneSetup.
-- R059: active → validated — All views are uGUI Text+Button stubs. No art, no animations.
+- R045: active to validated — MainMenuPresenter shows environment, objects, balance, play, settings. 25 DemoWiringTests pass.
+- R046: active to validated — InGamePresenter has piece counter, hearts, auto-win/lose. 18 tests pass.
+- R047: active to validated — WorldData/EnvironmentData/RestorableObjectData SOs with blocked-by. 18 tests pass.
+- R048: active to validated — Golden pieces earned on win, spent on tap-to-restore. 15+25 tests pass.
+- R049: active to validated — IMetaSaveService + PlayerPrefsMetaSaveService with JSON. Round-trip tests pass.
+- R050: active to validated — GetCurrentEnvironment finds first non-complete, NextEnvironment advances. 3 environments.
+- R051: active to validated — LevelComplete shows score/level/golden pieces + Continue. 4 tests pass.
+- R052: active to validated — LevelFailed offers Retry/WatchAd/Quit. 6 tests pass.
+- R053: active to validated — RewardedAd stub popup with Watch/Skip. 5 tests pass.
+- R054: active to validated — IAPPurchase stub popup with Purchase/Cancel. 5 tests pass.
+- R055: active to validated — ObjectRestored popup fires on completion. 4 tests pass.
+- R056: active to validated — "[Ads] Interstitial ad opportunity" Debug.Log at win and lose.
+- R057: active to validated — HeartService: Reset(3), UseHeart, IsAlive. 12+14 tests pass.
+- R058: active to validated — Full flow wired end-to-end. All controllers + SceneSetup.
+- R059: active to validated — All views are uGUI Text+Button stubs. No art, no animations.
 
 ## Forward Intelligence
 

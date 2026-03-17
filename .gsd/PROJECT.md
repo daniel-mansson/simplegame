@@ -10,9 +10,11 @@ A complete game flow skeleton — main screen with meta world, stub gameplay wit
 
 ## Current State
 
-**M006 in progress.** Building the Puzzle Tap game skeleton — all screens, popups, domain services, data model, and persistence.
+**M006 complete.** Full Puzzle Tap game skeleton built — meta world data model (ScriptableObjects), golden piece economy, heart-based stub gameplay, 6 popups (LevelComplete, LevelFailed, RewardedAd, IAPPurchase, ObjectRestored, ConfirmDialog), object restoration, environment progression, and PlayerPrefs persistence. All wired end-to-end with text-stub visuals.
 
-**M001–M005 complete.** MVP pattern, screen management, popup system, transitions, input blocking, assembly separation, SceneController architecture, boot-from-any-scene, full game loop, LitMotion prefab transitions — all proven and tested. 98/98 edit-mode tests passing.
+**M001–M005 complete.** MVP pattern, screen management, popup system, transitions, input blocking, assembly separation, SceneController architecture, boot-from-any-scene, full game loop, LitMotion prefab transitions — all proven and tested.
+
+**Test count:** 164+ edit-mode tests passing across Core and Game assemblies.
 
 ## Architecture / Key Patterns
 
@@ -31,9 +33,13 @@ A complete game flow skeleton — main screen with meta world, stub gameplay wit
 - **Boot injection**: `BootInjector` `[RuntimeInitializeOnLoadMethod]` loads Boot additively if not present (play-from-any-scene)
 - **Service-mediated context**: `GameSessionService` passes context between scenes; controllers read what they need
 - **Prefab transitions**: `UnityTransitionPlayer` uses LitMotion `BindToAlpha`/`ToUniTask()` on a self-contained prefab
-- **ScriptableObject data**: WorldData/EnvironmentData/RestorableObjectData define meta-world structure (new in M006)
-- **Interface-backed persistence**: IMetaSaveService with PlayerPrefs implementation (new in M006)
-- **Testing**: `SimpleGame.Tests.Core` + `SimpleGame.Tests.Game`; 98/98 passing (pre-M006)
+- **ScriptableObject data**: WorldData/EnvironmentData/RestorableObjectData define meta-world structure
+- **Interface-backed persistence**: IMetaSaveService with PlayerPrefs JSON implementation; reload-then-merge pattern for multi-service shared persistence
+- **Golden piece economy**: GoldenPieceService (earn/spend/persist) + HeartService (per-level, 3 hearts)
+- **6 popup types**: ConfirmDialog, LevelComplete, LevelFailed, RewardedAd, IAPPurchase, ObjectRestored — all in UnityPopupContainer
+- **Auto-resolving presenters**: InGamePresenter auto-resolves Win/Lose based on game state
+- **Presenter→view data transfer**: ObjectDisplayData struct decouples presenter from view
+- **Testing**: `SimpleGame.Tests.Core` + `SimpleGame.Tests.Game`; 164+ tests passing
 
 ## Capability Contract
 
@@ -46,4 +52,4 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 - [x] M003: SceneController Architecture — async control flow, linear scene controllers, boot-from-any-scene
 - [x] M004: Game Loop — meta-progression, context passing, InGame scene, win/lose flow, full menu→play→outcome→menu loop
 - [x] M005: Prefab-Based Transitions — LitMotion tweening, prefab-driven transition visuals, extensible for future complex transitions
-- [ ] M006: Puzzle Tap Game Skeleton — all screens, popups, domain services, meta world data model, persistence, ad/IAP stubs, full game flow
+- [x] M006: Puzzle Tap Game Skeleton — all screens, popups, domain services, meta world data model, persistence, ad/IAP stubs, full game flow
