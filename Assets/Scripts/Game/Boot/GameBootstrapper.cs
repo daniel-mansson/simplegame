@@ -100,7 +100,7 @@ namespace SimpleGame.Game.Boot
                             return;
                         }
                         ctrl.Initialize(_uiFactory, _popupManager, _metaProgressionService,
-                                       _progressionService, _goldenPieceService);
+                                       _progressionService, _goldenPieceService, popupContainer);
                         var next = await ctrl.RunAsync();
                         await _screenManager.ShowScreenAsync(next);
                         break;
@@ -127,7 +127,7 @@ namespace SimpleGame.Game.Boot
                             return;
                         }
                         ctrl.Initialize(_uiFactory, _progressionService, _sessionService,
-                                       _popupManager, _goldenPieceService, _heartService);
+                                       _popupManager, _goldenPieceService, _heartService, popupContainer);
                         var next = await ctrl.RunAsync();
                         await _screenManager.ShowScreenAsync(next);
                         break;

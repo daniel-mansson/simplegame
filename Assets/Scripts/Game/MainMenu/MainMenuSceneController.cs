@@ -23,6 +23,7 @@ namespace SimpleGame.Game.MainMenu
         [SerializeField] private MainMenuView _mainMenuView;
         [SerializeField] private ConfirmDialogView _confirmDialogView;
 
+        private IViewResolver _viewResolver;
         private IMainMenuView _mainMenuViewOverride;
         private IConfirmDialogView _confirmDialogViewOverride;
         private IObjectRestoredView _objectRestoredViewOverride;
@@ -35,7 +36,7 @@ namespace SimpleGame.Game.MainMenu
             {
                 if (_confirmDialogViewOverride != null) return _confirmDialogViewOverride;
                 if (_confirmDialogView != null) return _confirmDialogView;
-                var found = FindFirstObjectByType<ConfirmDialogView>(FindObjectsInactive.Include);
+                var found = _viewResolver?.Get<IConfirmDialogView>();
                 if (found == null)
                     Debug.LogError("[MainMenuSceneController] ConfirmDialogView not found in any loaded scene.");
                 return found;
@@ -47,7 +48,7 @@ namespace SimpleGame.Game.MainMenu
             get
             {
                 if (_objectRestoredViewOverride != null) return _objectRestoredViewOverride;
-                var found = FindFirstObjectByType<ObjectRestoredView>(FindObjectsInactive.Include);
+                var found = _viewResolver?.Get<IObjectRestoredView>();
                 if (found == null)
                     Debug.LogError("[MainMenuSceneController] ObjectRestoredView not found in any loaded scene.");
                 return found;
@@ -64,13 +65,15 @@ namespace SimpleGame.Game.MainMenu
         public void Initialize(UIFactory uiFactory, PopupManager<PopupId> popupManager,
                                MetaProgressionService metaProgression = null,
                                ProgressionService progression = null,
-                               IGoldenPieceService goldenPieces = null)
+                               IGoldenPieceService goldenPieces = null,
+                               IViewResolver viewResolver = null)
         {
             _uiFactory = uiFactory;
             _popupManager = popupManager;
             _metaProgression = metaProgression;
             _progression = progression;
             _goldenPieces = goldenPieces;
+            _viewResolver = viewResolver;
         }
 
         /// <summary>

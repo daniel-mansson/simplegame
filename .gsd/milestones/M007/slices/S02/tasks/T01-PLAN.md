@@ -67,6 +67,19 @@ rg "\.Initialize\(" Assets/Tests/EditMode/Game/SceneControllerTests.cs | grep "g
 # → both MainMenu calls end with null
 ```
 
+## Observability Impact
+
+**What signals change after this task:**
+- `ActiveLevelCompleteView`, `ActiveLevelFailedView`, `ActiveConfirmDialogView`, `ActiveObjectRestoredView` getters now use `_viewResolver?.Get<T>()` instead of `FindFirstObjectByType`. The `Debug.LogError` fallback remains intact — it fires if the resolver also returns null (view is truly missing). A future agent diagnosing popup failures should filter the Unity Console for `[InGameSceneController]` or `[MainMenuSceneController]` to identify missing views.
+- When `_viewResolver` is null (e.g., in tests that pass `null`), and no `SetViewsForTesting()` override is set, the getter returns null silently without a log — this is the expected "no view" path (popup handlers guard with `if (view == null) return;`).
+- `GameBootstrapper` now passes `popupContainer` to both `Initialize()` calls — verifiable by checking the `popupContainer` variable is not null before the navigation loop via existing `[GameBootstrapper] Infrastructure ready.` log.
+
+**How to inspect this task's work at runtime:**
+- Play mode: Unity Console shows `[GameBootstrapper] Boot sequence started.` followed by `Infrastructure ready.` — if `popupContainer` is missing, subsequent `PopupManager` calls will log errors.
+- Edit-mode tests: all 6 InGame and 2 MainMenu `Initialize()` calls pass `null` for `IViewResolver`; tests pass because `SetViewsForTesting()` overrides take precedence.
+
+**No redaction constraints** — log messages contain only type/controller names.
+
 ## Inputs
 
 - `Assets/Scripts/Core/PopupManagement/IViewResolver.cs` — The interface created in S01: `T Get<T>() where T : class` in namespace `SimpleGame.Core.PopupManagement`

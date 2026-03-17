@@ -163,7 +163,7 @@ namespace SimpleGame.Tests.Game
         {
             var go = new GameObject("MainMenuCtrl");
             var ctrl = go.AddComponent<MainMenuSceneController>();
-            ctrl.Initialize(_factory, _popupManager, _metaProgression, _progression, _goldenPieces);
+            ctrl.Initialize(_factory, _popupManager, _metaProgression, _progression, _goldenPieces, null);
 
             var mmView = new MockMainMenuView();
             ctrl.SetViewsForTesting(mmView);
@@ -182,7 +182,7 @@ namespace SimpleGame.Tests.Game
         {
             var go = new GameObject("MainMenuCtrl");
             var ctrl = go.AddComponent<MainMenuSceneController>();
-            ctrl.Initialize(_factory, _popupManager, _metaProgression, _progression, _goldenPieces);
+            ctrl.Initialize(_factory, _popupManager, _metaProgression, _progression, _goldenPieces, null);
 
             var mmView = new MockMainMenuView();
             ctrl.SetViewsForTesting(mmView);

@@ -54,7 +54,27 @@ rg "FindFirstObjectByType" Assets/Scripts/ --count
 # SceneSetup wires new fields
 rg "_inputBlocker|_transitionPlayer|_viewContainer" Assets/Editor/SceneSetup.cs
 # → 3 WireSerializedField calls
+
+# Failure-path: view resolution error messages are observable
+# (verify the LogError fallback is intact in both controllers)
+rg "LogError.*not found in any loaded scene" Assets/Scripts/Game/InGame/InGameSceneController.cs Assets/Scripts/Game/MainMenu/MainMenuSceneController.cs
+# → 4 matches (2 per file) — confirms failure visibility is preserved
 ```
+
+## Observability / Diagnostics
+
+**Runtime signals introduced by this slice:**
+- Both `InGameSceneController` and `MainMenuSceneController` retain their existing `Debug.LogError(...)` calls inside view getters — these fire if `_viewResolver?.Get<T>()` also returns null (i.e., the view was neither injected via `SetViewsForTesting()` nor found by the resolver). Log messages identify the exact controller and missing view type (e.g., `[InGameSceneController] LevelCompleteView not found in any loaded scene.`).
+- `GameBootstrapper` logs `[GameBootstrapper] Boot sequence started.` and `[GameBootstrapper] Infrastructure ready. Starting navigation loop.` — if `popupContainer` was null at that point, the `PopupManager` constructor would fail or calls to `ShowPopupAsync` would throw, which surfaces in the Unity Console.
+
+**Inspecting this slice:**
+- In the Unity Console, filter by `[InGameSceneController]` or `[MainMenuSceneController]` to see view resolution failures.
+- In test runs, null `IViewResolver` passed to `Initialize()` is safe because `SetViewsForTesting()` overrides take precedence. No errors are emitted for the null case alone — errors only fire if the override is also unset and the resolver returns null.
+
+**Failure visibility:**
+- Missing view without resolver: `Debug.LogError` with controller name and view type.
+- `_viewResolver` null and no override: getter returns null, popup handle is skipped silently (`if (view == null) return;` guards are in place in all popup handlers).
+- No redaction concerns: log messages contain only type names and controller names — no user data.
 
 ## Integration Closure
 
@@ -64,7 +84,7 @@ rg "_inputBlocker|_transitionPlayer|_viewContainer" Assets/Editor/SceneSetup.cs
 
 ## Tasks
 
-- [ ] **T01: Wire IViewResolver into scene controller Initialize() and replace popup view FindFirstObjectByType** `est:25m`
+- [x] **T01: Wire IViewResolver into scene controller Initialize() and replace popup view FindFirstObjectByType** `est:25m`
   - Why: Eliminates 4 `FindFirstObjectByType` calls in scene controllers (R072) and establishes the `IViewResolver` injection pattern. This is the higher-risk task — it changes `Initialize()` signatures which propagate to `GameBootstrapper` and 8 test call sites.
   - Files: `Assets/Scripts/Game/InGame/InGameSceneController.cs`, `Assets/Scripts/Game/MainMenu/MainMenuSceneController.cs`, `Assets/Scripts/Game/Boot/GameBootstrapper.cs`, `Assets/Tests/EditMode/Game/InGameTests.cs`, `Assets/Tests/EditMode/Game/SceneControllerTests.cs`
   - Do: (1) Add `IViewResolver _viewResolver` field + parameter to `InGameSceneController.Initialize()`. Replace `ActiveLevelCompleteView`/`ActiveLevelFailedView` getters: fallback changes from `FindFirstObjectByType<T>()` to `_viewResolver?.Get<T>()`. (2) Same for `MainMenuSceneController` — add field/param, replace `ActiveConfirmDialogView`/`ActiveObjectRestoredView` getters. Note `MainMenuSceneController` has an existing `[SerializeField] _confirmDialogView` check before the fallback — preserve that. (3) Update `GameBootstrapper` to pass `popupContainer` (cast as `IViewResolver`) in both `ctrl.Initialize()` calls for MainMenu and InGame cases. (4) Update test files: add `null` as the `IViewResolver` parameter to all `Initialize()` calls (tests use `SetViewsForTesting()` which overrides, so null is safe).

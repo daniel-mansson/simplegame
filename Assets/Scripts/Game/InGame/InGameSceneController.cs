@@ -26,6 +26,7 @@ namespace SimpleGame.Game.InGame
         [SerializeField] private int _defaultTotalPieces = 10;
         [SerializeField] private int _goldenPiecesPerWin = 5;
 
+        private IViewResolver _viewResolver;
         private IInGameView _viewOverride;
         private ILevelCompleteView _levelCompleteViewOverride;
         private ILevelFailedView _levelFailedViewOverride;
@@ -37,7 +38,7 @@ namespace SimpleGame.Game.InGame
             get
             {
                 if (_levelCompleteViewOverride != null) return _levelCompleteViewOverride;
-                var found = FindFirstObjectByType<LevelCompleteView>(FindObjectsInactive.Include);
+                var found = _viewResolver?.Get<ILevelCompleteView>();
                 if (found == null)
                     Debug.LogError("[InGameSceneController] LevelCompleteView not found in any loaded scene.");
                 return found;
@@ -49,7 +50,7 @@ namespace SimpleGame.Game.InGame
             get
             {
                 if (_levelFailedViewOverride != null) return _levelFailedViewOverride;
-                var found = FindFirstObjectByType<LevelFailedView>(FindObjectsInactive.Include);
+                var found = _viewResolver?.Get<ILevelFailedView>();
                 if (found == null)
                     Debug.LogError("[InGameSceneController] LevelFailedView not found in any loaded scene.");
                 return found;
@@ -66,7 +67,8 @@ namespace SimpleGame.Game.InGame
         /// <summary>Inject dependencies. Called by the boot loop before RunAsync.</summary>
         public void Initialize(UIFactory uiFactory, ProgressionService progression,
                                GameSessionService session, PopupManager<PopupId> popupManager,
-                               IGoldenPieceService goldenPieces = null, IHeartService hearts = null)
+                               IGoldenPieceService goldenPieces = null, IHeartService hearts = null,
+                               IViewResolver viewResolver = null)
         {
             _uiFactory = uiFactory;
             _progression = progression;
@@ -74,6 +76,7 @@ namespace SimpleGame.Game.InGame
             _popupManager = popupManager;
             _goldenPieces = goldenPieces;
             _hearts = hearts;
+            _viewResolver = viewResolver;
         }
 
         /// <summary>
