@@ -10,11 +10,9 @@ A complete game flow skeleton — main screen with meta world, stub gameplay wit
 
 ## Current State
 
-**M007 S03 complete — M007 mechanically complete, human UAT pending.** All 3 remaining `FindFirstObjectByType` calls replaced with `FindSceneController<T>(current.Value.ToString())` private static helper using scene root convention (`SceneManager.GetSceneByName()` + `scene.IsValid()` + `GetRootGameObjects()` + `GetComponent<T>()`). Zero `FindObject*` variants anywhere in Assets/. 169/169 EditMode tests pass. Human UAT (R077: full play-through MainMenu→InGame→Win→MainMenu, InGame→Lose→Retry→Win) is the only remaining gate before M007 closes.
+**M007 complete.** All `FindFirstObjectByType` calls eliminated from production code. `IViewResolver` interface in Core with `Get<T>()`, implemented by `UnityViewContainer` (renamed from `UnityPopupContainer`). Scene controllers receive `IViewResolver` via `Initialize()` and resolve popup views through it. `GameBootstrapper` has `[SerializeField]` refs for all boot infrastructure. Scene controllers found via `FindSceneController<T>()` scene root convention. 169/169 EditMode tests pass. R077 (human UAT play-through) remains an open item — all mechanical criteria met.
 
 **M001–M006 complete.** MVP pattern, screen management, popup system, transitions, input blocking, assembly separation, SceneController architecture, boot-from-any-scene, full game loop, LitMotion prefab transitions, meta world with restoration + economy — all proven and tested.
-
-**M007 complete (pending UAT).** All popup views are prefabs under `UnityViewContainer` in Boot scene. `IViewResolver` in Core with `Get<T>()`, implemented by container. Scene controllers receive `IViewResolver` via `Initialize()`. `GameBootstrapper` has `[SerializeField]` refs for all boot infrastructure. Scene controllers found via scene root convention. Zero `FindObject*` in production code. 169 edit-mode tests pass.
 
 **Test count:** 169 edit-mode tests passing across Core and Game assemblies.
 
@@ -30,7 +28,11 @@ A complete game flow skeleton — main screen with meta world, stub gameplay wit
 - **SceneController pattern**: Per-scene MonoBehaviour with `RunAsync()` — loops internally, returns `ScreenId` for navigation. GameBootstrapper drives the navigation loop.
 - **Hybrid scene management**: Persistent Boot scene with additive scene loading for screen scenes (MainMenu, Settings, InGame)
 - **UniTask**: All async operations use UniTask
+- **IViewResolver**: `IViewResolver` interface in Core (`T Get<T>() where T : class`) implemented by `UnityViewContainer` via `GetComponentInChildren<T>(true)` — zero-registration view resolution for popup views
 - **Popup pre-instantiation**: `UnityViewContainer` shows/hides pre-instantiated popup GameObjects in Boot scene via `SetActive`; exposes `IViewResolver.Get<T>()` for view resolution without scene scanning
+- **Scene root convention**: `FindSceneController<T>(sceneName)` in GameBootstrapper — queries loaded scene's root GameObjects via `SceneManager.GetSceneByName()` + `GetRootGameObjects()` + `GetComponent<T>()`
+- **Boot infrastructure wiring**: `GameBootstrapper` uses `[SerializeField]` refs for `UnityInputBlocker`, `UnityTransitionPlayer`, `UnityViewContainer` — no scene scanning at boot
+- **View getter resolution order**: override field (test seam) → SerializeField ref → `_viewResolver?.Get<T>()` → `Debug.LogError` + return null
 - **Presenter results**: Presenters expose awaitable result methods (`WaitForAction`, `WaitForBack`, `WaitForConfirmation`, `WaitForContinue`, `WaitForChoice`) — no outbound callbacks
 - **Boot injection**: `BootInjector` `[RuntimeInitializeOnLoadMethod]` loads Boot additively if not present (play-from-any-scene)
 - **Service-mediated context**: `GameSessionService` passes context between scenes; controllers read what they need
@@ -39,10 +41,9 @@ A complete game flow skeleton — main screen with meta world, stub gameplay wit
 - **Interface-backed persistence**: IMetaSaveService with PlayerPrefs JSON implementation; reload-then-merge pattern for multi-service shared persistence
 - **Golden piece economy**: GoldenPieceService (earn/spend/persist) + HeartService (per-level, 3 hearts)
 - **6 popup types**: ConfirmDialog, LevelComplete, LevelFailed, RewardedAd, IAPPurchase, ObjectRestored — all in UnityViewContainer
-- **IViewResolver**: `IViewResolver` interface in Core (`T Get<T>() where T : class`) implemented by `UnityViewContainer` via `GetComponentInChildren<T>(true)`
 - **Auto-resolving presenters**: InGamePresenter auto-resolves Win/Lose based on game state
 - **Presenter→view data transfer**: ObjectDisplayData struct decouples presenter from view
-- **Testing**: `SimpleGame.Tests.Core` + `SimpleGame.Tests.Game`; 164+ tests passing
+- **Testing**: `SimpleGame.Tests.Core` + `SimpleGame.Tests.Game`; 169 tests passing
 
 ## Capability Contract
 
@@ -56,4 +57,4 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 - [x] M004: Game Loop — meta-progression, context passing, InGame scene, win/lose flow, full menu→play→outcome→menu loop
 - [x] M005: Prefab-Based Transitions — LitMotion tweening, prefab-driven transition visuals, extensible for future complex transitions
 - [x] M006: Puzzle Tap Game Skeleton — all screens, popups, domain services, meta world data model, persistence, ad/IAP stubs, full game flow
-- [ ] M007: Prefab-Based View Management — refactor popup wiring to prefab-based IViewResolver, eliminate FindFirstObjectByType
+- [x] M007: Prefab-Based View Management — IViewResolver in Core, UnityViewContainer, scene root convention, zero FindObject* in production code, 169 tests passing

@@ -106,36 +106,36 @@ Use it to track what is actively in scope, what has been validated by completed 
 
 ### R069 — Popup views are individual prefabs
 - Class: core-capability
-- Status: active
+- Status: validated
 - Description: Each popup view (ConfirmDialog, LevelComplete, LevelFailed, RewardedAd, IAPPurchase, ObjectRestored) exists as its own prefab rather than being placed directly in a scene.
 - Why it matters: Prefab-based organization is the standard Unity pattern — enables reuse, clean hierarchy, and future instantiation-based management.
 - Source: user
 - Primary owning slice: M007/S01
 - Supporting slices: none
-- Validation: unmapped
+- Validation: M007/S01 — All 6 popup views held as inactive children under UnityViewContainer in Boot scene. Container resolves all 6 interfaces via GetComponentInChildren<T>(true). Proven by 5 ViewContainerTests.
 - Notes: Popup prefabs held as inactive children under the container in Boot scene.
 
 ### R070 — Generic view resolver interface (IViewResolver) in Core
 - Class: core-capability
-- Status: active
+- Status: validated
 - Description: A Core interface `IViewResolver` with `T Get<T>() where T : class` enables generic resolution of view interfaces without scene scanning.
 - Why it matters: Decouples view resolution from Unity scene queries. Keeps Core game-agnostic.
 - Source: user
 - Primary owning slice: M007/S01
 - Supporting slices: M007/S02
-- Validation: unmapped
+- Validation: M007/S01 — IViewResolver interface in Assets/Scripts/Core/PopupManagement/IViewResolver.cs. Proven by 3 ViewContainerGetTests + 2 MockViewResolverTests.
 - Notes: Separate from IPopupContainer — single responsibility.
 
 ### R071 — Popup container renamed and implements IViewResolver
 - Class: core-capability
-- Status: active
+- Status: validated
 - Description: UnityPopupContainer is renamed to reflect its expanded role and implements both IPopupContainer<PopupId> and IViewResolver.
 - Why it matters: Single component handles both popup show/hide and view interface resolution.
 - Source: user
 - Primary owning slice: M007/S01
 - Supporting slices: M007/S02
-- Validation: unmapped
-- Notes: Name TBD — agent discretion (ViewContainer, PopupViewContainer, etc.).
+- Validation: M007/S01 — UnityViewContainer implements IPopupContainer<PopupId> + IViewResolver. rg "UnityPopupContainer" Assets/ → exit 1 (zero matches). GUID preserved via git mv.
+- Notes: Renamed to UnityViewContainer per D042.
 
 ### R072 — Scene controllers get popup views via IViewResolver
 - Class: core-capability
