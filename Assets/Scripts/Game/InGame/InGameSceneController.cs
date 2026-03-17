@@ -102,38 +102,44 @@ namespace SimpleGame.Game.InGame
                 presenter.Initialize();
                 try
                 {
-                    ct.ThrowIfCancellationRequested();
-
-                    var action = await presenter.WaitForAction();
-
-                    if (action == InGameAction.Win)
+                    // Inner loop: handles WatchAd continuation without restarting
+                    while (true)
                     {
-                        // Earn golden pieces
-                        _goldenPieces?.Earn(_goldenPiecesPerWin);
-                        _goldenPieces?.Save();
+                        ct.ThrowIfCancellationRequested();
 
-                        _progression.RegisterWin(_session.CurrentScore);
-                        _session.Outcome = GameOutcome.Win;
-                        await HandleLevelCompletePopupAsync(ct);
-                        return ScreenId.MainMenu;
-                    }
+                        var action = await presenter.WaitForAction();
 
-                    if (action == InGameAction.Lose)
-                    {
-                        _session.Outcome = GameOutcome.Lose;
-                        var choice = await HandleLevelFailedPopupAsync(ct);
-
-                        if (choice == LevelFailedChoice.Quit)
-                            return ScreenId.MainMenu;
-
-                        if (choice == LevelFailedChoice.WatchAd)
+                        if (action == InGameAction.Win)
                         {
-                            // Grant extra hearts via rewarded ad
-                            await HandleRewardedAdAsync(ct);
+                            _goldenPieces?.Earn(_goldenPiecesPerWin);
+                            _goldenPieces?.Save();
+
+                            _progression.RegisterWin(_session.CurrentScore);
+                            _session.Outcome = GameOutcome.Win;
+                            await HandleLevelCompletePopupAsync(ct);
+                            return ScreenId.MainMenu;
                         }
 
-                        // Retry or WatchAd: reset score, loop to create fresh presenter
-                        _session.CurrentScore = 0;
+                        if (action == InGameAction.Lose)
+                        {
+                            _session.Outcome = GameOutcome.Lose;
+                            var choice = await HandleLevelFailedPopupAsync(ct);
+
+                            if (choice == LevelFailedChoice.Quit)
+                                return ScreenId.MainMenu;
+
+                            if (choice == LevelFailedChoice.WatchAd)
+                            {
+                                await HandleRewardedAdAsync(ct);
+                                // Continue with same presenter — restore hearts, keep piece progress
+                                presenter.RestoreHeartsAndContinue();
+                                continue;
+                            }
+
+                            // Retry: break inner loop to create fresh presenter
+                            _session.CurrentScore = 0;
+                            break;
+                        }
                     }
                 }
                 finally

@@ -356,6 +356,93 @@ namespace SimpleGame.Tests.Game
 
             UnityEngine.Object.DestroyImmediate(go);
         }
+
+        [Test]
+        public async Task RunAsync_LoseWatchAdThenContinue_KeepsPieceProgress()
+        {
+            var go = new UnityEngine.GameObject("InGameCtrl");
+            var ctrl = go.AddComponent<InGameSceneController>();
+            _session.ResetForNewGame(1, totalPieces: 5);
+            ctrl.Initialize(_factory, _progression, _session, _popupManager, _goldenPieces, _hearts);
+
+            var view = new MockInGameView();
+            var completeView = new MockLevelCompleteView();
+            var failedView = new MockLevelFailedView();
+            ctrl.SetViewsForTesting(view, completeView, failedView);
+
+            var task = ctrl.RunAsync().AsTask();
+
+            // Place 3 correct pieces, then lose all hearts
+            view.SimulatePlaceCorrect();      // 1/5
+            view.SimulatePlaceCorrect();      // 2/5
+            view.SimulatePlaceCorrect();      // 3/5
+            view.SimulatePlaceIncorrect();    // 2 hearts
+            view.SimulatePlaceIncorrect();    // 1 heart
+            view.SimulatePlaceIncorrect();    // 0 hearts → lose
+
+            // Choose WatchAd → should continue with hearts restored, piece progress kept
+            failedView.SimulateWatchAdClicked();
+
+            // Hearts should be restored — verify via view update
+            Assert.AreEqual("3", view.LastHeartsText,
+                "Hearts should be fully restored after WatchAd");
+
+            // Continue placing the remaining 2 pieces to win
+            view.SimulatePlaceCorrect();      // 4/5
+            view.SimulatePlaceCorrect();      // 5/5 → win
+            completeView.SimulateContinueClicked();
+
+            var result = await task;
+            Assert.AreEqual(ScreenId.MainMenu, result);
+            Assert.AreEqual(GameOutcome.Win, _session.Outcome);
+            Assert.AreEqual(2, _progression.CurrentLevel, "Level should advance after WatchAd + win");
+            Assert.AreEqual("5/5", view.LastPieceCounterText,
+                "Piece counter should show all pieces placed");
+
+            UnityEngine.Object.DestroyImmediate(go);
+        }
+
+        [Test]
+        public async Task RunAsync_LoseRetryThenWin_ResetsProgress()
+        {
+            // Verify that Retry (unlike WatchAd) does reset piece progress
+            var go = new UnityEngine.GameObject("InGameCtrl");
+            var ctrl = go.AddComponent<InGameSceneController>();
+            _session.ResetForNewGame(1, totalPieces: 3);
+            ctrl.Initialize(_factory, _progression, _session, _popupManager, _goldenPieces, _hearts);
+
+            var view = new MockInGameView();
+            var completeView = new MockLevelCompleteView();
+            var failedView = new MockLevelFailedView();
+            ctrl.SetViewsForTesting(view, completeView, failedView);
+
+            var task = ctrl.RunAsync().AsTask();
+
+            // Place 2 correct, then lose
+            view.SimulatePlaceCorrect();      // 1/3
+            view.SimulatePlaceCorrect();      // 2/3
+            view.SimulatePlaceIncorrect();    // 2 hearts
+            view.SimulatePlaceIncorrect();    // 1 heart
+            view.SimulatePlaceIncorrect();    // 0 hearts → lose
+
+            // Choose Retry → piece progress should reset
+            failedView.SimulateRetryClicked();
+
+            // After retry, piece counter should be back to 0/3
+            Assert.AreEqual("0/3", view.LastPieceCounterText,
+                "Piece counter should reset after Retry");
+
+            // Complete all pieces
+            view.SimulatePlaceCorrect();
+            view.SimulatePlaceCorrect();
+            view.SimulatePlaceCorrect();  // 3/3 → win
+            completeView.SimulateContinueClicked();
+
+            var result = await task;
+            Assert.AreEqual(ScreenId.MainMenu, result);
+
+            UnityEngine.Object.DestroyImmediate(go);
+        }
     }
 
     // ---------------------------------------------------------------------------

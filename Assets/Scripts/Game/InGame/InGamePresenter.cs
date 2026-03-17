@@ -66,6 +66,16 @@ namespace SimpleGame.Game.InGame
             return _actionTcs.Task;
         }
 
+        /// <summary>
+        /// Restores hearts to full and re-arms the action source so gameplay continues
+        /// from current piece progress. Called after a rewarded ad grants a retry.
+        /// </summary>
+        public void RestoreHeartsAndContinue()
+        {
+            _hearts.Reset(_initialHearts);
+            View.UpdateHearts(_hearts.RemainingHearts.ToString());
+        }
+
         private void HandlePlaceCorrect()
         {
             _piecesPlaced++;
