@@ -27,6 +27,7 @@
 - `rg "class UnityViewContainer" Assets/Scripts/Game/Popup/` → finds the renamed class implementing both interfaces
 - New test file `Assets/Tests/EditMode/Game/ViewContainerTests.cs` with ≥3 tests for `Get<T>()` + `MockViewResolver`
 - All 164+ existing tests pass (no regressions from rename)
+- **Failure-path diagnostic:** `rg "UnityPopupContainer" Assets/Scripts/ Assets/Editor/` must exit 1 (no matches). Exit 0 means the rename is incomplete and a `CS0246` compile error will surface in Unity Console. Run this check explicitly; a non-zero match count blocks the slice.
 
 ## Observability / Diagnostics
 
@@ -58,7 +59,7 @@ This slice is a compile-time and test-time refactor with no runtime-only observa
   - Verify: `rg "UnityPopupContainer" Assets/` returns zero; `rg "IViewResolver" Assets/Scripts/Core/` finds the interface; project compiles
   - Done when: `IViewResolver` exists in Core, container renamed and implements both interfaces, zero old-name references remain
 
-- [ ] **T02: Add MockViewResolver + ViewContainerTests proving Get<T>() resolution** `est:25m`
+- [x] **T02: Add MockViewResolver + ViewContainerTests proving Get<T>() resolution** `est:25m`
   - Why: Proves the `IViewResolver` contract works — `Get<T>()` finds the correct component on inactive children. Also validates the rename didn't break any existing tests. The `MockViewResolver` test double is the boundary artifact S02 needs.
   - Files: `Assets/Tests/EditMode/Game/ViewContainerTests.cs` (new)
   - Do: (1) Create `ViewContainerTests.cs` with a `MockViewResolver` implementing `IViewResolver` via dictionary lookup. (2) Write tests: `Get_ReturnsCorrectInterface` — attach a mock MonoBehaviour implementing a view interface to a child GO, call `Get<T>()`, assert non-null and correct type. `Get_ReturnsNull_WhenNotFound` — call `Get<T>()` for an interface with no matching child. `Get_FindsInactiveChild` — child GO is inactive, `Get<T>()` still resolves. `MockViewResolver_ReturnsRegisteredView` — test the mock double itself. `MockViewResolver_ReturnsNull_WhenNotRegistered`. (3) All tests use `[Test]` attribute and NUnit assertions consistent with existing test patterns.
