@@ -58,3 +58,28 @@ When renaming a MonoBehaviour class (e.g. `UnityPopupContainer` → `UnityViewCo
 
 **Fix:** After `git mv`, run `sed -i 's/OldClassName/NewClassName/g' Assets/Scenes/Boot.unity` (or the relevant scene file). Always run `rg "OldName" Assets/` across all file types (not just `.cs`) to catch scene file references.
 
+
+---
+
+### K006 — mcporter run_tests on Windows: UV_HANDLE_CLOSING assertion crash
+**Date:** 2026-03-17
+
+`mcporter call unityMCP.run_tests testMode:EditMode` consistently crashes on Windows with:
+```
+Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), file src\win\async.c, line 76
+```
+This is a libuv/mcporter issue where the test runner's long-running async response triggers a handle lifecycle conflict on Windows. The same crash occurs with `batch_execute` wrapping `run_tests`.
+
+**Workaround:** Use stdin pipe mode to bypass the CLI arg handling path:
+```bash
+echo '{"testMode":"EditMode"}' | mcporter call unityMCP.run_tests --stdin
+```
+This returns `{"job_id": "...", "status": "running", ...}` immediately.
+
+Poll for results with (this works fine via normal CLI):
+```bash
+mcporter call unityMCP.get_test_job job_id=<job_id>
+```
+When `status == "succeeded"`, check `result.summary.total`, `.passed`, `.failed`.
+
+Note: `mcp_call(server: "unityMCP", tool: "run_tests", args: {...})` via the pi tool also triggers the same crash. The stdin pipe workaround is the only reliable method.

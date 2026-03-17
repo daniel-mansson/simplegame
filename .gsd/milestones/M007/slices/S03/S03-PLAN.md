@@ -26,6 +26,12 @@
 - Unity batchmode test run: all 169+ tests pass
 - Human UAT: full game flow play-through confirms identical behavior
 
+### Failure-Path Diagnostics
+
+- **Test count < 169 in batchmode XML:** K003 domain-reload issue — new test files compiled into `SimpleGame.Tests.Game.dll` (Mar 17) are not reflected in the batchmode cache. Remedy: close and reopen Unity editor to force a full domain reload, then re-run tests. Confirm fresh run with: `mcporter call unityMCP.get_test_job job_id=<id>` → `summary.total == 169`.
+- **FindSceneController returns null at runtime:** Check Unity Console for `[GameBootstrapper] XyzSceneController not found in scene.` — this means the scene wasn't loaded before the controller lookup. Verify scene names match `ScreenId` enum values using `rg "ScreenId\." Assets/Scripts/ -n`.
+- **Compile error after S03:** Run `rg "FindFirstObjectByType|FindObjectOfType" Assets/Scripts/` — if any remain, T01 was not completed. Check `GameBootstrapper.cs` line 99–126 for the three `FindSceneController<T>` calls.
+
 ## Observability / Diagnostics
 
 - **Runtime signals:** `GameBootstrapper` emits `Debug.Log("[GameBootstrapper] Boot sequence started.")` and `Debug.Log("[GameBootstrapper] Infrastructure ready. Starting navigation loop.")` at startup. Each `FindSceneController<T>` failure path emits `Debug.LogError("[GameBootstrapper] XyzSceneController not found in scene.")` — these are visible in the Unity Console and in batchmode logs.
@@ -49,7 +55,7 @@
   - Verify: `rg "FindFirstObjectByType|FindObjectOfType|FindObjectsOfType|FindAnyObjectByType" Assets/Scripts/` returns exit 1; `rg "FindSceneController" Assets/Scripts/Game/Boot/GameBootstrapper.cs` shows 4 matches (1 definition + 3 calls)
   - Done when: Zero `FindObject*` calls in `Assets/Scripts/`, helper method exists with `IsValid()` safety guard, and all 3 call sites use it
 
-- [ ] **T02: Run full test suite and verify milestone completion** `est:15m`
+- [x] **T02: Run full test suite and verify milestone completion** `est:15m`
   - Why: Gate for R076 (all 169+ tests pass) and milestone-level done criteria — confirms zero regressions from S01–S03 refactoring
   - Files: none (verification only)
   - Do: Run Unity batchmode edit-mode tests. Verify all 169+ tests pass. Run comprehensive `rg` checks across `Assets/` for any `FindObject*` variants. Confirm no `.cs` file under `Assets/Scripts/`, `Assets/Editor/`, or `Assets/Tests/` contains `FindFirstObjectByType`.

@@ -64,6 +64,13 @@ Run the full Unity edit-mode test suite in batchmode to confirm all 169+ tests p
 - All test files unchanged from S02 state — no test modifications expected or required in S03
 - K003 knowledge entry — domain-reload-disabled editor may not detect new test files without restart
 
+## Observability Impact
+
+- **What changes:** No runtime code changes. The test run itself surfaces whether all 169 test methods are compiled and passing under the current domain state.
+- **How a future agent inspects this task:** Run `mcporter call unityMCP.run_tests job_id` → poll `get_test_job` for `status: succeeded` and `summary.total == 169`. Alternatively, check `TestResults_M007.xml` (or the latest `TestResults.xml`) — the `<test-run>` root attribute `testcasecount` must be 169.
+- **Failure state visibility:** If the test count is < 169, the K003 domain-reload issue is in effect — the running editor hasn't reloaded since new test files were added. Remedy: close and reopen the Unity editor to force domain reload, then re-run tests. If any tests fail, read the `<test-case result="Failed">` entries in the XML output for the exact assertion message and stack trace.
+- **Diagnostic command:** `rg -g "*.cs" "\[Test\]\|\[TestCase\]\|\[UnityTest\]" Assets/Tests/ | wc -l` should return 169. If the batchmode XML shows fewer, it's a stale assembly cache (K003).
+
 ## Expected Output
 
 - No files modified — this is a verification-only task
