@@ -139,24 +139,24 @@ Use it to track what is actively in scope, what has been validated by completed 
 
 ### R072 — Scene controllers get popup views via IViewResolver
 - Class: core-capability
-- Status: active
+- Status: validated
 - Description: Scene controllers receive IViewResolver in their Initialize() method and use Get<T>() to resolve popup view interfaces instead of FindFirstObjectByType.
 - Why it matters: Eliminates implicit scene scanning. Makes view dependencies explicit.
 - Source: user
 - Primary owning slice: M007/S02
 - Supporting slices: none
-- Validation: unmapped
+- Validation: Zero FindFirstObjectByType in InGameSceneController.cs and MainMenuSceneController.cs (grep exit 1). IViewResolver field and parameter present in both. 4 LogError signals intact. All 8 test call sites compile with null IViewResolver (SetViewsForTesting overrides take precedence). Verified M007/S02.
 - Notes: SetViewsForTesting test seam must still work for test doubles.
 
 ### R073 — GameBootstrapper uses SerializeField refs for boot infrastructure
 - Class: core-capability
-- Status: active
+- Status: validated
 - Description: GameBootstrapper has [SerializeField] references to UnityInputBlocker, UnityTransitionPlayer, and the popup container — no FindFirstObjectByType for boot infrastructure.
 - Why it matters: Explicit wiring, no scene scanning at boot time.
 - Source: user
 - Primary owning slice: M007/S02
 - Supporting slices: none
-- Validation: unmapped
+- Validation: 4 [SerializeField] fields in GameBootstrapper (_worldData + 3 new). rg "FindFirstObjectByType<Unity" Assets/Scripts/Game/Boot/GameBootstrapper.cs → exit 1. Exactly 3 FindFirstObjectByType remaining (scene controller lookups only). 3 WireSerializedField calls in SceneSetup.cs. Verified M007/S02.
 - Notes: These are all in the Boot scene, so SerializeField refs are straightforward.
 
 ### R074 — Scene controllers resolved via scene root convention
@@ -656,8 +656,8 @@ Use it to track what is actively in scope, what has been validated by completed 
 | R069 | core-capability | active | M007/S01 | none | mapped |
 | R070 | core-capability | active | M007/S01 | M007/S02 | mapped |
 | R071 | core-capability | active | M007/S01 | M007/S02 | mapped |
-| R072 | core-capability | active | M007/S02 | none | mapped |
-| R073 | core-capability | active | M007/S02 | none | mapped |
+| R072 | core-capability | validated | M007/S02 | none | mapped |
+| R073 | core-capability | validated | M007/S02 | none | mapped |
 | R074 | core-capability | active | M007/S03 | none | mapped |
 | R075 | constraint | active | M007/S03 | M007/S01, M007/S02 | mapped |
 | R076 | quality-attribute | active | M007/S03 | M007/S01, M007/S02 | mapped |

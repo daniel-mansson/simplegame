@@ -10,7 +10,7 @@ A complete game flow skeleton — main screen with meta world, stub gameplay wit
 
 ## Current State
 
-**M007 S01 complete.** `IViewResolver` interface introduced in Core, `UnityPopupContainer` renamed to `UnityViewContainer` (GUID preserved), `Get<T>()` implemented via `GetComponentInChildren<T>(true)`. `MockViewResolver` test double and 5 new tests in `ViewContainerTests.cs`. All reference files updated; `rg "UnityPopupContainer" Assets/` returns exit 1. S02 next: wire scene controllers to use IViewResolver.Get<T>(), switch GameBootstrapper to SerializeField refs.
+**M007 S02 complete.** Scene controllers now receive `IViewResolver` in `Initialize()` and use `_viewResolver?.Get<T>()` instead of `FindFirstObjectByType` for popup views. `GameBootstrapper` has `[SerializeField]` fields for `UnityInputBlocker`, `UnityTransitionPlayer`, `UnityViewContainer` — wired by `SceneSetup`. Only 3 `FindFirstObjectByType` calls remain (scene controller lookups in `GameBootstrapper`). S03 next: scene root convention to replace those 3, batchmode test run, human UAT.
 
 **M001–M005 complete.** MVP pattern, screen management, popup system, transitions, input blocking, assembly separation, SceneController architecture, boot-from-any-scene, full game loop, LitMotion prefab transitions — all proven and tested.
 

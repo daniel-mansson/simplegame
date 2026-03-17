@@ -56,7 +56,7 @@ This milestone is complete only when all are true:
 - [x] **S01: IViewResolver + Container Refactor** `risk:medium` `depends:[]`
   > After this: renamed container in Boot holds all 6 popup views as inactive children and exposes Get<IMyView>(), show/hide by PopupId still works, verified by tests
 
-- [ ] **S02: Scene Controller View Resolution + Boot SerializeField Refs** `risk:medium` `depends:[S01]`
+- [x] **S02: Scene Controller View Resolution + Boot SerializeField Refs** `risk:medium` `depends:[S01]`
   > After this: scene controllers get popup views from IViewResolver instead of FindFirstObjectByType, GameBootstrapper uses SerializeField refs for boot infrastructure, all existing tests pass
 
 - [ ] **S03: Scene Root Convention + Final Cleanup** `risk:medium` `depends:[S01,S02]`
