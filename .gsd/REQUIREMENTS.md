@@ -159,39 +159,6 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Validation: 4 [SerializeField] fields in GameBootstrapper (_worldData + 3 new). rg "FindFirstObjectByType<Unity" Assets/Scripts/Game/Boot/GameBootstrapper.cs → exit 1. Exactly 3 FindFirstObjectByType remaining (scene controller lookups only). 3 WireSerializedField calls in SceneSetup.cs. Verified M007/S02.
 - Notes: These are all in the Boot scene, so SerializeField refs are straightforward.
 
-### R074 — Scene controllers resolved via scene root convention
-- Class: core-capability
-- Status: active
-- Description: After additive scene load, the GameBootstrapper finds scene controllers via a scene root convention (e.g. querying root GameObjects of the loaded scene) instead of FindFirstObjectByType.
-- Why it matters: Eliminates the last FindFirstObjectByType usage from production code.
-- Source: user
-- Primary owning slice: M007/S03
-- Supporting slices: none
-- Validation: unmapped
-- Notes: Exact convention (root query, scene loader return value, etc.) is agent discretion.
-
-### R075 — Zero FindFirstObjectByType calls in production code
-- Class: constraint
-- Status: active
-- Description: No FindFirstObjectByType, FindObjectOfType, FindObjectsOfType, or FindAnyObjectByType anywhere in Assets/Scripts/.
-- Why it matters: Forces explicit wiring everywhere — no implicit scene scanning.
-- Source: user
-- Primary owning slice: M007/S03
-- Supporting slices: M007/S01, M007/S02
-- Validation: unmapped
-- Notes: Verified by grep across Assets/Scripts/.
-
-### R076 — All existing tests pass after refactor
-- Class: quality-attribute
-- Status: active
-- Description: All 164+ edit-mode tests pass in Unity batchmode after the refactor.
-- Why it matters: Refactor must not break existing behavior.
-- Source: inferred
-- Primary owning slice: M007/S03
-- Supporting slices: M007/S01, M007/S02
-- Validation: unmapped
-- Notes: Verified by Unity batchmode test run.
-
 ### R077 — Functionally identical behavior end-to-end
 - Class: constraint
 - Status: active
@@ -200,8 +167,8 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M007/S03
 - Supporting slices: M007/S01, M007/S02
-- Validation: unmapped
-- Notes: Verified by human UAT play-through.
+- Validation: unmapped — Human UAT required: MainMenu → InGame → Win → MainMenu and InGame → Lose → Retry → Win play-through. Not yet performed.
+- Notes: Verified by human UAT play-through. Milestone not fully closed until UAT passes.
 
 ## Deferred
 
@@ -300,6 +267,27 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Validation: unmapped
 
 ## Validated
+
+### R074 — Scene controllers resolved via scene root convention
+- Class: core-capability
+- Status: validated
+- Description: After additive scene load, the GameBootstrapper finds scene controllers via a scene root convention (e.g. querying root GameObjects of the loaded scene) instead of FindFirstObjectByType.
+- Validated by: M007/S03 — FindSceneController<T>(sceneName) private static helper in GameBootstrapper.cs using SceneManager.GetSceneByName() + scene.IsValid() + GetRootGameObjects() + GetComponent<T>(). Three call sites confirmed at lines 99, 113, 126.
+- Proof: rg "FindSceneController|GetSceneByName|GetRootGameObjects" GameBootstrapper.cs → 5 matches
+
+### R075 — Zero FindFirstObjectByType calls in production code
+- Class: constraint
+- Status: validated
+- Description: No FindFirstObjectByType, FindObjectOfType, FindObjectsOfType, or FindAnyObjectByType anywhere in Assets/Scripts/.
+- Validated by: M007/S03 — rg -g "*.cs" "FindFirstObjectByType|..." Assets/ → exit 1 (zero matches across entire Assets/ tree). 2026-03-17.
+- Proof: grep across all .cs files in Assets/ — zero matches
+
+### R076 — All existing tests pass after refactor
+- Class: quality-attribute
+- Status: validated
+- Description: All 164+ edit-mode tests pass in Unity batchmode after the refactor.
+- Validated by: M007/S03 — Unity EditMode test run (job ID 766d31f2ff0b434eaad592ac6a7a8796): total=169, passed=169, failed=0, skipped=0.
+- Proof: Unity MCP test job; last test: ViewContainerGetTests.Get_ReturnsNull_WhenInterfaceNotFound
 
 ### R045 — Main screen shows environment with restorable objects, balance, play, settings
 - Class: primary-user-loop

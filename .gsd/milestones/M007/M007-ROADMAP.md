@@ -59,7 +59,7 @@ This milestone is complete only when all are true:
 - [x] **S02: Scene Controller View Resolution + Boot SerializeField Refs** `risk:medium` `depends:[S01]`
   > After this: scene controllers get popup views from IViewResolver instead of FindFirstObjectByType, GameBootstrapper uses SerializeField refs for boot infrastructure, all existing tests pass
 
-- [ ] **S03: Scene Root Convention + Final Cleanup** `risk:medium` `depends:[S01,S02]`
+- [x] **S03: Scene Root Convention + Final Cleanup** `risk:medium` `depends:[S01,S02]`
   > After this: scene controllers resolved via scene root convention, zero FindFirstObjectByType in production code, all 164+ tests pass, full game flow identical
 
 ## Boundary Map

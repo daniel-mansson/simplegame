@@ -10,13 +10,13 @@ A complete game flow skeleton — main screen with meta world, stub gameplay wit
 
 ## Current State
 
-**M007 S02 complete.** Scene controllers now receive `IViewResolver` in `Initialize()` and use `_viewResolver?.Get<T>()` instead of `FindFirstObjectByType` for popup views. `GameBootstrapper` has `[SerializeField]` fields for `UnityInputBlocker`, `UnityTransitionPlayer`, `UnityViewContainer` — wired by `SceneSetup`. Only 3 `FindFirstObjectByType` calls remain (scene controller lookups in `GameBootstrapper`). S03 next: scene root convention to replace those 3, batchmode test run, human UAT.
+**M007 S03 complete — M007 mechanically complete, human UAT pending.** All 3 remaining `FindFirstObjectByType` calls replaced with `FindSceneController<T>(current.Value.ToString())` private static helper using scene root convention (`SceneManager.GetSceneByName()` + `scene.IsValid()` + `GetRootGameObjects()` + `GetComponent<T>()`). Zero `FindObject*` variants anywhere in Assets/. 169/169 EditMode tests pass. Human UAT (R077: full play-through MainMenu→InGame→Win→MainMenu, InGame→Lose→Retry→Win) is the only remaining gate before M007 closes.
 
-**M001–M005 complete.** MVP pattern, screen management, popup system, transitions, input blocking, assembly separation, SceneController architecture, boot-from-any-scene, full game loop, LitMotion prefab transitions — all proven and tested.
+**M001–M006 complete.** MVP pattern, screen management, popup system, transitions, input blocking, assembly separation, SceneController architecture, boot-from-any-scene, full game loop, LitMotion prefab transitions, meta world with restoration + economy — all proven and tested.
 
-**M007 in progress.** Refactoring popup view wiring from scene-placed GameObjects with FindFirstObjectByType to prefab-based organization under a generic IViewResolver container. Eliminates all implicit scene scanning from production code.
+**M007 complete (pending UAT).** All popup views are prefabs under `UnityViewContainer` in Boot scene. `IViewResolver` in Core with `Get<T>()`, implemented by container. Scene controllers receive `IViewResolver` via `Initialize()`. `GameBootstrapper` has `[SerializeField]` refs for all boot infrastructure. Scene controllers found via scene root convention. Zero `FindObject*` in production code. 169 edit-mode tests pass.
 
-**Test count:** 164+ edit-mode tests passing across Core and Game assemblies.
+**Test count:** 169 edit-mode tests passing across Core and Game assemblies.
 
 ## Architecture / Key Patterns
 
