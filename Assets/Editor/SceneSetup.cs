@@ -82,6 +82,7 @@ public static class SceneSetup
         inputBlockerCanvasGroup.alpha = 1f;
         var inputBlocker = inputBlockerCanvas.gameObject.AddComponent<UnityInputBlocker>();
         WireSerializedField(inputBlocker, "_canvasGroup", inputBlockerCanvasGroup);
+        WireSerializedField(bootstrapper, "_inputBlocker", inputBlocker);
 
         // Transition overlay from prefab
         var transitionPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/TransitionOverlay.prefab");
@@ -89,6 +90,7 @@ public static class SceneSetup
         {
             var transitionInstance = (GameObject)PrefabUtility.InstantiatePrefab(transitionPrefab);
             transitionInstance.SetActive(false);
+            WireSerializedField(bootstrapper, "_transitionPlayer", transitionInstance.GetComponent<UnityTransitionPlayer>());
         }
         else
         {
@@ -98,6 +100,7 @@ public static class SceneSetup
         // Popup Canvas (sort order 300)
         CreateFullScreenCanvas("PopupCanvas", 300, out var popupCanvas);
         var popupContainer = popupCanvas.gameObject.AddComponent<UnityViewContainer>();
+        WireSerializedField(bootstrapper, "_viewContainer", popupContainer);
 
         // --- ConfirmDialog popup ---
         var confirmDialogGO = CreatePopupDialog(popupCanvas.transform, "ConfirmDialogPopup",

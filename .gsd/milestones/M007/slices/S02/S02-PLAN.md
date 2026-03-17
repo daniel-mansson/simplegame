@@ -59,6 +59,12 @@ rg "_inputBlocker|_transitionPlayer|_viewContainer" Assets/Editor/SceneSetup.cs
 # (verify the LogError fallback is intact in both controllers)
 rg "LogError.*not found in any loaded scene" Assets/Scripts/Game/InGame/InGameSceneController.cs Assets/Scripts/Game/MainMenu/MainMenuSceneController.cs
 # → 4 matches (2 per file) — confirms failure visibility is preserved
+
+# Failure-path: SerializeField null-guard — any null boot infrastructure field
+# will cause GameBootstrapper to never reach "Infrastructure ready" log line.
+# Verify the "Infrastructure ready" log is present in GameBootstrapper.cs:
+rg "Infrastructure ready" Assets/Scripts/Game/Boot/GameBootstrapper.cs
+# → 1 match — confirms boot failure is observable via Console filter [GameBootstrapper]
 ```
 
 ## Observability / Diagnostics
@@ -91,7 +97,7 @@ rg "LogError.*not found in any loaded scene" Assets/Scripts/Game/InGame/InGameSc
   - Verify: `rg "FindFirstObjectByType" Assets/Scripts/Game/InGame/InGameSceneController.cs` → exit 1; same for MainMenuSceneController; `rg "IViewResolver" Assets/Scripts/Game/InGame/InGameSceneController.cs Assets/Scripts/Game/MainMenu/MainMenuSceneController.cs` → matches in both
   - Done when: Zero `FindFirstObjectByType` in both scene controllers, all `Initialize()` call sites compile (no CS7036), test seam (`SetViewsForTesting`) untouched
 
-- [ ] **T02: Add SerializeField refs to GameBootstrapper for boot infrastructure and wire in SceneSetup** `est:15m`
+- [x] **T02: Add SerializeField refs to GameBootstrapper for boot infrastructure and wire in SceneSetup** `est:15m`
   - Why: Eliminates 3 `FindFirstObjectByType` calls for boot infrastructure in `GameBootstrapper.Start()` (R073). Completes the explicit-wiring pattern for all Boot scene components.
   - Files: `Assets/Scripts/Game/Boot/GameBootstrapper.cs`, `Assets/Editor/SceneSetup.cs`
   - Do: (1) Add three `[SerializeField] private` fields to `GameBootstrapper`: `UnityInputBlocker _inputBlocker`, `UnityTransitionPlayer _transitionPlayer`, `UnityViewContainer _viewContainer`. (2) In `Start()`, remove the 3 `FindFirstObjectByType` calls (lines 57-59) and use `_inputBlocker`, `_transitionPlayer`, `_viewContainer` directly. Rename local vars or use fields directly — the `popupContainer` local used in `PopupManager` construction becomes `_viewContainer`. (3) In `SceneSetup.CreateBootScene()`, after the bootstrapper is created, add 3 `WireSerializedField` calls: `_inputBlocker` → `inputBlocker`, `_transitionPlayer` → the `UnityTransitionPlayer` component on the transition instance (with null-guard for missing prefab), `_viewContainer` → `popupContainer`.

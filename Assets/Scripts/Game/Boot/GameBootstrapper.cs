@@ -29,6 +29,9 @@ namespace SimpleGame.Game.Boot
     public class GameBootstrapper : MonoBehaviour
     {
         [SerializeField] private WorldData _worldData;
+        [SerializeField] private UnityInputBlocker _inputBlocker;
+        [SerializeField] private UnityTransitionPlayer _transitionPlayer;
+        [SerializeField] private UnityViewContainer _viewContainer;
 
         private ScreenManager<ScreenId> _screenManager;
         private PopupManager<PopupId> _popupManager;
@@ -54,9 +57,9 @@ namespace SimpleGame.Game.Boot
             _goldenPieceService = new GoldenPieceService(_metaSaveService);
 
             // --- Build infrastructure ---
-            var inputBlocker = FindFirstObjectByType<UnityInputBlocker>();
-            var transitionPlayer = FindFirstObjectByType<UnityTransitionPlayer>(FindObjectsInactive.Include);
-            var popupContainer = FindFirstObjectByType<UnityViewContainer>();
+            var inputBlocker = _inputBlocker;
+            var transitionPlayer = _transitionPlayer;
+            var popupContainer = _viewContainer;
             var sceneLoader = new UnitySceneLoader();
 
             _popupManager = new PopupManager<PopupId>(popupContainer, inputBlocker);

@@ -91,6 +91,22 @@ rg "FindFirstObjectByType" Assets/Scripts/ --count
 # → GameBootstrapper.cs:3 only (scene controllers removed in T01)
 ```
 
+## Observability Impact
+
+**Signals introduced / changed by this task:**
+- `GameBootstrapper.Start()` now reads `_inputBlocker`, `_transitionPlayer`, and `_viewContainer` from serialized fields instead of searching the scene at runtime. If any field is `null` (not wired in the Boot scene), downstream construction of `PopupManager` or `ScreenManager` will receive null and will throw a `NullReferenceException` or silently skip functionality. The Unity Console will show the exception with a `GameBootstrapper` stack frame.
+- The existing `Debug.Log("[GameBootstrapper] Infrastructure ready. Starting navigation loop.")` log still fires after infrastructure is built — absence of this message means construction failed before that point.
+
+**How to inspect this task at runtime:**
+1. In Unity Console, filter by `[GameBootstrapper]` — if the "Infrastructure ready" message is absent, one of the three serialized fields was null.
+2. Check the `GameBootstrapper` Inspector in the Boot scene — all three fields (`_inputBlocker`, `_transitionPlayer`, `_viewContainer`) should show populated references after running `Tools/Setup/Create And Register Scenes`.
+3. If `_transitionPlayer` is null (prefab missing), `ScreenManager` will have no transition effect but won't crash (transition is nullable). Log line `[SceneSetup] TransitionOverlay.prefab not found.` in the Console flags the missing asset.
+
+**Failure visibility:**
+- `_inputBlocker` null: `PopupManager` constructor receives null; blocking behavior silently absent. No exception unless PopupManager guards against null internally.
+- `_transitionPlayer` null: `ScreenManager` treats transitions as no-ops. The SceneSetup already logs a warning for the missing prefab case.
+- `_viewContainer` null: `PopupManager` constructor receives null `IPopupContainer`; ShowPopupAsync will throw on first popup attempt — visible as NullReferenceException in Console.
+
 ## Inputs
 
 - `Assets/Scripts/Game/Boot/GameBootstrapper.cs` — After T01, this file already passes `popupContainer` to scene controller `Initialize()` calls. The `Start()` method still has 3 `FindFirstObjectByType` calls for infrastructure (lines 57-59).
