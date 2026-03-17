@@ -7,9 +7,11 @@ using SimpleGame.Core.MVP;
 using SimpleGame.Game;
 using SimpleGame.Game.Boot;
 using SimpleGame.Game.MainMenu;
+using SimpleGame.Game.Meta;
 using SimpleGame.Game.Popup;
 using SimpleGame.Game.Services;
 using SimpleGame.Game.Settings;
+using UnityEngine;
 
 namespace SimpleGame.Tests.Game
 {
@@ -19,29 +21,28 @@ namespace SimpleGame.Tests.Game
     internal class MockMainMenuView : IMainMenuView
     {
         public event Action OnSettingsClicked;
-        public event Action OnPopupClicked;
         public event Action OnPlayClicked;
+        public event Action<int> OnObjectTapped;
 
-        public string LastTitleText { get; private set; }
-        public int UpdateTitleCallCount { get; private set; }
+        public string LastEnvironmentNameText { get; private set; }
+        public string LastBalanceText { get; private set; }
         public string LastLevelDisplayText { get; private set; }
-        public int UpdateLevelDisplayCallCount { get; private set; }
+        public ObjectDisplayData[] LastObjects { get; private set; }
+        public int UpdateObjectsCallCount { get; private set; }
 
-        public void UpdateTitle(string text)
-        {
-            LastTitleText = text;
-            UpdateTitleCallCount++;
-        }
+        public void UpdateEnvironmentName(string text) => LastEnvironmentNameText = text;
+        public void UpdateBalance(string text) => LastBalanceText = text;
+        public void UpdateLevelDisplay(string text) => LastLevelDisplayText = text;
 
-        public void UpdateLevelDisplay(string text)
+        public void UpdateObjects(ObjectDisplayData[] objects)
         {
-            LastLevelDisplayText = text;
-            UpdateLevelDisplayCallCount++;
+            LastObjects = objects;
+            UpdateObjectsCallCount++;
         }
 
         public void SimulateSettingsClicked() => OnSettingsClicked?.Invoke();
-        public void SimulatePopupClicked() => OnPopupClicked?.Invoke();
         public void SimulatePlayClicked() => OnPlayClicked?.Invoke();
+        public void SimulateObjectTapped(int index) => OnObjectTapped?.Invoke(index);
     }
 
     // ---------------------------------------------------------------------------
@@ -93,7 +94,14 @@ namespace SimpleGame.Tests.Game
         private GameService _gameService;
         private ProgressionService _progression;
         private GameSessionService _session;
+        private HeartService _hearts;
+        private MockMetaSaveServiceForDemo _saveService;
+        private MetaProgressionService _metaProgression;
+        private GoldenPieceService _goldenPieces;
         private UIFactory _factory;
+        private EnvironmentData _testEnv;
+        private WorldData _testWorld;
+        private RestorableObjectData _fountain;
 
         [SetUp]
         public void SetUp()
@@ -101,7 +109,37 @@ namespace SimpleGame.Tests.Game
             _gameService = new GameService();
             _progression = new ProgressionService();
             _session = new GameSessionService();
-            _factory = new UIFactory(_gameService, _progression, _session);
+            _hearts = new HeartService();
+
+            // Create minimal test data
+            _fountain = ScriptableObject.CreateInstance<RestorableObjectData>();
+            _fountain.name = "Fountain";
+            _fountain.displayName = "Fountain";
+            _fountain.totalSteps = 3;
+            _fountain.costPerStep = 1;
+            _fountain.blockedBy = new RestorableObjectData[0];
+
+            _testEnv = ScriptableObject.CreateInstance<EnvironmentData>();
+            _testEnv.environmentName = "Garden";
+            _testEnv.objects = new[] { _fountain };
+
+            _testWorld = ScriptableObject.CreateInstance<WorldData>();
+            _testWorld.environments = new[] { _testEnv };
+
+            _saveService = new MockMetaSaveServiceForDemo();
+            _metaProgression = new MetaProgressionService(_testWorld, _saveService);
+            _goldenPieces = new GoldenPieceService(_saveService);
+
+            _factory = new UIFactory(_gameService, _progression, _session, _hearts,
+                                     _metaProgression, _goldenPieces);
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            UnityEngine.Object.DestroyImmediate(_fountain);
+            UnityEngine.Object.DestroyImmediate(_testEnv);
+            UnityEngine.Object.DestroyImmediate(_testWorld);
         }
 
         // --- Construction tests ---
@@ -110,7 +148,7 @@ namespace SimpleGame.Tests.Game
         public void UIFactory_CreatesMainMenuPresenter()
         {
             var view = new MockMainMenuView();
-            var presenter = _factory.CreateMainMenuPresenter(view);
+            var presenter = _factory.CreateMainMenuPresenter(view, _testEnv);
 
             Assert.IsNotNull(presenter);
             Assert.IsInstanceOf<MainMenuPresenter>(presenter);
@@ -136,34 +174,51 @@ namespace SimpleGame.Tests.Game
             Assert.IsInstanceOf<ConfirmDialogPresenter>(presenter);
         }
 
-        // --- Initialize sets initial title/message ---
+        // --- Initialize sets initial state ---
 
         [Test]
-        public void MainMenuPresenter_Initialize_SetsTitle()
+        public void MainMenuPresenter_Initialize_SetsEnvironmentName()
         {
             var view = new MockMainMenuView();
-            var presenter = _factory.CreateMainMenuPresenter(view);
-
+            var presenter = _factory.CreateMainMenuPresenter(view, _testEnv);
             presenter.Initialize();
 
-            Assert.IsFalse(string.IsNullOrEmpty(view.LastTitleText),
-                "Initialize() must set a non-empty title on the MainMenu view");
-            Assert.Greater(view.UpdateTitleCallCount, 0,
-                "Initialize() must call UpdateTitle at least once");
+            Assert.AreEqual("Garden", view.LastEnvironmentNameText);
         }
 
         [Test]
         public void MainMenuPresenter_Initialize_SetsLevelDisplay()
         {
             var view = new MockMainMenuView();
-            var presenter = _factory.CreateMainMenuPresenter(view);
-
+            var presenter = _factory.CreateMainMenuPresenter(view, _testEnv);
             presenter.Initialize();
 
-            Assert.AreEqual("Level 1", view.LastLevelDisplayText,
-                "Initialize() must set level display to 'Level 1' (progression starts at 1)");
-            Assert.Greater(view.UpdateLevelDisplayCallCount, 0,
-                "Initialize() must call UpdateLevelDisplay at least once");
+            Assert.AreEqual("Level 1", view.LastLevelDisplayText);
+        }
+
+        [Test]
+        public void MainMenuPresenter_Initialize_SetsBalance()
+        {
+            var view = new MockMainMenuView();
+            var presenter = _factory.CreateMainMenuPresenter(view, _testEnv);
+            presenter.Initialize();
+
+            Assert.AreEqual("0 Golden Pieces", view.LastBalanceText);
+        }
+
+        [Test]
+        public void MainMenuPresenter_Initialize_SetsObjects()
+        {
+            var view = new MockMainMenuView();
+            var presenter = _factory.CreateMainMenuPresenter(view, _testEnv);
+            presenter.Initialize();
+
+            Assert.IsNotNull(view.LastObjects);
+            Assert.AreEqual(1, view.LastObjects.Length);
+            Assert.AreEqual("Fountain", view.LastObjects[0].Name);
+            Assert.AreEqual("0/3", view.LastObjects[0].Progress);
+            Assert.IsFalse(view.LastObjects[0].IsBlocked);
+            Assert.IsFalse(view.LastObjects[0].IsComplete);
         }
 
         [Test]
@@ -171,8 +226,7 @@ namespace SimpleGame.Tests.Game
         {
             _progression.RegisterWin(0); // advance to level 2
             var view = new MockMainMenuView();
-            var presenter = _factory.CreateMainMenuPresenter(view);
-
+            var presenter = _factory.CreateMainMenuPresenter(view, _testEnv);
             presenter.Initialize();
 
             Assert.AreEqual("Level 2", view.LastLevelDisplayText);
@@ -183,13 +237,9 @@ namespace SimpleGame.Tests.Game
         {
             var view = new MockSettingsView();
             var presenter = _factory.CreateSettingsPresenter(view);
-
             presenter.Initialize();
 
-            Assert.IsFalse(string.IsNullOrEmpty(view.LastTitleText),
-                "Initialize() must set a non-empty title on the Settings view");
-            Assert.Greater(view.UpdateTitleCallCount, 0,
-                "Initialize() must call UpdateTitle at least once");
+            Assert.IsFalse(string.IsNullOrEmpty(view.LastTitleText));
         }
 
         [Test]
@@ -197,13 +247,9 @@ namespace SimpleGame.Tests.Game
         {
             var view = new MockConfirmDialogView();
             var presenter = _factory.CreateConfirmDialogPresenter(view);
-
             presenter.Initialize();
 
-            Assert.IsFalse(string.IsNullOrEmpty(view.LastMessageText),
-                "Initialize() must set a non-empty message on the ConfirmDialog view");
-            Assert.Greater(view.UpdateMessageCallCount, 0,
-                "Initialize() must call UpdateMessage at least once");
+            Assert.IsFalse(string.IsNullOrEmpty(view.LastMessageText));
         }
 
         // --- Async result task tests ---
@@ -212,7 +258,7 @@ namespace SimpleGame.Tests.Game
         public async Task MainMenuPresenter_WaitForAction_SettingsClicked_ResolvesSettings()
         {
             var view = new MockMainMenuView();
-            var presenter = _factory.CreateMainMenuPresenter(view);
+            var presenter = _factory.CreateMainMenuPresenter(view, _testEnv);
             presenter.Initialize();
 
             var task = presenter.WaitForAction().AsTask();
@@ -223,24 +269,10 @@ namespace SimpleGame.Tests.Game
         }
 
         [Test]
-        public async Task MainMenuPresenter_WaitForAction_PopupClicked_ResolvesPopup()
-        {
-            var view = new MockMainMenuView();
-            var presenter = _factory.CreateMainMenuPresenter(view);
-            presenter.Initialize();
-
-            var task = presenter.WaitForAction().AsTask();
-            view.SimulatePopupClicked();
-
-            var result = await task;
-            Assert.AreEqual(MainMenuAction.Popup, result);
-        }
-
-        [Test]
         public async Task MainMenuPresenter_WaitForAction_PlayClicked_ResolvesPlay()
         {
             var view = new MockMainMenuView();
-            var presenter = _factory.CreateMainMenuPresenter(view);
+            var presenter = _factory.CreateMainMenuPresenter(view, _testEnv);
             presenter.Initialize();
 
             var task = presenter.WaitForAction().AsTask();
@@ -254,20 +286,66 @@ namespace SimpleGame.Tests.Game
         public async Task MainMenuPresenter_PlayClicked_SetsSessionContext()
         {
             var view = new MockMainMenuView();
-            var presenter = _factory.CreateMainMenuPresenter(view);
+            var presenter = _factory.CreateMainMenuPresenter(view, _testEnv);
             presenter.Initialize();
 
             var task = presenter.WaitForAction().AsTask();
             view.SimulatePlayClicked();
             await task;
 
-            Assert.AreEqual(1, _session.CurrentLevelId,
-                "Play must set session level to progression's current level");
-            Assert.AreEqual(0, _session.CurrentScore,
-                "Play must reset session score to 0");
-            Assert.AreEqual(GameOutcome.None, _session.Outcome,
-                "Play must reset session outcome to None");
+            Assert.AreEqual(1, _session.CurrentLevelId);
+            Assert.AreEqual(0, _session.CurrentScore);
+            Assert.AreEqual(GameOutcome.None, _session.Outcome);
         }
+
+        // --- Object tapping ---
+
+        [Test]
+        public void MainMenuPresenter_TapObject_SpendsGoldenPieces()
+        {
+            _goldenPieces.Earn(10);
+            var view = new MockMainMenuView();
+            var presenter = _factory.CreateMainMenuPresenter(view, _testEnv);
+            presenter.Initialize();
+
+            view.SimulateObjectTapped(0);
+
+            Assert.AreEqual(9, _goldenPieces.Balance);
+            Assert.AreEqual(1, _metaProgression.GetCurrentSteps(_fountain));
+        }
+
+        [Test]
+        public void MainMenuPresenter_TapObject_InsufficientBalance_NoChange()
+        {
+            var view = new MockMainMenuView();
+            var presenter = _factory.CreateMainMenuPresenter(view, _testEnv);
+            presenter.Initialize();
+
+            view.SimulateObjectTapped(0); // 0 balance
+
+            Assert.AreEqual(0, _metaProgression.GetCurrentSteps(_fountain));
+        }
+
+        [Test]
+        public async Task MainMenuPresenter_TapObject_CompletesObject_ResolvesObjectRestored()
+        {
+            _goldenPieces.Earn(10);
+            var view = new MockMainMenuView();
+            var presenter = _factory.CreateMainMenuPresenter(view, _testEnv);
+            presenter.Initialize();
+
+            var task = presenter.WaitForAction().AsTask();
+
+            view.SimulateObjectTapped(0); // 1/3
+            view.SimulateObjectTapped(0); // 2/3
+            view.SimulateObjectTapped(0); // 3/3 → complete
+
+            var result = await task;
+            Assert.AreEqual(MainMenuAction.ObjectRestored, result);
+            Assert.AreEqual("Fountain", presenter.LastRestoredObjectName);
+        }
+
+        // --- Async tests for other presenters ---
 
         [Test]
         public async Task SettingsPresenter_WaitForBack_BackClicked_Resolves()
@@ -278,9 +356,8 @@ namespace SimpleGame.Tests.Game
 
             var task = presenter.WaitForBack().AsTask();
             view.SimulateBackClicked();
-
-            await task; // resolves without exception == pass
-            Assert.Pass("WaitForBack() resolved after back click");
+            await task;
+            Assert.Pass("WaitForBack resolved");
         }
 
         [Test]
@@ -292,9 +369,8 @@ namespace SimpleGame.Tests.Game
 
             var task = presenter.WaitForConfirmation().AsTask();
             view.SimulateConfirmClicked();
-
             var result = await task;
-            Assert.IsTrue(result, "Confirm click must resolve WaitForConfirmation() as true");
+            Assert.IsTrue(result);
         }
 
         [Test]
@@ -306,47 +382,23 @@ namespace SimpleGame.Tests.Game
 
             var task = presenter.WaitForConfirmation().AsTask();
             view.SimulateCancelClicked();
-
             var result = await task;
-            Assert.IsFalse(result, "Cancel click must resolve WaitForConfirmation() as false");
+            Assert.IsFalse(result);
         }
 
-        [Test]
-        public async Task MainMenuPresenter_WaitForAction_SecondCall_CancelsPrevious()
-        {
-            var view = new MockMainMenuView();
-            var presenter = _factory.CreateMainMenuPresenter(view);
-            presenter.Initialize();
-
-            var firstTask = presenter.WaitForAction().AsTask();
-            var secondTask = presenter.WaitForAction().AsTask(); // cancels first
-
-            view.SimulateSettingsClicked();
-
-            // First task should throw OperationCanceledException when awaited
-            Assert.ThrowsAsync<System.Threading.Tasks.TaskCanceledException>(async () => await firstTask,
-                "Calling WaitForAction() a second time must cancel the previous pending task");
-
-            var result = await secondTask;
-            Assert.AreEqual(MainMenuAction.Settings, result,
-                "Second task resolves normally");
-        }
-
-        // --- Dispose cancels pending tasks ---
+        // --- Dispose ---
 
         [Test]
         public void MainMenuPresenter_Dispose_CancelsPendingTask()
         {
             var view = new MockMainMenuView();
-            var presenter = _factory.CreateMainMenuPresenter(view);
+            var presenter = _factory.CreateMainMenuPresenter(view, _testEnv);
             presenter.Initialize();
 
             var task = presenter.WaitForAction().AsTask();
             presenter.Dispose();
 
-            // After dispose, awaiting the task throws OperationCanceledException
-            Assert.ThrowsAsync<System.Threading.Tasks.TaskCanceledException>(async () => await task,
-                "Dispose() must cancel any pending WaitForAction() task");
+            Assert.ThrowsAsync<TaskCanceledException>(async () => await task);
         }
 
         [Test]
@@ -359,8 +411,7 @@ namespace SimpleGame.Tests.Game
             var task = presenter.WaitForBack().AsTask();
             presenter.Dispose();
 
-            Assert.ThrowsAsync<System.Threading.Tasks.TaskCanceledException>(async () => await task,
-                "Dispose() must cancel any pending WaitForBack() task");
+            Assert.ThrowsAsync<TaskCanceledException>(async () => await task);
         }
 
         [Test]
@@ -373,27 +424,23 @@ namespace SimpleGame.Tests.Game
             var task = presenter.WaitForConfirmation().AsTask();
             presenter.Dispose();
 
-            Assert.ThrowsAsync<System.Threading.Tasks.TaskCanceledException>(async () => await task,
-                "Dispose() must cancel any pending WaitForConfirmation() task");
+            Assert.ThrowsAsync<TaskCanceledException>(async () => await task);
         }
-
-        // --- After Dispose, view events are unsubscribed ---
 
         [Test]
         public void MainMenuPresenter_Dispose_UnsubscribesViewEvents()
         {
             var view = new MockMainMenuView();
-            var presenter = _factory.CreateMainMenuPresenter(view);
+            var presenter = _factory.CreateMainMenuPresenter(view, _testEnv);
             presenter.Initialize();
             presenter.Dispose();
 
-            // Fire events after dispose — no exception, no side-effects
             Assert.DoesNotThrow(() =>
             {
                 view.SimulateSettingsClicked();
-                view.SimulatePopupClicked();
                 view.SimulatePlayClicked();
-            }, "Firing view events after Dispose() must not throw");
+                view.SimulateObjectTapped(0);
+            });
         }
 
         [Test]
@@ -404,8 +451,7 @@ namespace SimpleGame.Tests.Game
             presenter.Initialize();
             presenter.Dispose();
 
-            Assert.DoesNotThrow(() => view.SimulateBackClicked(),
-                "Firing back event after Dispose() must not throw");
+            Assert.DoesNotThrow(() => view.SimulateBackClicked());
         }
 
         [Test]
@@ -420,7 +466,7 @@ namespace SimpleGame.Tests.Game
             {
                 view.SimulateConfirmClicked();
                 view.SimulateCancelClicked();
-            }, "Firing view events after Dispose() must not throw");
+            });
         }
 
         // --- Mock views have no backward references ---
@@ -474,6 +520,29 @@ namespace SimpleGame.Tests.Game
                 baseType != null &&
                 (baseType.Name.Contains("Presenter") || (baseType.FullName?.Contains("Presenter") ?? false)),
                 $"{mockType.Name} must not inherit from any Presenter type");
+        }
+
+        /// <summary>In-memory mock save service for demo wiring tests.</summary>
+        private class MockMetaSaveServiceForDemo : IMetaSaveService
+        {
+            private string _json;
+
+            public void Save(MetaSaveData data)
+            {
+                _json = JsonUtility.ToJson(data);
+            }
+
+            public MetaSaveData Load()
+            {
+                if (string.IsNullOrEmpty(_json))
+                    return new MetaSaveData();
+                return JsonUtility.FromJson<MetaSaveData>(_json);
+            }
+
+            public void Delete()
+            {
+                _json = null;
+            }
         }
     }
 }

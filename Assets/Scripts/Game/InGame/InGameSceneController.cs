@@ -11,45 +11,47 @@ namespace SimpleGame.Game.InGame
     /// <summary>
     /// SceneController for the InGame scene. Owns the InGamePresenter lifetime.
     /// RunAsync reads level context from GameSessionService, runs the gameplay
-    /// loop (score + win/lose), shows outcome popups, and returns ScreenId for navigation.
+    /// loop (piece placement + hearts), shows outcome popups, and returns ScreenId for navigation.
     ///
-    /// Win: calls ProgressionService.RegisterWin, shows WinDialog popup, returns MainMenu.
-    /// Lose: shows LoseDialog popup — Retry resets score and loops, Back returns MainMenu.
+    /// Win: earns golden pieces, calls ProgressionService.RegisterWin, shows LevelComplete popup.
+    /// Lose: shows LevelFailed popup — Retry resets and loops, WatchAd grants extra hearts and loops, Quit returns MainMenu.
     ///
     /// Play-from-editor: when GameSessionService has no level set (CurrentLevelId == 0),
-    /// the serialized _defaultLevelId is used as fallback.
+    /// the serialized defaults are used as fallback.
     /// </summary>
     public class InGameSceneController : MonoBehaviour, ISceneController
     {
         [SerializeField] private InGameView _inGameView;
         [SerializeField] private int _defaultLevelId = 1;
+        [SerializeField] private int _defaultTotalPieces = 10;
+        [SerializeField] private int _goldenPiecesPerWin = 5;
 
         private IInGameView _viewOverride;
-        private IWinDialogView _winDialogViewOverride;
-        private ILoseDialogView _loseDialogViewOverride;
+        private ILevelCompleteView _levelCompleteViewOverride;
+        private ILevelFailedView _levelFailedViewOverride;
 
         private IInGameView ActiveView => _viewOverride != null ? _viewOverride : _inGameView;
 
-        private IWinDialogView ActiveWinDialogView
+        private ILevelCompleteView ActiveLevelCompleteView
         {
             get
             {
-                if (_winDialogViewOverride != null) return _winDialogViewOverride;
-                var found = FindFirstObjectByType<WinDialogView>(FindObjectsInactive.Include);
+                if (_levelCompleteViewOverride != null) return _levelCompleteViewOverride;
+                var found = FindFirstObjectByType<LevelCompleteView>(FindObjectsInactive.Include);
                 if (found == null)
-                    Debug.LogError("[InGameSceneController] WinDialogView not found in any loaded scene.");
+                    Debug.LogError("[InGameSceneController] LevelCompleteView not found in any loaded scene.");
                 return found;
             }
         }
 
-        private ILoseDialogView ActiveLoseDialogView
+        private ILevelFailedView ActiveLevelFailedView
         {
             get
             {
-                if (_loseDialogViewOverride != null) return _loseDialogViewOverride;
-                var found = FindFirstObjectByType<LoseDialogView>(FindObjectsInactive.Include);
+                if (_levelFailedViewOverride != null) return _levelFailedViewOverride;
+                var found = FindFirstObjectByType<LevelFailedView>(FindObjectsInactive.Include);
                 if (found == null)
-                    Debug.LogError("[InGameSceneController] LoseDialogView not found in any loaded scene.");
+                    Debug.LogError("[InGameSceneController] LevelFailedView not found in any loaded scene.");
                 return found;
             }
         }
@@ -57,69 +59,81 @@ namespace SimpleGame.Game.InGame
         private UIFactory _uiFactory;
         private ProgressionService _progression;
         private GameSessionService _session;
+        private IGoldenPieceService _goldenPieces;
+        private IHeartService _hearts;
         private PopupManager<PopupId> _popupManager;
 
         /// <summary>Inject dependencies. Called by the boot loop before RunAsync.</summary>
         public void Initialize(UIFactory uiFactory, ProgressionService progression,
-                               GameSessionService session, PopupManager<PopupId> popupManager)
+                               GameSessionService session, PopupManager<PopupId> popupManager,
+                               IGoldenPieceService goldenPieces = null, IHeartService hearts = null)
         {
             _uiFactory = uiFactory;
             _progression = progression;
             _session = session;
             _popupManager = popupManager;
+            _goldenPieces = goldenPieces;
+            _hearts = hearts;
         }
 
         /// <summary>
         /// For editor / test use: supply mock views that override the serialized fields.
         /// </summary>
         public void SetViewsForTesting(IInGameView inGameView,
-                                        IWinDialogView winDialogView = null,
-                                        ILoseDialogView loseDialogView = null)
+                                        ILevelCompleteView levelCompleteView = null,
+                                        ILevelFailedView levelFailedView = null)
         {
             _viewOverride = inGameView;
-            _winDialogViewOverride = winDialogView;
-            _loseDialogViewOverride = loseDialogView;
+            _levelCompleteViewOverride = levelCompleteView;
+            _levelFailedViewOverride = levelFailedView;
         }
 
         public async UniTask<ScreenId> RunAsync(CancellationToken ct = default)
         {
-            // Play-from-editor fallback: if no level was set via session, use default.
+            // Play-from-editor fallback: if no level was set via session, use defaults.
             if (_session.CurrentLevelId == 0)
             {
-                _session.ResetForNewGame(_defaultLevelId);
+                _session.ResetForNewGame(_defaultLevelId, _defaultTotalPieces);
             }
 
             while (true)
             {
-                var presenter = _uiFactory.CreateInGamePresenter(ActiveView);
+                var presenter = _uiFactory.CreateInGamePresenter(ActiveView, _session.TotalPieces);
                 presenter.Initialize();
                 try
                 {
-                    while (true)
+                    ct.ThrowIfCancellationRequested();
+
+                    var action = await presenter.WaitForAction();
+
+                    if (action == InGameAction.Win)
                     {
-                        ct.ThrowIfCancellationRequested();
+                        // Earn golden pieces
+                        _goldenPieces?.Earn(_goldenPiecesPerWin);
+                        _goldenPieces?.Save();
 
-                        var action = await presenter.WaitForAction();
+                        _progression.RegisterWin(_session.CurrentScore);
+                        _session.Outcome = GameOutcome.Win;
+                        await HandleLevelCompletePopupAsync(ct);
+                        return ScreenId.MainMenu;
+                    }
 
-                        if (action == InGameAction.Win)
-                        {
-                            _progression.RegisterWin(_session.CurrentScore);
-                            _session.Outcome = GameOutcome.Win;
-                            await HandleWinPopupAsync(ct);
+                    if (action == InGameAction.Lose)
+                    {
+                        _session.Outcome = GameOutcome.Lose;
+                        var choice = await HandleLevelFailedPopupAsync(ct);
+
+                        if (choice == LevelFailedChoice.Quit)
                             return ScreenId.MainMenu;
-                        }
 
-                        if (action == InGameAction.Lose)
+                        if (choice == LevelFailedChoice.WatchAd)
                         {
-                            _session.Outcome = GameOutcome.Lose;
-                            var choice = await HandleLosePopupAsync(ct);
-                            if (choice == LoseDialogChoice.Back)
-                                return ScreenId.MainMenu;
-
-                            // Retry: reset score, break inner loop to create fresh presenter
-                            _session.CurrentScore = 0;
-                            break;
+                            // Grant extra hearts via rewarded ad
+                            await HandleRewardedAdAsync(ct);
                         }
+
+                        // Retry or WatchAd: reset score, loop to create fresh presenter
+                        _session.CurrentScore = 0;
                     }
                 }
                 finally
@@ -129,48 +143,56 @@ namespace SimpleGame.Game.InGame
             }
         }
 
-        private async UniTask HandleWinPopupAsync(CancellationToken ct)
+        private async UniTask HandleLevelCompletePopupAsync(CancellationToken ct)
         {
-            var winView = ActiveWinDialogView;
-            if (winView == null) return;
+            var view = ActiveLevelCompleteView;
+            if (view == null) return;
 
-            var winPresenter = _uiFactory.CreateWinDialogPresenter(winView);
-            winPresenter.Initialize(_session.CurrentScore, _session.CurrentLevelId);
+            var presenter = _uiFactory.CreateLevelCompletePresenter(view);
+            presenter.Initialize(_session.CurrentScore, _session.CurrentLevelId, _goldenPiecesPerWin);
             try
             {
-                await _popupManager.ShowPopupAsync(PopupId.WinDialog, ct);
-                await winPresenter.WaitForContinue();
-                // Popup stays open — ScreenManager dismisses it behind the transition
+                await _popupManager.ShowPopupAsync(PopupId.LevelComplete, ct);
+                await presenter.WaitForContinue();
             }
             finally
             {
-                winPresenter.Dispose();
+                presenter.Dispose();
             }
         }
 
-        private async UniTask<LoseDialogChoice> HandleLosePopupAsync(CancellationToken ct)
+        private async UniTask<LevelFailedChoice> HandleLevelFailedPopupAsync(CancellationToken ct)
         {
-            var loseView = ActiveLoseDialogView;
-            if (loseView == null) return LoseDialogChoice.Back;
+            var view = ActiveLevelFailedView;
+            if (view == null) return LevelFailedChoice.Quit;
 
-            var losePresenter = _uiFactory.CreateLoseDialogPresenter(loseView);
-            losePresenter.Initialize(_session.CurrentScore, _session.CurrentLevelId);
+            var presenter = _uiFactory.CreateLevelFailedPresenter(view);
+            presenter.Initialize(_session.CurrentScore, _session.CurrentLevelId);
             try
             {
-                await _popupManager.ShowPopupAsync(PopupId.LoseDialog, ct);
-                var choice = await losePresenter.WaitForChoice();
-                if (choice == LoseDialogChoice.Retry)
+                await _popupManager.ShowPopupAsync(PopupId.LevelFailed, ct);
+                var choice = await presenter.WaitForChoice();
+                if (choice == LevelFailedChoice.Retry || choice == LevelFailedChoice.WatchAd)
                 {
-                    // Retry stays in-scene — dismiss popup normally
                     await _popupManager.DismissPopupAsync(ct);
                 }
-                // Back leaves popup open — ScreenManager dismisses it behind the transition
                 return choice;
             }
             finally
             {
-                losePresenter.Dispose();
+                presenter.Dispose();
             }
+        }
+
+        private async UniTask HandleRewardedAdAsync(CancellationToken ct)
+        {
+            // Stub: show rewarded ad popup, wait for completion, grant retry
+            await _popupManager.ShowPopupAsync(PopupId.RewardedAd, ct);
+            // In a real implementation, the RewardedAdPresenter would handle
+            // the ad flow. For the stub, we just dismiss after a beat.
+            // The S06 integration will wire the real presenter.
+            Debug.Log("[InGameSceneController] Rewarded ad stub — granting retry with extra hearts.");
+            await _popupManager.DismissPopupAsync(ct);
         }
     }
 }

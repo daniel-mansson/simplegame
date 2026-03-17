@@ -6,6 +6,7 @@ using SimpleGame.Core.Unity.ScreenManagement;
 using SimpleGame.Core.Unity.TransitionManagement;
 using SimpleGame.Game.InGame;
 using SimpleGame.Game.MainMenu;
+using SimpleGame.Game.Meta;
 using SimpleGame.Game.Popup;
 using SimpleGame.Game.Services;
 using SimpleGame.Game.Settings;
@@ -16,10 +17,10 @@ namespace SimpleGame.Game.Boot
     /// <summary>
     /// Bootstraps infrastructure and drives the top-level navigation loop.
     /// Constructs all services and managers, then delegates all scene-level
-    /// control flow to SceneControllers — contains no navigation logic itself.
+    /// control flow to SceneControllers.
     ///
     /// Boot sequence:
-    ///   1. Build infrastructure (managers, UIFactory)
+    ///   1. Build infrastructure (managers, services, UIFactory)
     ///   2. Load the initial screen (MainMenu)
     ///   3. Find and initialize the active SceneController
     ///   4. Await RunAsync() — only returns when navigation is decided
@@ -27,21 +28,32 @@ namespace SimpleGame.Game.Boot
     /// </summary>
     public class GameBootstrapper : MonoBehaviour
     {
+        [SerializeField] private WorldData _worldData;
+
         private ScreenManager<ScreenId> _screenManager;
         private PopupManager<PopupId> _popupManager;
         private UIFactory _uiFactory;
         private ProgressionService _progressionService;
         private GameSessionService _sessionService;
+        private HeartService _heartService;
+        private IMetaSaveService _metaSaveService;
+        private MetaProgressionService _metaProgressionService;
+        private GoldenPieceService _goldenPieceService;
 
         private async UniTaskVoid Start()
         {
             Debug.Log("[GameBootstrapper] Boot sequence started.");
 
-            // --- Build infrastructure ---
+            // --- Build services ---
             var gameService = new GameService();
             _progressionService = new ProgressionService();
             _sessionService = new GameSessionService();
+            _heartService = new HeartService();
+            _metaSaveService = new PlayerPrefsMetaSaveService();
+            _metaProgressionService = new MetaProgressionService(_worldData, _metaSaveService);
+            _goldenPieceService = new GoldenPieceService(_metaSaveService);
 
+            // --- Build infrastructure ---
             var inputBlocker = FindFirstObjectByType<UnityInputBlocker>();
             var transitionPlayer = FindFirstObjectByType<UnityTransitionPlayer>(FindObjectsInactive.Include);
             var popupContainer = FindFirstObjectByType<UnityPopupContainer>();
@@ -50,12 +62,12 @@ namespace SimpleGame.Game.Boot
             _popupManager = new PopupManager<PopupId>(popupContainer, inputBlocker);
             _screenManager = new ScreenManager<ScreenId>(sceneLoader, transitionPlayer, inputBlocker,
                 onBeforeSceneUnload: _popupManager.DismissAllAsync);
-            _uiFactory = new UIFactory(gameService, _progressionService, _sessionService);
+            _uiFactory = new UIFactory(gameService, _progressionService, _sessionService,
+                                       _heartService, _metaProgressionService, _goldenPieceService);
 
             Debug.Log("[GameBootstrapper] Infrastructure ready. Starting navigation loop.");
 
-            // Determine initial screen. If a game scene is already loaded (e.g. editor
-            // started from MainMenu or Settings), adopt it instead of loading a fresh one.
+            // Determine initial screen
             var initialScreen = DetectAlreadyLoadedScreen();
             if (initialScreen.HasValue)
             {
@@ -87,7 +99,7 @@ namespace SimpleGame.Game.Boot
                             Debug.LogError("[GameBootstrapper] MainMenuSceneController not found in scene.");
                             return;
                         }
-                        ctrl.Initialize(_uiFactory, _popupManager);
+                        ctrl.Initialize(_uiFactory, _popupManager, _metaProgressionService);
                         var next = await ctrl.RunAsync();
                         await _screenManager.ShowScreenAsync(next);
                         break;
@@ -113,7 +125,8 @@ namespace SimpleGame.Game.Boot
                             Debug.LogError("[GameBootstrapper] InGameSceneController not found in scene.");
                             return;
                         }
-                        ctrl.Initialize(_uiFactory, _progressionService, _sessionService, _popupManager);
+                        ctrl.Initialize(_uiFactory, _progressionService, _sessionService,
+                                       _popupManager, _goldenPieceService, _heartService);
                         var next = await ctrl.RunAsync();
                         await _screenManager.ShowScreenAsync(next);
                         break;
@@ -125,10 +138,6 @@ namespace SimpleGame.Game.Boot
             }
         }
 
-        /// <summary>
-        /// Detects whether a game scene (MainMenu or Settings) is already loaded
-        /// as an additive scene. Used when Boot was injected into a running session.
-        /// </summary>
         private static ScreenId? DetectAlreadyLoadedScreen()
         {
             for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; i++)

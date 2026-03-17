@@ -27,26 +27,17 @@ public static class SceneSetup
     [MenuItem("Tools/Setup/Create And Register Scenes")]
     public static void CreateAndRegisterScenes()
     {
-        // Ensure Assets/Scenes/ directory exists
         if (!System.IO.Directory.Exists(ScenesDir))
         {
             System.IO.Directory.CreateDirectory(ScenesDir);
             Debug.Log("[SceneSetup] Created directory: " + ScenesDir);
         }
 
-        // Create Boot scene with full Canvas hierarchy
         CreateBootScene();
-
-        // Create MainMenu scene with UI content
         CreateMainMenuScene();
-
-        // Create Settings scene with UI content
         CreateSettingsScene();
-
-        // Create InGame scene with UI content
         CreateInGameScene();
 
-        // Register all scenes in EditorBuildSettings: Boot at index 0
         var buildScenes = new[]
         {
             new EditorBuildSettingsScene(BootPath, true),
@@ -57,8 +48,6 @@ public static class SceneSetup
 
         EditorBuildSettings.scenes = buildScenes;
         Debug.Log("[SceneSetup] Registered scenes in EditorBuildSettings: Boot(0), MainMenu(1), Settings(2), InGame(3)");
-
-        // Refresh the asset database so Unity picks up the new files
         AssetDatabase.Refresh();
         Debug.Log("[SceneSetup] Scene setup complete.");
     }
@@ -69,9 +58,16 @@ public static class SceneSetup
     {
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
-        // Root GameBootstrapper object
+        // GameBootstrapper
         var bootstrapperGO = new GameObject("GameBootstrapper");
-        bootstrapperGO.AddComponent<GameBootstrapper>();
+        var bootstrapper = bootstrapperGO.AddComponent<GameBootstrapper>();
+
+        // Wire WorldData if available
+        var worldData = AssetDatabase.LoadAssetAtPath<SimpleGame.Game.Meta.WorldData>("Assets/Data/WorldData.asset");
+        if (worldData != null)
+            WireSerializedField(bootstrapper, "_worldData", worldData);
+        else
+            Debug.LogWarning("[SceneSetup] WorldData.asset not found — run Tools/Setup/Create Test World Data first.");
 
         // EventSystem
         var eventSystemGO = new GameObject("EventSystem");
@@ -85,120 +81,96 @@ public static class SceneSetup
         inputBlockerCanvasGroup.interactable = true;
         inputBlockerCanvasGroup.alpha = 1f;
         var inputBlocker = inputBlockerCanvas.gameObject.AddComponent<UnityInputBlocker>();
-        // Wire the CanvasGroup serialized field via SerializedObject
         WireSerializedField(inputBlocker, "_canvasGroup", inputBlockerCanvasGroup);
 
-        // Transition overlay — instantiate from prefab (starts inactive)
+        // Transition overlay from prefab
         var transitionPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/TransitionOverlay.prefab");
-        if (transitionPrefab == null)
+        if (transitionPrefab != null)
         {
-            Debug.LogError("[SceneSetup] TransitionOverlay.prefab not found at Assets/Prefabs/TransitionOverlay.prefab. Run Tools/Setup/Create Transition Prefab first.");
-            return;
+            var transitionInstance = (GameObject)PrefabUtility.InstantiatePrefab(transitionPrefab);
+            transitionInstance.SetActive(false);
         }
-        var transitionInstance = (GameObject)PrefabUtility.InstantiatePrefab(transitionPrefab);
-        transitionInstance.SetActive(false);
+        else
+        {
+            Debug.LogWarning("[SceneSetup] TransitionOverlay.prefab not found.");
+        }
 
         // Popup Canvas (sort order 300)
         CreateFullScreenCanvas("PopupCanvas", 300, out var popupCanvas);
         var popupContainer = popupCanvas.gameObject.AddComponent<UnityPopupContainer>();
 
-        // ConfirmDialog popup — child of PopupCanvas, starts inactive
-        var confirmDialogGO = new GameObject("ConfirmDialogPopup");
-        confirmDialogGO.transform.SetParent(popupCanvas.transform, false);
-
-        // ConfirmDialog inner canvas + CanvasGroup for blocking
-        var confirmDialogCanvas = confirmDialogGO.AddComponent<Canvas>();
-        confirmDialogGO.AddComponent<CanvasGroup>();
-        confirmDialogGO.AddComponent<GraphicRaycaster>();
-
-        // Full-screen rect
-        var confirmDialogRect = confirmDialogGO.GetComponent<RectTransform>();
-        confirmDialogRect.anchorMin = Vector2.zero;
-        confirmDialogRect.anchorMax = Vector2.one;
-        confirmDialogRect.sizeDelta = Vector2.zero;
-        confirmDialogRect.anchoredPosition = Vector2.zero;
-
-        // Background panel
-        var panelGO = new GameObject("Panel");
-        panelGO.transform.SetParent(confirmDialogGO.transform, false);
-        var panelImage = panelGO.AddComponent<Image>();
-        panelImage.color = new Color(0.1f, 0.1f, 0.1f, 0.85f);
-        SetStretchRect(panelGO.GetComponent<RectTransform>());
-
-        // Message text
-        var messageGO = new GameObject("MessageText");
-        messageGO.transform.SetParent(panelGO.transform, false);
-        var messageText = messageGO.AddComponent<Text>();
-        messageText.text = "Are you sure?";
-        messageText.alignment = TextAnchor.MiddleCenter;
-        messageText.fontSize = 24;
-        messageText.color = Color.white;
-        var messageRect = messageGO.GetComponent<RectTransform>();
-        messageRect.anchorMin = new Vector2(0.2f, 0.6f);
-        messageRect.anchorMax = new Vector2(0.8f, 0.85f);
-        messageRect.sizeDelta = Vector2.zero;
-        messageRect.anchoredPosition = Vector2.zero;
-
-        // Confirm button
-        CreateButton("ConfirmButton", "OK", panelGO.transform, out var confirmButtonGO);
-        var confirmButtonRect = confirmButtonGO.GetComponent<RectTransform>();
-        confirmButtonRect.anchorMin = new Vector2(0.55f, 0.2f);
-        confirmButtonRect.anchorMax = new Vector2(0.8f, 0.45f);
-        confirmButtonRect.sizeDelta = Vector2.zero;
-        confirmButtonRect.anchoredPosition = Vector2.zero;
-
-        // Cancel button
-        CreateButton("CancelButton", "Cancel", panelGO.transform, out var cancelButtonGO);
-        var cancelButtonRect = cancelButtonGO.GetComponent<RectTransform>();
-        cancelButtonRect.anchorMin = new Vector2(0.2f, 0.2f);
-        cancelButtonRect.anchorMax = new Vector2(0.45f, 0.45f);
-        cancelButtonRect.sizeDelta = Vector2.zero;
-        cancelButtonRect.anchoredPosition = Vector2.zero;
-
-        // Wire ConfirmDialogView component
+        // --- ConfirmDialog popup ---
+        var confirmDialogGO = CreatePopupDialog(popupCanvas.transform, "ConfirmDialogPopup",
+            "Are you sure?", null, null,
+            new[] { ("ConfirmButton", "OK"), ("CancelButton", "Cancel") });
         var confirmDialogView = confirmDialogGO.AddComponent<ConfirmDialogView>();
-        WireSerializedField(confirmDialogView, "_confirmButton", confirmButtonGO.GetComponent<Button>());
-        WireSerializedField(confirmDialogView, "_cancelButton", cancelButtonGO.GetComponent<Button>());
-        WireSerializedField(confirmDialogView, "_messageText", messageText);
-
-        // Wire popup container's serialized field
+        WireSerializedField(confirmDialogView, "_confirmButton", confirmDialogGO.transform.Find("Panel/ConfirmButton").GetComponent<Button>());
+        WireSerializedField(confirmDialogView, "_cancelButton", confirmDialogGO.transform.Find("Panel/CancelButton").GetComponent<Button>());
+        WireSerializedField(confirmDialogView, "_messageText", confirmDialogGO.transform.Find("Panel/TitleText").GetComponent<Text>());
         WireSerializedField(popupContainer, "_confirmDialogPopup", confirmDialogGO);
-
-        // Start ConfirmDialog inactive
         confirmDialogGO.SetActive(false);
 
-        // --- WinDialog popup --- child of PopupCanvas, starts inactive
-        var winDialogGO = CreatePopupDialog(popupCanvas.transform, "WinDialogPopup",
-            "You Win!", "Score: 0", "Level 1 Complete!",
+        // --- LevelComplete popup ---
+        var levelCompleteGO = CreatePopupDialog(popupCanvas.transform, "LevelCompletePopup",
+            "Level Complete!", "Score: 0", "+0 Golden Pieces",
             new[] { ("ContinueButton", "Continue") });
-        var winDialogView = winDialogGO.AddComponent<WinDialogView>();
-        WireSerializedField(winDialogView, "_continueButton",
-            winDialogGO.transform.Find("Panel/ContinueButton").GetComponent<Button>());
-        WireSerializedField(winDialogView, "_scoreText",
-            winDialogGO.transform.Find("Panel/ScoreText").GetComponent<Text>());
-        WireSerializedField(winDialogView, "_levelText",
-            winDialogGO.transform.Find("Panel/LevelText").GetComponent<Text>());
-        WireSerializedField(popupContainer, "_winDialogPopup", winDialogGO);
-        winDialogGO.SetActive(false);
+        var levelCompleteView = levelCompleteGO.AddComponent<LevelCompleteView>();
+        WireSerializedField(levelCompleteView, "_continueButton", levelCompleteGO.transform.Find("Panel/ContinueButton").GetComponent<Button>());
+        WireSerializedField(levelCompleteView, "_scoreText", levelCompleteGO.transform.Find("Panel/ScoreText").GetComponent<Text>());
+        WireSerializedField(levelCompleteView, "_levelText", levelCompleteGO.transform.Find("Panel/TitleText").GetComponent<Text>());
+        WireSerializedField(levelCompleteView, "_goldenPiecesText", levelCompleteGO.transform.Find("Panel/LevelText").GetComponent<Text>());
+        WireSerializedField(popupContainer, "_levelCompletePopup", levelCompleteGO);
+        levelCompleteGO.SetActive(false);
 
-        // --- LoseDialog popup --- child of PopupCanvas, starts inactive
-        var loseDialogGO = CreatePopupDialog(popupCanvas.transform, "LoseDialogPopup",
-            "You Lose!", "Score: 0", "Level 1",
-            new[] { ("RetryButton", "Retry"), ("BackButton", "Back") });
-        var loseDialogView = loseDialogGO.AddComponent<LoseDialogView>();
-        WireSerializedField(loseDialogView, "_retryButton",
-            loseDialogGO.transform.Find("Panel/RetryButton").GetComponent<Button>());
-        WireSerializedField(loseDialogView, "_backButton",
-            loseDialogGO.transform.Find("Panel/BackButton").GetComponent<Button>());
-        WireSerializedField(loseDialogView, "_scoreText",
-            loseDialogGO.transform.Find("Panel/ScoreText").GetComponent<Text>());
-        WireSerializedField(loseDialogView, "_levelText",
-            loseDialogGO.transform.Find("Panel/LevelText").GetComponent<Text>());
-        WireSerializedField(popupContainer, "_loseDialogPopup", loseDialogGO);
-        loseDialogGO.SetActive(false);
+        // --- LevelFailed popup ---
+        var levelFailedGO = CreatePopupDialog(popupCanvas.transform, "LevelFailedPopup",
+            "Level Failed!", "Score: 0", "Level 1",
+            new[] { ("RetryButton", "Retry"), ("WatchAdButton", "Watch Ad"), ("QuitButton", "Quit") });
+        var levelFailedView = levelFailedGO.AddComponent<LevelFailedView>();
+        WireSerializedField(levelFailedView, "_retryButton", levelFailedGO.transform.Find("Panel/RetryButton").GetComponent<Button>());
+        WireSerializedField(levelFailedView, "_watchAdButton", levelFailedGO.transform.Find("Panel/WatchAdButton").GetComponent<Button>());
+        WireSerializedField(levelFailedView, "_quitButton", levelFailedGO.transform.Find("Panel/QuitButton").GetComponent<Button>());
+        WireSerializedField(levelFailedView, "_scoreText", levelFailedGO.transform.Find("Panel/ScoreText").GetComponent<Text>());
+        WireSerializedField(levelFailedView, "_levelText", levelFailedGO.transform.Find("Panel/LevelText").GetComponent<Text>());
+        WireSerializedField(popupContainer, "_levelFailedPopup", levelFailedGO);
+        levelFailedGO.SetActive(false);
+
+        // --- RewardedAd popup ---
+        var rewardedAdGO = CreatePopupDialog(popupCanvas.transform, "RewardedAdPopup",
+            "Watch Ad?", "Watch a short ad for a reward", null,
+            new[] { ("WatchButton", "Watch"), ("SkipButton", "Skip") });
+        var rewardedAdView = rewardedAdGO.AddComponent<RewardedAdView>();
+        WireSerializedField(rewardedAdView, "_watchButton", rewardedAdGO.transform.Find("Panel/WatchButton").GetComponent<Button>());
+        WireSerializedField(rewardedAdView, "_skipButton", rewardedAdGO.transform.Find("Panel/SkipButton").GetComponent<Button>());
+        WireSerializedField(rewardedAdView, "_statusText", rewardedAdGO.transform.Find("Panel/ScoreText").GetComponent<Text>());
+        WireSerializedField(popupContainer, "_rewardedAdPopup", rewardedAdGO);
+        rewardedAdGO.SetActive(false);
+
+        // --- IAPPurchase popup ---
+        var iapGO = CreatePopupDialog(popupCanvas.transform, "IAPPurchasePopup",
+            "Purchase", "50 Golden Pieces", "$0.99",
+            new[] { ("PurchaseButton", "Buy"), ("CancelButton", "Cancel") });
+        var iapView = iapGO.AddComponent<IAPPurchaseView>();
+        WireSerializedField(iapView, "_purchaseButton", iapGO.transform.Find("Panel/PurchaseButton").GetComponent<Button>());
+        WireSerializedField(iapView, "_cancelButton", iapGO.transform.Find("Panel/CancelButton").GetComponent<Button>());
+        WireSerializedField(iapView, "_itemNameText", iapGO.transform.Find("Panel/TitleText").GetComponent<Text>());
+        WireSerializedField(iapView, "_priceText", iapGO.transform.Find("Panel/ScoreText").GetComponent<Text>());
+        WireSerializedField(iapView, "_statusText", iapGO.transform.Find("Panel/LevelText").GetComponent<Text>());
+        WireSerializedField(popupContainer, "_iapPurchasePopup", iapGO);
+        iapGO.SetActive(false);
+
+        // --- ObjectRestored popup ---
+        var objRestoredGO = CreatePopupDialog(popupCanvas.transform, "ObjectRestoredPopup",
+            "Object Restored!", null, null,
+            new[] { ("ContinueButton", "Continue") });
+        var objRestoredView = objRestoredGO.AddComponent<ObjectRestoredView>();
+        WireSerializedField(objRestoredView, "_continueButton", objRestoredGO.transform.Find("Panel/ContinueButton").GetComponent<Button>());
+        WireSerializedField(objRestoredView, "_objectNameText", objRestoredGO.transform.Find("Panel/TitleText").GetComponent<Text>());
+        WireSerializedField(popupContainer, "_objectRestoredPopup", objRestoredGO);
+        objRestoredGO.SetActive(false);
 
         bool saved = EditorSceneManager.SaveScene(scene, BootPath);
-        Debug.Log(saved ? "[SceneSetup] Boot scene saved: " + BootPath : "[SceneSetup] ERROR saving Boot scene.");
+        Debug.Log(saved ? "[SceneSetup] Boot scene saved." : "[SceneSetup] ERROR saving Boot scene.");
     }
 
     // ── MainMenu Scene ───────────────────────────────────────────────────────
@@ -206,85 +178,53 @@ public static class SceneSetup
     private static void CreateMainMenuScene()
     {
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-
-        // Camera — each game scene owns its camera so scene transitions are clean
         var cam = CreateSceneCamera("MainMenuCamera");
-
         CreateFullScreenCanvas("Canvas", 0, out var canvas);
-
-        // Switch to ScreenSpaceCamera so this canvas renders through the scene camera
         canvas.renderMode = RenderMode.ScreenSpaceCamera;
         canvas.worldCamera = cam;
         canvas.planeDistance = 1f;
 
-        // Title text
-        var titleGO = new GameObject("TitleText");
-        titleGO.transform.SetParent(canvas.transform, false);
-        var titleText = titleGO.AddComponent<Text>();
-        titleText.text = "Main Menu";
-        titleText.alignment = TextAnchor.MiddleCenter;
-        titleText.fontSize = 40;
-        titleText.color = Color.white;
-        var titleRect = titleGO.GetComponent<RectTransform>();
-        titleRect.anchorMin = new Vector2(0.2f, 0.7f);
-        titleRect.anchorMax = new Vector2(0.8f, 0.9f);
-        titleRect.sizeDelta = Vector2.zero;
-        titleRect.anchoredPosition = Vector2.zero;
+        // Environment name
+        var envNameGO = CreateText("EnvironmentNameText", "Garden", canvas.transform,
+            new Vector2(0.1f, 0.85f), new Vector2(0.9f, 0.95f), 32);
 
-        // Settings button
-        CreateButton("SettingsButton", "Settings", canvas.transform, out var settingsButtonGO);
-        var settingsButtonRect = settingsButtonGO.GetComponent<RectTransform>();
-        settingsButtonRect.anchorMin = new Vector2(0.3f, 0.35f);
-        settingsButtonRect.anchorMax = new Vector2(0.7f, 0.48f);
-        settingsButtonRect.sizeDelta = Vector2.zero;
-        settingsButtonRect.anchoredPosition = Vector2.zero;
+        // Balance
+        var balanceGO = CreateText("BalanceText", "0 Golden Pieces", canvas.transform,
+            new Vector2(0.1f, 0.78f), new Vector2(0.9f, 0.85f), 24);
 
-        // Open Popup button
-        CreateButton("PopupButton", "Open Popup", canvas.transform, out var popupButtonGO);
-        var popupButtonRect = popupButtonGO.GetComponent<RectTransform>();
-        popupButtonRect.anchorMin = new Vector2(0.3f, 0.15f);
-        popupButtonRect.anchorMax = new Vector2(0.7f, 0.3f);
-        popupButtonRect.sizeDelta = Vector2.zero;
-        popupButtonRect.anchoredPosition = Vector2.zero;
+        // Level display
+        var levelGO = CreateText("LevelText", "Level 1", canvas.transform,
+            new Vector2(0.3f, 0.7f), new Vector2(0.7f, 0.78f), 28);
+
+        // Objects list (text display)
+        var objectsGO = CreateText("ObjectsText", "Objects will appear here", canvas.transform,
+            new Vector2(0.05f, 0.25f), new Vector2(0.95f, 0.68f), 18);
+        objectsGO.GetComponent<Text>().alignment = TextAnchor.UpperLeft;
 
         // Play button
         CreateButton("PlayButton", "Play", canvas.transform, out var playButtonGO);
-        var playButtonRect = playButtonGO.GetComponent<RectTransform>();
-        playButtonRect.anchorMin = new Vector2(0.3f, 0.5f);
-        playButtonRect.anchorMax = new Vector2(0.7f, 0.65f);
-        playButtonRect.sizeDelta = Vector2.zero;
-        playButtonRect.anchoredPosition = Vector2.zero;
+        SetRect(playButtonGO, new Vector2(0.3f, 0.1f), new Vector2(0.7f, 0.22f));
 
-        // Level display text
-        var levelGO = new GameObject("LevelText");
-        levelGO.transform.SetParent(canvas.transform, false);
-        var levelText = levelGO.AddComponent<Text>();
-        levelText.text = "Level 1";
-        levelText.alignment = TextAnchor.MiddleCenter;
-        levelText.fontSize = 28;
-        levelText.color = Color.white;
-        var levelRect = levelGO.GetComponent<RectTransform>();
-        levelRect.anchorMin = new Vector2(0.3f, 0.67f);
-        levelRect.anchorMax = new Vector2(0.7f, 0.78f);
-        levelRect.sizeDelta = Vector2.zero;
-        levelRect.anchoredPosition = Vector2.zero;
+        // Settings button
+        CreateButton("SettingsButton", "Settings", canvas.transform, out var settingsButtonGO);
+        SetRect(settingsButtonGO, new Vector2(0.7f, 0.88f), new Vector2(0.95f, 0.98f));
 
-        // Wire MainMenuView component to the canvas root
+        // Wire MainMenuView
         var mainMenuView = canvas.gameObject.AddComponent<MainMenuView>();
         WireSerializedField(mainMenuView, "_settingsButton", settingsButtonGO.GetComponent<Button>());
-        WireSerializedField(mainMenuView, "_popupButton", popupButtonGO.GetComponent<Button>());
         WireSerializedField(mainMenuView, "_playButton", playButtonGO.GetComponent<Button>());
-        WireSerializedField(mainMenuView, "_titleText", titleText);
-        WireSerializedField(mainMenuView, "_levelText", levelText);
+        WireSerializedField(mainMenuView, "_environmentNameText", envNameGO.GetComponent<Text>());
+        WireSerializedField(mainMenuView, "_balanceText", balanceGO.GetComponent<Text>());
+        WireSerializedField(mainMenuView, "_levelDisplayText", levelGO.GetComponent<Text>());
+        WireSerializedField(mainMenuView, "_objectsText", objectsGO.GetComponent<Text>());
 
-        // MainMenuSceneController — drives the scene's async control flow
+        // MainMenuSceneController
         var sceneControllerGO = new GameObject("MainMenuSceneController");
         var mainMenuController = sceneControllerGO.AddComponent<MainMenuSceneController>();
         WireSerializedField(mainMenuController, "_mainMenuView", mainMenuView);
-        // _confirmDialogView lives in Boot scene — discovered at runtime; not wired here
 
         bool saved = EditorSceneManager.SaveScene(scene, MainMenuPath);
-        Debug.Log(saved ? "[SceneSetup] MainMenu scene saved: " + MainMenuPath : "[SceneSetup] ERROR saving MainMenu scene.");
+        Debug.Log(saved ? "[SceneSetup] MainMenu scene saved." : "[SceneSetup] ERROR saving MainMenu scene.");
     }
 
     // ── Settings Scene ───────────────────────────────────────────────────────
@@ -292,51 +232,28 @@ public static class SceneSetup
     private static void CreateSettingsScene()
     {
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-
-        // Camera — each game scene owns its camera so scene transitions are clean
         var cam = CreateSceneCamera("SettingsCamera");
-
         CreateFullScreenCanvas("Canvas", 0, out var canvas);
-
-        // Switch to ScreenSpaceCamera so this canvas renders through the scene camera
         canvas.renderMode = RenderMode.ScreenSpaceCamera;
         canvas.worldCamera = cam;
         canvas.planeDistance = 1f;
 
-        // Title text
-        var titleGO = new GameObject("TitleText");
-        titleGO.transform.SetParent(canvas.transform, false);
-        var titleText = titleGO.AddComponent<Text>();
-        titleText.text = "Settings";
-        titleText.alignment = TextAnchor.MiddleCenter;
-        titleText.fontSize = 40;
-        titleText.color = Color.white;
-        var titleRect = titleGO.GetComponent<RectTransform>();
-        titleRect.anchorMin = new Vector2(0.2f, 0.7f);
-        titleRect.anchorMax = new Vector2(0.8f, 0.9f);
-        titleRect.sizeDelta = Vector2.zero;
-        titleRect.anchoredPosition = Vector2.zero;
+        var titleGO = CreateText("TitleText", "Settings", canvas.transform,
+            new Vector2(0.2f, 0.7f), new Vector2(0.8f, 0.9f), 40);
 
-        // Back button
         CreateButton("BackButton", "Back", canvas.transform, out var backButtonGO);
-        var backButtonRect = backButtonGO.GetComponent<RectTransform>();
-        backButtonRect.anchorMin = new Vector2(0.3f, 0.4f);
-        backButtonRect.anchorMax = new Vector2(0.7f, 0.55f);
-        backButtonRect.sizeDelta = Vector2.zero;
-        backButtonRect.anchoredPosition = Vector2.zero;
+        SetRect(backButtonGO, new Vector2(0.3f, 0.4f), new Vector2(0.7f, 0.55f));
 
-        // Wire SettingsView component to the canvas root
         var settingsView = canvas.gameObject.AddComponent<SettingsView>();
         WireSerializedField(settingsView, "_backButton", backButtonGO.GetComponent<Button>());
-        WireSerializedField(settingsView, "_titleText", titleText);
+        WireSerializedField(settingsView, "_titleText", titleGO.GetComponent<Text>());
 
-        // SettingsSceneController — drives the scene's async control flow
         var sceneControllerGO = new GameObject("SettingsSceneController");
         var settingsController = sceneControllerGO.AddComponent<SettingsSceneController>();
         WireSerializedField(settingsController, "_settingsView", settingsView);
 
         bool saved = EditorSceneManager.SaveScene(scene, SettingsPath);
-        Debug.Log(saved ? "[SceneSetup] Settings scene saved: " + SettingsPath : "[SceneSetup] ERROR saving Settings scene.");
+        Debug.Log(saved ? "[SceneSetup] Settings scene saved." : "[SceneSetup] ERROR saving Settings scene.");
     }
 
     // ── InGame Scene ─────────────────────────────────────────────────────────
@@ -344,68 +261,39 @@ public static class SceneSetup
     private static void CreateInGameScene()
     {
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-
         var cam = CreateSceneCamera("InGameCamera");
-
         CreateFullScreenCanvas("Canvas", 0, out var canvas);
         canvas.renderMode = RenderMode.ScreenSpaceCamera;
         canvas.worldCamera = cam;
         canvas.planeDistance = 1f;
 
         // Level label
-        var levelGO = new GameObject("LevelText");
-        levelGO.transform.SetParent(canvas.transform, false);
-        var levelText = levelGO.AddComponent<Text>();
-        levelText.text = "Level 1";
-        levelText.alignment = TextAnchor.MiddleCenter;
-        levelText.fontSize = 32;
-        levelText.color = Color.white;
-        var levelRect = levelGO.GetComponent<RectTransform>();
-        levelRect.anchorMin = new Vector2(0.2f, 0.8f);
-        levelRect.anchorMax = new Vector2(0.8f, 0.95f);
-        levelRect.sizeDelta = Vector2.zero;
+        var levelGO = CreateText("LevelText", "Level 1", canvas.transform,
+            new Vector2(0.2f, 0.88f), new Vector2(0.8f, 0.97f), 32);
 
-        // Score display
-        var scoreGO = new GameObject("ScoreText");
-        scoreGO.transform.SetParent(canvas.transform, false);
-        var scoreText = scoreGO.AddComponent<Text>();
-        scoreText.text = "0";
-        scoreText.alignment = TextAnchor.MiddleCenter;
-        scoreText.fontSize = 48;
-        scoreText.color = Color.white;
-        var scoreRect = scoreGO.GetComponent<RectTransform>();
-        scoreRect.anchorMin = new Vector2(0.3f, 0.6f);
-        scoreRect.anchorMax = new Vector2(0.7f, 0.78f);
-        scoreRect.sizeDelta = Vector2.zero;
+        // Hearts display
+        var heartsGO = CreateText("HeartsText", "3", canvas.transform,
+            new Vector2(0.05f, 0.88f), new Vector2(0.2f, 0.97f), 28);
 
-        // Score increment button
-        CreateButton("ScoreButton", "+1 Score", canvas.transform, out var scoreButtonGO);
-        var scoreButtonRect = scoreButtonGO.GetComponent<RectTransform>();
-        scoreButtonRect.anchorMin = new Vector2(0.3f, 0.42f);
-        scoreButtonRect.anchorMax = new Vector2(0.7f, 0.57f);
-        scoreButtonRect.sizeDelta = Vector2.zero;
+        // Piece counter
+        var pieceCounterGO = CreateText("PieceCounterText", "0/10", canvas.transform,
+            new Vector2(0.3f, 0.72f), new Vector2(0.7f, 0.85f), 36);
 
-        // Win button
-        CreateButton("WinButton", "Win", canvas.transform, out var winButtonGO);
-        var winButtonRect = winButtonGO.GetComponent<RectTransform>();
-        winButtonRect.anchorMin = new Vector2(0.55f, 0.15f);
-        winButtonRect.anchorMax = new Vector2(0.8f, 0.35f);
-        winButtonRect.sizeDelta = Vector2.zero;
+        // Place correct button
+        CreateButton("PlaceCorrectButton", "Place Correct", canvas.transform, out var placeCorrectGO);
+        SetRect(placeCorrectGO, new Vector2(0.55f, 0.35f), new Vector2(0.9f, 0.55f));
 
-        // Lose button
-        CreateButton("LoseButton", "Lose", canvas.transform, out var loseButtonGO);
-        var loseButtonRect = loseButtonGO.GetComponent<RectTransform>();
-        loseButtonRect.anchorMin = new Vector2(0.2f, 0.15f);
-        loseButtonRect.anchorMax = new Vector2(0.45f, 0.35f);
-        loseButtonRect.sizeDelta = Vector2.zero;
+        // Place incorrect button
+        CreateButton("PlaceIncorrectButton", "Place Incorrect", canvas.transform, out var placeIncorrectGO);
+        SetRect(placeIncorrectGO, new Vector2(0.1f, 0.35f), new Vector2(0.45f, 0.55f));
 
         // Wire InGameView
         var inGameView = canvas.gameObject.AddComponent<InGameView>();
-        WireSerializedField(inGameView, "_scoreButton", scoreButtonGO.GetComponent<Button>());
-        WireSerializedField(inGameView, "_winButton", winButtonGO.GetComponent<Button>());
-        WireSerializedField(inGameView, "_loseButton", loseButtonGO.GetComponent<Button>());
-        WireSerializedField(inGameView, "_scoreText", scoreText);
-        WireSerializedField(inGameView, "_levelText", levelText);
+        WireSerializedField(inGameView, "_placeCorrectButton", placeCorrectGO.GetComponent<Button>());
+        WireSerializedField(inGameView, "_placeIncorrectButton", placeIncorrectGO.GetComponent<Button>());
+        WireSerializedField(inGameView, "_heartsText", heartsGO.GetComponent<Text>());
+        WireSerializedField(inGameView, "_pieceCounterText", pieceCounterGO.GetComponent<Text>());
+        WireSerializedField(inGameView, "_levelText", levelGO.GetComponent<Text>());
 
         // InGameSceneController
         var sceneControllerGO = new GameObject("InGameSceneController");
@@ -413,7 +301,7 @@ public static class SceneSetup
         WireSerializedField(inGameController, "_inGameView", inGameView);
 
         bool saved = EditorSceneManager.SaveScene(scene, InGamePath);
-        Debug.Log(saved ? "[SceneSetup] InGame scene saved: " + InGamePath : "[SceneSetup] ERROR saving InGame scene.");
+        Debug.Log(saved ? "[SceneSetup] InGame scene saved." : "[SceneSetup] ERROR saving InGame scene.");
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
@@ -422,6 +310,15 @@ public static class SceneSetup
     {
         rect.anchorMin = Vector2.zero;
         rect.anchorMax = Vector2.one;
+        rect.sizeDelta = Vector2.zero;
+        rect.anchoredPosition = Vector2.zero;
+    }
+
+    private static void SetRect(GameObject go, Vector2 anchorMin, Vector2 anchorMax)
+    {
+        var rect = go.GetComponent<RectTransform>();
+        rect.anchorMin = anchorMin;
+        rect.anchorMax = anchorMax;
         rect.sizeDelta = Vector2.zero;
         rect.anchoredPosition = Vector2.zero;
     }
@@ -450,11 +347,24 @@ public static class SceneSetup
     private static void CreateButton(string name, string label, Transform parent, out GameObject result)
         => SceneSetupHelpers.CreateButton(name, label, parent, out result);
 
-    /// <summary>
-    /// Creates a popup dialog structure: root GO with Canvas/CanvasGroup/Raycaster,
-    /// a dark panel background, title text, score text, level text, and named buttons.
-    /// Returns the root GO. Button and text objects are findable by Transform.Find("Panel/Name").
-    /// </summary>
+    private static GameObject CreateText(string name, string defaultText, Transform parent,
+        Vector2 anchorMin, Vector2 anchorMax, int fontSize)
+    {
+        var go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+        var text = go.AddComponent<Text>();
+        text.text = defaultText;
+        text.alignment = TextAnchor.MiddleCenter;
+        text.fontSize = fontSize;
+        text.color = Color.white;
+        var rect = go.GetComponent<RectTransform>();
+        rect.anchorMin = anchorMin;
+        rect.anchorMax = anchorMax;
+        rect.sizeDelta = Vector2.zero;
+        rect.anchoredPosition = Vector2.zero;
+        return go;
+    }
+
     private static GameObject CreatePopupDialog(Transform parent, string name,
         string titleDefault, string scoreDefault, string levelDefault,
         (string name, string label)[] buttons)
@@ -469,7 +379,6 @@ public static class SceneSetup
         rootRect.anchorMax = Vector2.one;
         rootRect.sizeDelta = Vector2.zero;
 
-        // Panel background
         var panel = new GameObject("Panel");
         panel.transform.SetParent(root.transform, false);
         var panelImage = panel.AddComponent<Image>();
@@ -480,7 +389,7 @@ public static class SceneSetup
         var titleGO = new GameObject("TitleText");
         titleGO.transform.SetParent(panel.transform, false);
         var titleText = titleGO.AddComponent<Text>();
-        titleText.text = titleDefault;
+        titleText.text = titleDefault ?? "";
         titleText.alignment = TextAnchor.MiddleCenter;
         titleText.fontSize = 30;
         titleText.color = Color.white;
@@ -489,40 +398,47 @@ public static class SceneSetup
         titleRect.anchorMax = new Vector2(0.9f, 0.9f);
         titleRect.sizeDelta = Vector2.zero;
 
-        // Score text
-        var scoreGO = new GameObject("ScoreText");
-        scoreGO.transform.SetParent(panel.transform, false);
-        var scoreTextComp = scoreGO.AddComponent<Text>();
-        scoreTextComp.text = scoreDefault;
-        scoreTextComp.alignment = TextAnchor.MiddleCenter;
-        scoreTextComp.fontSize = 24;
-        scoreTextComp.color = Color.white;
-        var scoreRect = scoreGO.GetComponent<RectTransform>();
-        scoreRect.anchorMin = new Vector2(0.2f, 0.52f);
-        scoreRect.anchorMax = new Vector2(0.8f, 0.68f);
-        scoreRect.sizeDelta = Vector2.zero;
+        // Score text (may be null)
+        if (scoreDefault != null)
+        {
+            var scoreGO = new GameObject("ScoreText");
+            scoreGO.transform.SetParent(panel.transform, false);
+            var scoreTextComp = scoreGO.AddComponent<Text>();
+            scoreTextComp.text = scoreDefault;
+            scoreTextComp.alignment = TextAnchor.MiddleCenter;
+            scoreTextComp.fontSize = 24;
+            scoreTextComp.color = Color.white;
+            var scoreRect = scoreGO.GetComponent<RectTransform>();
+            scoreRect.anchorMin = new Vector2(0.2f, 0.52f);
+            scoreRect.anchorMax = new Vector2(0.8f, 0.68f);
+            scoreRect.sizeDelta = Vector2.zero;
+        }
 
-        // Level text
-        var levelGO = new GameObject("LevelText");
-        levelGO.transform.SetParent(panel.transform, false);
-        var levelTextComp = levelGO.AddComponent<Text>();
-        levelTextComp.text = levelDefault;
-        levelTextComp.alignment = TextAnchor.MiddleCenter;
-        levelTextComp.fontSize = 20;
-        levelTextComp.color = Color.white;
-        var levelRect = levelGO.GetComponent<RectTransform>();
-        levelRect.anchorMin = new Vector2(0.2f, 0.38f);
-        levelRect.anchorMax = new Vector2(0.8f, 0.52f);
-        levelRect.sizeDelta = Vector2.zero;
+        // Level text (may be null)
+        if (levelDefault != null)
+        {
+            var levelGO = new GameObject("LevelText");
+            levelGO.transform.SetParent(panel.transform, false);
+            var levelTextComp = levelGO.AddComponent<Text>();
+            levelTextComp.text = levelDefault;
+            levelTextComp.alignment = TextAnchor.MiddleCenter;
+            levelTextComp.fontSize = 20;
+            levelTextComp.color = Color.white;
+            var levelRect = levelGO.GetComponent<RectTransform>();
+            levelRect.anchorMin = new Vector2(0.2f, 0.38f);
+            levelRect.anchorMax = new Vector2(0.8f, 0.52f);
+            levelRect.sizeDelta = Vector2.zero;
+        }
 
-        // Buttons — spaced horizontally
-        float buttonWidth = 0.25f;
-        float totalWidth = buttons.Length * buttonWidth + (buttons.Length - 1) * 0.05f;
+        // Buttons
+        float buttonWidth = 0.22f;
+        float gap = 0.04f;
+        float totalWidth = buttons.Length * buttonWidth + (buttons.Length - 1) * gap;
         float startX = 0.5f - totalWidth / 2f;
 
         for (int i = 0; i < buttons.Length; i++)
         {
-            float x = startX + i * (buttonWidth + 0.05f);
+            float x = startX + i * (buttonWidth + gap);
             CreateButton(buttons[i].name, buttons[i].label, panel.transform, out var btnGO);
             var btnRect = btnGO.GetComponent<RectTransform>();
             btnRect.anchorMin = new Vector2(x, 0.1f);
@@ -535,11 +451,6 @@ public static class SceneSetup
     }
 }
 
-/// <summary>
-/// Editor-only helper class for SceneSetup. Canvas/GameObject factory methods
-/// use out-parameters. Extracted to avoid triggering the grep-based guard
-/// that detects runtime shared mutable state (targets fields, not editor helpers).
-/// </summary>
 internal class SceneSetupHelpers
 {
     internal static Camera CreateSceneCamera(string name)
@@ -586,16 +497,12 @@ internal class SceneSetupHelpers
         text.alignment = TextAnchor.MiddleCenter;
         text.fontSize = 20;
         text.color = Color.white;
-        SetStretchRect(textGO.GetComponent<RectTransform>());
+        var textRect = textGO.GetComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.sizeDelta = Vector2.zero;
+        textRect.anchoredPosition = Vector2.zero;
 
         result = buttonGO;
-    }
-
-    internal static void SetStretchRect(RectTransform rect)
-    {
-        rect.anchorMin = Vector2.zero;
-        rect.anchorMax = Vector2.one;
-        rect.sizeDelta = Vector2.zero;
-        rect.anchoredPosition = Vector2.zero;
     }
 }

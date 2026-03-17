@@ -11,26 +11,29 @@ namespace SimpleGame.Game.InGame
     /// </summary>
     public class InGameView : MonoBehaviour, IInGameView
     {
-        [SerializeField] private Button _scoreButton;
-        [SerializeField] private Button _winButton;
-        [SerializeField] private Button _loseButton;
-        [SerializeField] private Text _scoreText;
+        [SerializeField] private Button _placeCorrectButton;
+        [SerializeField] private Button _placeIncorrectButton;
+        [SerializeField] private Text _heartsText;
+        [SerializeField] private Text _pieceCounterText;
         [SerializeField] private Text _levelText;
 
-        public event Action OnScoreClicked;
-        public event Action OnWinClicked;
-        public event Action OnLoseClicked;
+        public event Action OnPlaceCorrect;
+        public event Action OnPlaceIncorrect;
 
         private void Awake()
         {
-            _scoreButton.onClick.AddListener(() => OnScoreClicked?.Invoke());
-            _winButton.onClick.AddListener(() => OnWinClicked?.Invoke());
-            _loseButton.onClick.AddListener(() => OnLoseClicked?.Invoke());
+            _placeCorrectButton.onClick.AddListener(() => OnPlaceCorrect?.Invoke());
+            _placeIncorrectButton.onClick.AddListener(() => OnPlaceIncorrect?.Invoke());
         }
 
-        public void UpdateScore(string text)
+        public void UpdateHearts(string text)
         {
-            _scoreText.text = text;
+            _heartsText.text = text;
+        }
+
+        public void UpdatePieceCounter(string text)
+        {
+            _pieceCounterText.text = text;
         }
 
         public void UpdateLevelLabel(string text)

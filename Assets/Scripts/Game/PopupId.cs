@@ -3,7 +3,10 @@ namespace SimpleGame.Game
     public enum PopupId
     {
         ConfirmDialog,
-        WinDialog,
-        LoseDialog
+        LevelComplete,
+        LevelFailed,
+        RewardedAd,
+        IAPPurchase,
+        ObjectRestored
     }
 }

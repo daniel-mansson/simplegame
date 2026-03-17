@@ -14,8 +14,11 @@ namespace SimpleGame.Game.Popup
     public class UnityPopupContainer : MonoBehaviour, IPopupContainer<PopupId>
     {
         [SerializeField] private GameObject _confirmDialogPopup;
-        [SerializeField] private GameObject _winDialogPopup;
-        [SerializeField] private GameObject _loseDialogPopup;
+        [SerializeField] private GameObject _levelCompletePopup;
+        [SerializeField] private GameObject _levelFailedPopup;
+        [SerializeField] private GameObject _rewardedAdPopup;
+        [SerializeField] private GameObject _iapPurchasePopup;
+        [SerializeField] private GameObject _objectRestoredPopup;
 
         public UniTask ShowPopupAsync(PopupId popupId, CancellationToken ct = default)
         {
@@ -39,10 +42,16 @@ namespace SimpleGame.Game.Popup
             {
                 case PopupId.ConfirmDialog:
                     return _confirmDialogPopup;
-                case PopupId.WinDialog:
-                    return _winDialogPopup;
-                case PopupId.LoseDialog:
-                    return _loseDialogPopup;
+                case PopupId.LevelComplete:
+                    return _levelCompletePopup;
+                case PopupId.LevelFailed:
+                    return _levelFailedPopup;
+                case PopupId.RewardedAd:
+                    return _rewardedAdPopup;
+                case PopupId.IAPPurchase:
+                    return _iapPurchasePopup;
+                case PopupId.ObjectRestored:
+                    return _objectRestoredPopup;
                 default:
                     Debug.LogWarning($"[UnityPopupContainer] No GameObject registered for PopupId: {popupId}");
                     return null;

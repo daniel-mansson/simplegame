@@ -102,6 +102,257 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Notes: M004 upgrades the demo from navigation showcase to working game loop.
 
 
+### R045 — Main screen shows environment with restorable objects, balance, play, settings
+- Class: primary-user-loop
+- Status: active
+- Description: Main screen shows current environment with restorable objects (text stubs), golden piece balance, play button with current level, and settings entry. The main screen IS the meta world — no separate scene.
+- Why it matters: Central hub of the game — the player sees their world, spends currency, and launches levels from here.
+- Source: user
+- Primary owning slice: M006/S05
+- Supporting slices: M006/S06
+- Validation: unmapped
+- Notes: Reworks existing MainMenu scene. Tap object = spend one golden piece for one restoration step, no confirmation.
+
+### R046 — Stub gameplay with hearts and piece counter
+- Class: primary-user-loop
+- Status: active
+- Description: Stub gameplay screen: level ID, piece counter (N/total), place-correct button, place-incorrect button (costs 1 heart), hearts display (3 per level). Win when all pieces placed, lose when 0 hearts.
+- Why it matters: Proves the gameplay flow without real puzzle rendering. Real mechanics come later.
+- Source: user
+- Primary owning slice: M006/S03
+- Supporting slices: M006/S04
+- Validation: unmapped
+- Notes: Core gameplay is deliberately minimal — just an ID, a counter, correct/incorrect buttons. No board, tray, or neighbor logic.
+
+### R047 — Meta world data model via ScriptableObjects
+- Class: core-capability
+- Status: active
+- Description: WorldData → EnvironmentData → RestorableObjectData via ScriptableObjects. Flat structure (not tree). Each object has: name, totalSteps, costPerStep, blockedBy list (references to other RestorableObjectData). An environment contains many objects.
+- Why it matters: Defines the meta-progression structure that drives long-term engagement.
+- Source: user
+- Primary owning slice: M006/S01
+- Supporting slices: M006/S05, M006/S06
+- Validation: unmapped
+- Notes: ScriptableObjects are new to this project. Test data: 2 environments, 4+ objects.
+
+### R048 — Golden puzzle pieces earned on level complete, spent on object restoration
+- Class: primary-user-loop
+- Status: active
+- Description: Golden puzzle pieces earned on level complete, spent on main screen to restore objects. One tap on unblocked object = one step of progress at costPerStep golden pieces.
+- Why it matters: Core economy loop connecting gameplay to meta progression.
+- Source: user
+- Primary owning slice: M006/S02
+- Supporting slices: M006/S04, M006/S05
+- Validation: unmapped
+- Notes: Balance persists via IMetaSaveService.
+
+### R049 — Meta progression persists via PlayerPrefs
+- Class: continuity
+- Status: active
+- Description: Meta progression (per-object restoration progress, golden piece balance, current environment) persists via interface-backed storage with PlayerPrefs implementation internally. Survives app restart.
+- Why it matters: Players must not lose meta progress between sessions.
+- Source: user
+- Primary owning slice: M006/S01
+- Supporting slices: M006/S02
+- Validation: unmapped
+- Notes: Interface-backed so implementation can be swapped to file/cloud later.
+
+### R050 — Environment unlocking with 1–3 simultaneous availability
+- Class: core-capability
+- Status: active
+- Description: 1–3 environments available simultaneously. All must complete (all objects restored) before the next milestone unlocks. Mostly linear with occasional parallel branches.
+- Why it matters: Provides pacing and progression structure for the meta world.
+- Source: user
+- Primary owning slice: M006/S06
+- Supporting slices: M006/S01
+- Validation: unmapped
+- Notes: Environment unlock logic lives in MetaProgressionService.
+
+### R051 — LevelComplete popup with golden piece reward
+- Class: primary-user-loop
+- Status: active
+- Description: LevelComplete popup shows golden pieces earned, continue button returns to main screen.
+- Why it matters: Reward feedback loop — player sees what they earned.
+- Source: user
+- Primary owning slice: M006/S04
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Reworks existing WinDialog.
+
+### R052 — LevelFailed popup with retry/ad/quit
+- Class: primary-user-loop
+- Status: active
+- Description: LevelFailed popup offers retry, watch-ad stub (grants extra heart/continue), quit back to main screen.
+- Why it matters: Fail state must offer recovery paths — monetization hook.
+- Source: user
+- Primary owning slice: M006/S04
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Reworks existing LoseDialog.
+
+### R053 — Rewarded ad stub popup
+- Class: integration
+- Status: active
+- Description: Rewarded ad stub popup: simulates ad viewing with text UI ("Watching ad..."), grants reward (heart or golden pieces) on close.
+- Why it matters: UI must exist for the ad flow even before real SDK integration.
+- Source: user
+- Primary owning slice: M006/S04
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Tappable stub — not just an interface.
+
+### R054 — IAP purchase stub popup
+- Class: integration
+- Status: active
+- Description: IAP purchase stub popup: simulates purchase confirmation with text UI ("Buy X for $Y?"), confirms on tap.
+- Why it matters: UI must exist for the IAP flow even before real SDK integration.
+- Source: user
+- Primary owning slice: M006/S04
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Tappable stub — not just an interface.
+
+### R055 — Object restored celebration popup
+- Class: quality-attribute
+- Status: active
+- Description: Celebration popup fires when a restorable object's restoration completes (all steps done).
+- Why it matters: Reward moment for meta-progression milestones.
+- Source: user
+- Primary owning slice: M006/S05
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Text stub — real animations/effects come later.
+
+### R056 — Interstitial ad stub debug log
+- Class: integration
+- Status: active
+- Description: Debug log fires at win/lose indicating an interstitial ad could be shown here. No UI, just a log.
+- Why it matters: Marks the integration point for future real ad SDK.
+- Source: user
+- Primary owning slice: M006/S03
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Will later fire with a certain interval on lose/win.
+
+### R057 — Heart system: 3 per level, incorrect costs 1, 0 = fail
+- Class: core-capability
+- Status: active
+- Description: Player has 3 hearts per level. Each incorrect placement costs 1 heart. 0 hearts triggers fail state.
+- Why it matters: Core difficulty mechanic and monetization lever.
+- Source: user
+- Primary owning slice: M006/S02
+- Supporting slices: M006/S03
+- Validation: unmapped
+- Notes: Hearts reset per level. No persistence across levels.
+
+### R058 — Full navigable flow end-to-end
+- Class: launchability
+- Status: active
+- Description: Full flow navigable: main screen → play → win/lose → earn golden pieces → spend on objects → restore → unlock environments → repeat.
+- Why it matters: Proves the entire game skeleton works before real content is added.
+- Source: user
+- Primary owning slice: M006/S06
+- Supporting slices: M006/S01-S05
+- Validation: unmapped
+- Notes: Integration verification in play mode.
+
+### R059 — All views are text-box stubs
+- Class: constraint
+- Status: active
+- Description: All new views use simple text boxes with info. No real art, rendering, or animations. Manual visual work comes later.
+- Why it matters: Keeps this milestone focused on flow and data, not visuals.
+- Source: user
+- Primary owning slice: M006/S03
+- Supporting slices: M006/S04, M006/S05
+- Validation: unmapped
+- Notes: User will manually fix visuals in all scenes after this milestone.
+
+## Deferred
+
+### R060 — Real puzzle board with piece placement
+- Class: core-capability
+- Status: deferred
+- Description: Real puzzle board with piece placement, tray, neighbor validation, camera auto-adjust.
+- Why it matters: The actual core gameplay mechanic.
+- Source: user
+- Primary owning slice: none
+- Validation: unmapped
+- Notes: M006 provides stub gameplay only. Real mechanics are a future milestone.
+
+### R061 — Real art/illustrations
+- Class: quality-attribute
+- Status: deferred
+- Description: Real art/illustrations for environments, objects, and puzzle images.
+- Why it matters: Visual identity of the game.
+- Source: user
+- Primary owning slice: none
+- Validation: unmapped
+
+### R062 — Real ad SDK integration
+- Class: integration
+- Status: deferred
+- Description: Real ad SDK integration (rewarded + interstitial).
+- Why it matters: Primary monetization channel.
+- Source: user
+- Primary owning slice: none
+- Validation: unmapped
+- Notes: M006 provides UI stubs and integration points.
+
+### R063 — Real IAP integration
+- Class: integration
+- Status: deferred
+- Description: Real IAP integration (hearts, ad removal, powerups, bundles).
+- Why it matters: Secondary monetization channel.
+- Source: user
+- Primary owning slice: none
+- Validation: unmapped
+- Notes: M006 provides UI stubs and integration points.
+
+### R064 — Powerups and special mechanics
+- Class: differentiator
+- Status: deferred
+- Description: In-level abilities that assist with piece placement or reveal valid pieces.
+- Why it matters: Adds depth and monetization options to gameplay.
+- Source: GDD
+- Primary owning slice: none
+- Validation: unmapped
+
+### R065 — Daily challenge mode
+- Class: differentiator
+- Status: deferred
+- Description: Standalone mode with unique rules/constraints, available as premium feature.
+- Why it matters: Retention mechanic and premium content.
+- Source: GDD
+- Primary owning slice: none
+- Validation: unmapped
+
+### R066 — New piece types (hex, triangular)
+- Class: differentiator
+- Status: deferred
+- Description: Hexagonal, triangular, and other non-standard puzzle piece shapes.
+- Why it matters: Content variety for long-term engagement.
+- Source: GDD
+- Primary owning slice: none
+- Validation: unmapped
+
+### R067 — LiveOps and seasonal events
+- Class: differentiator
+- Status: deferred
+- Description: Seasonal content, limited-time challenges, themed rewards.
+- Why it matters: Live service engagement loop.
+- Source: GDD
+- Primary owning slice: none
+- Validation: unmapped
+
+### R068 — Object restoration animations
+- Class: quality-attribute
+- Status: deferred
+- Description: Looping animations when a meta-world object is fully restored.
+- Why it matters: Brings the meta world to life — reward for completion.
+- Source: GDD
+- Primary owning slice: none
+- Validation: unmapped
+
 ## Validated
 
 ### R003 — Interface-per-view for presenter dependency
@@ -260,62 +511,6 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Validated by: M004 — 98/98 edit-mode tests pass; all new types covered
 - Proof: TestResults.xml testcasecount="98" passed="98" failed="0"
 
-## Deferred
-
-### R018 — View preview tool
-- Class: differentiator
-- Status: deferred
-- Description: A tool to preview individual views in isolation without any system/service wiring.
-- Why it matters: Fast visual iteration on UI without running the full app.
-- Source: user
-- Primary owning slice: none
-- Supporting slices: none
-- Validation: unmapped
-- Notes: View independence (R002) enables this. Future milestone.
-
-### R019 — Play-mode tests for views
-- Class: quality-attribute
-- Status: deferred
-- Description: Play-mode tests that verify view behavior in a running Unity environment.
-- Why it matters: Views are MonoBehaviours — some behaviors can only be tested in play mode.
-- Source: user
-- Primary owning slice: none
-- Supporting slices: none
-- Validation: unmapped
-
-### R041 — Disk persistence for progression
-- Class: continuity
-- Status: deferred
-- Description: Level progress persists across app restarts (PlayerPrefs or JSON save).
-- Why it matters: Real games need persistence. Currently in-memory only.
-- Source: user
-- Primary owning slice: none
-- Supporting slices: none
-- Validation: unmapped
-- Notes: User explicitly chose in-memory for M004. Persistence is a future milestone.
-
-### R042 — Level-specific content/config loading from data
-- Class: core-capability
-- Status: deferred
-- Description: InGame scene loads different content based on level data (enemies, layouts, difficulty curves).
-- Why it matters: Real games have varied levels. Currently level ID is cosmetic.
-- Source: inferred
-- Primary owning slice: none
-- Supporting slices: none
-- Validation: unmapped
-- Notes: Architecture supports it — InGame reads level ID from service. Real content loading deferred.
-
-### R044 — Prefab-based transition with LitMotion tweening
-- Class: quality-attribute
-- Status: validated
-- Description: Transition visuals live in a self-contained prefab. The prefab's MonoBehaviour implements ITransitionPlayer using LitMotion for tweening. Swapping the prefab changes the transition look without touching callers or the API. First implementation: 0.3s fade-to-black via CanvasGroup alpha.
-- Why it matters: Current hand-rolled while-loop fade is brittle and non-extensible. Future transitions will use images, animations, and shaders — the prefab must own all visual details. LitMotion replaces manual tweening for consistency and correctness.
-- Source: user
-- Primary owning slice: M005/S01
-- Supporting slices: none
-- Validation: validated
-- Notes: UnityTransitionPlayer uses LMotion.Create().BindToAlpha().ToUniTask(). Prefab at Assets/Prefabs/TransitionOverlay.prefab. 98/98 tests pass. ITransitionPlayer unchanged.
-
 ## Out of Scope
 
 ### R020 — DI framework integration
@@ -345,8 +540,8 @@ Use it to track what is actively in scope, what has been validated by completed 
 ### R043 — Real gameplay mechanics beyond score button
 - Class: anti-feature
 - Status: out-of-scope
-- Description: No physics, enemies, timers, or complex gameplay. Score button + win/lose buttons only.
-- Why it matters: The milestone proves the architecture loop, not gameplay depth.
+- Description: No physics, enemies, timers, or complex gameplay beyond stub buttons.
+- Why it matters: The milestone proves the game flow, not gameplay depth.
 - Source: inferred
 - Validation: n/a
 
@@ -398,12 +593,36 @@ Use it to track what is actively in scope, what has been validated by completed 
 | R042 | core-capability | deferred | none | none | unmapped |
 | R043 | anti-feature | out-of-scope | none | none | n/a |
 | R044 | quality-attribute | validated | M005/S01 | none | validated |
+| R045 | primary-user-loop | active | M006/S05 | M006/S06 | unmapped |
+| R046 | primary-user-loop | active | M006/S03 | M006/S04 | unmapped |
+| R047 | core-capability | active | M006/S01 | M006/S05, M006/S06 | unmapped |
+| R048 | primary-user-loop | active | M006/S02 | M006/S04, M006/S05 | unmapped |
+| R049 | continuity | active | M006/S01 | M006/S02 | unmapped |
+| R050 | core-capability | active | M006/S06 | M006/S01 | unmapped |
+| R051 | primary-user-loop | active | M006/S04 | none | unmapped |
+| R052 | primary-user-loop | active | M006/S04 | none | unmapped |
+| R053 | integration | active | M006/S04 | none | unmapped |
+| R054 | integration | active | M006/S04 | none | unmapped |
+| R055 | quality-attribute | active | M006/S05 | none | unmapped |
+| R056 | integration | active | M006/S03 | none | unmapped |
+| R057 | core-capability | active | M006/S02 | M006/S03 | unmapped |
+| R058 | launchability | active | M006/S06 | M006/S01-S05 | unmapped |
+| R059 | constraint | active | M006/S03 | M006/S04, M006/S05 | unmapped |
+| R060 | core-capability | deferred | none | none | unmapped |
+| R061 | quality-attribute | deferred | none | none | unmapped |
+| R062 | integration | deferred | none | none | unmapped |
+| R063 | integration | deferred | none | none | unmapped |
+| R064 | differentiator | deferred | none | none | unmapped |
+| R065 | differentiator | deferred | none | none | unmapped |
+| R066 | differentiator | deferred | none | none | unmapped |
+| R067 | differentiator | deferred | none | none | unmapped |
+| R068 | quality-attribute | deferred | none | none | unmapped |
 
 ## Coverage Summary
 
-- Total requirements: 44
-- Active: 9
+- Total requirements: 68
+- Active: 24
 - Validated: 27
-- Deferred: 4
+- Deferred: 13
 - Out of scope: 4
 - Unmapped active requirements: 0

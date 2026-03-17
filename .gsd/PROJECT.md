@@ -2,24 +2,24 @@
 
 ## What This Is
 
-A Unity 6 (6000.3.10f1) project with a clean MVP-based UI architecture and a working game loop. The architecture handles screen management, popups, transitions, and the MVP pattern. The game loop proves the architecture carries real gameplay: meta-progression, scene-to-scene context passing, outcome handling with win/lose popups, retry flow, and state reflection on the main menu.
+A Unity 6 (6000.3.10f1) mobile puzzle game called **Puzzle Tap** — a cozy, feel-good jigsaw puzzle game where players tap to place pieces, earn golden puzzle pieces, and restore a charming illustrated world. Built on a clean MVP-based UI architecture with screen management, popups, transitions, and domain services.
 
 ## Core Value
 
-A proven, testable UI architecture where views are fully independent, presenters are plain C# classes, every layer can be tested in isolation — and a complete game loop (menu → play → outcome → menu reflects progress) demonstrates the architecture works for real gameplay, not just navigation demos.
+A complete game flow skeleton — main screen with meta world, stub gameplay with hearts, level progression, golden piece economy, object restoration, environment unlocking, and ad/IAP stub popups — all wired end-to-end so future milestones can focus on real gameplay, art, and monetization one at a time.
 
 ## Current State
 
-**M005 complete.** Transition system upgraded: LitMotion tweening replaces manual while-loop, transition overlay lives in a self-contained swappable prefab. 98/98 tests passing.
+**M006 in progress.** Building the Puzzle Tap game skeleton — all screens, popups, domain services, data model, and persistence.
 
-**M001–M004 complete.** MVP pattern, screen management, popup system, transitions, input blocking, assembly separation, SceneController architecture, boot-from-any-scene, full game loop — all proven and tested.
+**M001–M005 complete.** MVP pattern, screen management, popup system, transitions, input blocking, assembly separation, SceneController architecture, boot-from-any-scene, full game loop, LitMotion prefab transitions — all proven and tested. 98/98 edit-mode tests passing.
 
 ## Architecture / Key Patterns
 
 - **MVP pattern**: Views (MonoBehaviour/uGUI) expose interfaces → Presenters (plain C#) consume view interfaces and domain services → Models/Services encapsulate domain logic
 - **Assembly separation**: `SimpleGame.Core` (game-agnostic framework) and `SimpleGame.Game` (game-specific code) are separate asmdefs; Core has no game-specific references
 - **Generic managers**: `ScreenManager<TScreenId>` and `PopupManager<TPopupId>` where `T : struct, System.Enum`
-- **Feature cohesion**: Game code grouped by feature (`Game/MainMenu/`, `Game/Settings/`, `Game/Popup/`, `Game/InGame/`, `Game/Boot/`, `Game/Services/`)
+- **Feature cohesion**: Game code grouped by feature (`Game/MainMenu/`, `Game/Settings/`, `Game/Popup/`, `Game/InGame/`, `Game/Boot/`, `Game/Services/`, `Game/Meta/`)
 - **View independence**: Views have no references to presenters, models, or services
 - **Explicit DI**: Constructor or Init method injection only. No DI framework, no static state, no singletons.
 - **Central UI Factory**: `UIFactory` in `Game/Boot/` constructs all game presenters
@@ -30,8 +30,10 @@ A proven, testable UI architecture where views are fully independent, presenters
 - **Presenter results**: Presenters expose awaitable result methods (`WaitForAction`, `WaitForBack`, `WaitForConfirmation`, `WaitForContinue`, `WaitForChoice`) — no outbound callbacks
 - **Boot injection**: `BootInjector` `[RuntimeInitializeOnLoadMethod]` loads Boot additively if not present (play-from-any-scene)
 - **Service-mediated context**: `GameSessionService` passes context between scenes; controllers read what they need
-- **In-memory progression**: `ProgressionService` tracks level, advances on win, logs score (no persistence)
-- **Testing**: `SimpleGame.Tests.Core` (32 tests) and `SimpleGame.Tests.Game` (66 tests); 98/98 passing
+- **Prefab transitions**: `UnityTransitionPlayer` uses LitMotion `BindToAlpha`/`ToUniTask()` on a self-contained prefab
+- **ScriptableObject data**: WorldData/EnvironmentData/RestorableObjectData define meta-world structure (new in M006)
+- **Interface-backed persistence**: IMetaSaveService with PlayerPrefs implementation (new in M006)
+- **Testing**: `SimpleGame.Tests.Core` + `SimpleGame.Tests.Game`; 98/98 passing (pre-M006)
 
 ## Capability Contract
 
@@ -44,3 +46,4 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 - [x] M003: SceneController Architecture — async control flow, linear scene controllers, boot-from-any-scene
 - [x] M004: Game Loop — meta-progression, context passing, InGame scene, win/lose flow, full menu→play→outcome→menu loop
 - [x] M005: Prefab-Based Transitions — LitMotion tweening, prefab-driven transition visuals, extensible for future complex transitions
+- [ ] M006: Puzzle Tap Game Skeleton — all screens, popups, domain services, meta world data model, persistence, ad/IAP stubs, full game flow
