@@ -28,6 +28,21 @@
 - New test file `Assets/Tests/EditMode/Game/ViewContainerTests.cs` with ≥3 tests for `Get<T>()` + `MockViewResolver`
 - All 164+ existing tests pass (no regressions from rename)
 
+## Observability / Diagnostics
+
+This slice is a compile-time and test-time refactor with no runtime-only observability signals. However, the following surfaces expose failure state:
+
+- **Compile errors:** If any file still references `UnityPopupContainer` after the rename, Unity/Roslyn emits `CS0246` (type not found). These appear in the Unity Console and in `rg "UnityPopupContainer" Assets/` output.
+- **`rg` grep as status surface:** `rg "UnityPopupContainer" Assets/Scripts/ Assets/Editor/` returning zero is the primary inspection surface — a non-zero exit or any match output indicates an incomplete rename.
+- **`.meta` GUID integrity:** Run `git status Assets/Scripts/Game/Popup/` after `git mv` — both `.cs` and `.cs.meta` should show renamed (not deleted + untracked). A deleted `.meta` breaks Unity scene serialization silently.
+- **Test count regression:** After rename, the test runner must report ≥ 164 tests passing. A drop in count means a test file failed to compile due to a stale `UnityPopupContainer` reference.
+- **Failure path visibility:** The `Debug.LogWarning` in `UnityViewContainer.GetPopupObject` fires at runtime when an unknown `PopupId` is passed — preserved from the original implementation as the only runtime failure signal.
+- **Redaction:** No sensitive data involved; no redaction constraints apply.
+
+### Diagnostic Verification Step
+
+`rg "UnityPopupContainer" Assets/Scripts/ Assets/Editor/` must return exit code 1 (no matches). If it returns exit code 0 (matches found), the rename is incomplete and the codebase will not compile.
+
 ## Integration Closure
 
 - Upstream surfaces consumed: none (first slice)
@@ -36,7 +51,7 @@
 
 ## Tasks
 
-- [ ] **T01: Create IViewResolver, rename UnityPopupContainer → UnityViewContainer, implement Get<T>(), update all references** `est:30m`
+- [x] **T01: Create IViewResolver, rename UnityPopupContainer → UnityViewContainer, implement Get<T>(), update all references** `est:30m`
   - Why: Core production change — creates the interface, renames the container, implements the new contract, and updates all files that reference the old name. Must be atomic (partial rename leaves codebase broken).
   - Files: `Assets/Scripts/Core/PopupManagement/IViewResolver.cs` (new), `Assets/Scripts/Game/Popup/UnityPopupContainer.cs` → `UnityViewContainer.cs`, `Assets/Scripts/Game/Boot/GameBootstrapper.cs`, `Assets/Editor/SceneSetup.cs`
   - Do: (1) Create `IViewResolver.cs` in Core with `T Get<T>() where T : class`. (2) `git mv` `UnityPopupContainer.cs` → `UnityViewContainer.cs` and its `.meta`. (3) Rename class to `UnityViewContainer`, add `IViewResolver` to implements list, implement `Get<T>()` as `return GetComponentInChildren<T>(true)`. (4) Update `GameBootstrapper.cs` — change type reference from `UnityPopupContainer` to `UnityViewContainer`. (5) Update `SceneSetup.cs` — change `AddComponent<UnityPopupContainer>()` to `AddComponent<UnityViewContainer>()` and field names if needed. (6) Verify no remaining `UnityPopupContainer` references via `rg`.

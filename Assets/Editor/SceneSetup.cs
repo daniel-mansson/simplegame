@@ -97,7 +97,7 @@ public static class SceneSetup
 
         // Popup Canvas (sort order 300)
         CreateFullScreenCanvas("PopupCanvas", 300, out var popupCanvas);
-        var popupContainer = popupCanvas.gameObject.AddComponent<UnityPopupContainer>();
+        var popupContainer = popupCanvas.gameObject.AddComponent<UnityViewContainer>();
 
         // --- ConfirmDialog popup ---
         var confirmDialogGO = CreatePopupDialog(popupCanvas.transform, "ConfirmDialogPopup",

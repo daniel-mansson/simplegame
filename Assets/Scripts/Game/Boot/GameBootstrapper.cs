@@ -56,7 +56,7 @@ namespace SimpleGame.Game.Boot
             // --- Build infrastructure ---
             var inputBlocker = FindFirstObjectByType<UnityInputBlocker>();
             var transitionPlayer = FindFirstObjectByType<UnityTransitionPlayer>(FindObjectsInactive.Include);
-            var popupContainer = FindFirstObjectByType<UnityPopupContainer>();
+            var popupContainer = FindFirstObjectByType<UnityViewContainer>();
             var sceneLoader = new UnitySceneLoader();
 
             _popupManager = new PopupManager<PopupId>(popupContainer, inputBlocker);

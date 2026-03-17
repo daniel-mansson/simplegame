@@ -229,7 +229,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 71b5b82264919a5419df79f24eaaf5ac, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: SimpleGame.Game::SimpleGame.Game.Popup.UnityPopupContainer
+  m_EditorClassIdentifier: SimpleGame.Game::SimpleGame.Game.Popup.UnityViewContainer
   _confirmDialogPopup: {fileID: 1476847174}
   _levelCompletePopup: {fileID: 1099905638}
   _levelFailedPopup: {fileID: 414435021}

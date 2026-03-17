@@ -6,12 +6,15 @@ using UnityEngine;
 namespace SimpleGame.Game.Popup
 {
     /// <summary>
-    /// Unity MonoBehaviour implementation of IPopupContainer&lt;PopupId&gt;.
+    /// Unity MonoBehaviour implementation of IPopupContainer&lt;PopupId&gt; and IViewResolver.
     /// Shows and hides pre-instantiated popup GameObjects via SetActive.
     /// All popups live in the Boot scene and start inactive.
     /// Uses a switch on PopupId — add new cases as new popups are introduced.
+    ///
+    /// Get&lt;T&gt;() resolves view interfaces via GetComponentInChildren&lt;T&gt;(true),
+    /// which searches inactive children — no manual registration required.
     /// </summary>
-    public class UnityPopupContainer : MonoBehaviour, IPopupContainer<PopupId>
+    public class UnityViewContainer : MonoBehaviour, IPopupContainer<PopupId>, IViewResolver
     {
         [SerializeField] private GameObject _confirmDialogPopup;
         [SerializeField] private GameObject _levelCompletePopup;
@@ -36,6 +39,11 @@ namespace SimpleGame.Game.Popup
             return UniTask.CompletedTask;
         }
 
+        public T Get<T>() where T : class
+        {
+            return GetComponentInChildren<T>(true);
+        }
+
         private GameObject GetPopupObject(PopupId popupId)
         {
             switch (popupId)
@@ -53,7 +61,7 @@ namespace SimpleGame.Game.Popup
                 case PopupId.ObjectRestored:
                     return _objectRestoredPopup;
                 default:
-                    Debug.LogWarning($"[UnityPopupContainer] No GameObject registered for PopupId: {popupId}");
+                    Debug.LogWarning($"[UnityViewContainer] No GameObject registered for PopupId: {popupId}");
                     return null;
             }
         }

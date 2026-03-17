@@ -48,3 +48,13 @@ When adding members to `IInputBlocker` (in `Assets/Scripts/Core/PopupManagement/
 - `MockInputBlocker` in `Assets/Tests/EditMode/Core/PopupManagerTests.cs`
 - `MockInputBlockerGame` in `Assets/Tests/EditMode/Game/SceneControllerTests.cs`
 - `MockInputBlockerForInGame` in `Assets/Tests/EditMode/Game/InGameTests.cs`
+
+---
+
+### K005 — Unity scene file m_EditorClassIdentifier must be updated after class rename
+**Date:** 2026-03-17
+
+When renaming a MonoBehaviour class (e.g. `UnityPopupContainer` → `UnityViewContainer`), `git mv` preserves the `.meta` GUID so the scene's `m_Script` binding continues to resolve correctly at runtime. However, the `.unity` scene file also stores `m_EditorClassIdentifier` as a plain string containing the old class name. This does not break runtime binding, but shows the stale name in the Unity Inspector and will cause a `rg "OldName" Assets/` check to return a match.
+
+**Fix:** After `git mv`, run `sed -i 's/OldClassName/NewClassName/g' Assets/Scenes/Boot.unity` (or the relevant scene file). Always run `rg "OldName" Assets/` across all file types (not just `.cs`) to catch scene file references.
+

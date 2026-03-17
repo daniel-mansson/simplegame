@@ -69,6 +69,19 @@ Key decisions: `IViewResolver` is a separate interface from `IPopupContainer` (D
 - `rg "IViewResolver" Assets/Scripts/Core/PopupManagement/IViewResolver.cs` → finds the interface
 - `rg "IPopupContainer.*IViewResolver\|IViewResolver.*IPopupContainer" Assets/Scripts/Game/Popup/UnityViewContainer.cs` → confirms both interfaces on one class
 
+## Observability Impact
+
+This task is a compile-time refactor. The relevant signals are:
+
+- **Primary check:** `rg "UnityPopupContainer" Assets/Scripts/ Assets/Editor/` → must return exit 1 (zero matches). Any match is a broken-rename signal.
+- **Git rename integrity:** `git status` on `Assets/Scripts/Game/Popup/` should show both `.cs` and `.cs.meta` as renamed. A missing `.meta` rename means Unity will assign a new GUID, silently breaking scene serialization for the Boot scene.
+- **Compile signal:** Unity/Roslyn reports `CS0246` if any consumer still references `UnityPopupContainer`. This surfaces in the Unity Console on next recompile.
+- **`IViewResolver` discovery:** `rg "IViewResolver" Assets/Scripts/Core/PopupManagement/IViewResolver.cs` confirms the interface exists and is inspectable.
+- **Both-interfaces signal:** `rg "IPopupContainer.*IViewResolver" Assets/Scripts/Game/Popup/UnityViewContainer.cs` confirms the dual-interface implements clause.
+- **No runtime state changes:** `Get<T>()` adds behavior but produces no logs — it either returns a component or null (Unity default). The `Debug.LogWarning` in `GetPopupObject` remains as the only diagnostic for unknown `PopupId` values.
+
+A future agent inspecting this task should run the four `rg` commands in the Verification section — all passing means the task is complete and the codebase is in a valid state.
+
 ## Inputs
 
 - `Assets/Scripts/Core/PopupManagement/IPopupContainer.cs` — existing Core interface pattern to follow
