@@ -14,6 +14,8 @@ namespace SimpleGame.Game.MainMenu
     {
         [SerializeField] private Button _settingsButton;
         [SerializeField] private Button _playButton;
+        [SerializeField] private Button _resetProgressButton;
+        [SerializeField] private Button _nextEnvironmentButton;
         [SerializeField] private Text _environmentNameText;
         [SerializeField] private Text _balanceText;
         [SerializeField] private Text _levelDisplayText;
@@ -21,6 +23,8 @@ namespace SimpleGame.Game.MainMenu
 
         public event Action OnSettingsClicked;
         public event Action OnPlayClicked;
+        public event Action OnResetProgressClicked;
+        public event Action OnNextEnvironmentClicked;
         public event Action<int> OnObjectTapped;
 
         private readonly List<GameObject> _objectButtons = new List<GameObject>();
@@ -29,6 +33,9 @@ namespace SimpleGame.Game.MainMenu
         {
             _settingsButton.onClick.AddListener(() => OnSettingsClicked?.Invoke());
             _playButton.onClick.AddListener(() => OnPlayClicked?.Invoke());
+            _resetProgressButton.onClick.AddListener(() => OnResetProgressClicked?.Invoke());
+            if (_nextEnvironmentButton != null)
+                _nextEnvironmentButton.onClick.AddListener(() => OnNextEnvironmentClicked?.Invoke());
         }
 
         public void UpdateEnvironmentName(string text) => _environmentNameText.text = text;
@@ -61,6 +68,12 @@ namespace SimpleGame.Game.MainMenu
         /// Call from UI or test to simulate tapping an object at the given index.
         /// </summary>
         public void TapObject(int index) => OnObjectTapped?.Invoke(index);
+
+        public void SetNextEnvironmentVisible(bool visible)
+        {
+            if (_nextEnvironmentButton != null)
+                _nextEnvironmentButton.gameObject.SetActive(visible);
+        }
 
         private GameObject CreateObjectButton(string label, bool disabled)
         {

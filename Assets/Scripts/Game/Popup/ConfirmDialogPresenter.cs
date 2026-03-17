@@ -16,6 +16,14 @@ namespace SimpleGame.Game.Popup
             View.UpdateMessage("Are you sure?");
         }
 
+        /// <summary>Initialize with a custom message.</summary>
+        public void Initialize(string message)
+        {
+            View.OnConfirmClicked += HandleConfirm;
+            View.OnCancelClicked += HandleCancel;
+            View.UpdateMessage(message ?? "Are you sure?");
+        }
+
         public override void Dispose()
         {
             View.OnConfirmClicked -= HandleConfirm;

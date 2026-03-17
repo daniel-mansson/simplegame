@@ -10,10 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 20aa0ec4e6ce164418c5720bd2ee5a2c, type: 3}
-  m_Name: TownSquare
+  m_Name: House
   m_EditorClassIdentifier: SimpleGame.Game::SimpleGame.Game.Meta.EnvironmentData
-  environmentName: TownSquare
+  environmentName: House
   objects:
-  - {fileID: 11400000, guid: 76e12f90cf859f14e960b8c6cab39f1f, type: 2}
-  - {fileID: 11400000, guid: 509b184dde3dc1843971e80ddc8e5214, type: 2}
-  - {fileID: 11400000, guid: 01bad40e17f936d42ad8eadbeb0b9b3a, type: 2}
+  - {fileID: 11400000, guid: 5ace2c8f17396034fbdb0363c37ad32e, type: 2}
+  - {fileID: 11400000, guid: 63116963439410640913eec1ff96c2b5, type: 2}
+  - {fileID: 11400000, guid: b08a3de06e08be648b4b3579b1a4d8f9, type: 2}

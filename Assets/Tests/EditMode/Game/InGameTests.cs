@@ -485,5 +485,6 @@ namespace SimpleGame.Tests.Game
         }
 
         public void Save() => SaveCallCount++;
+        public void ResetAll() => Balance = 0;
     }
 }

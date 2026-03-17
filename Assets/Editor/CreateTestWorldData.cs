@@ -6,8 +6,8 @@ namespace SimpleGame.Editor
 {
     /// <summary>
     /// Editor utility to create test meta world data assets.
-    /// Creates 2 environments (Garden, Town Square) with 5 total objects
-    /// and blocked-by relationships for testing progression logic.
+    /// Creates 4 environments with varied objects and blocked-by
+    /// relationships for testing progression logic.
     ///
     /// Run via: Unity menu Tools/Setup/Create Test World Data
     /// Or batchmode: -executeMethod SimpleGame.Editor.CreateTestWorldData.Create
@@ -21,35 +21,38 @@ namespace SimpleGame.Editor
         {
             EnsureDirectory(DataDir);
 
-            // --- Garden environment: 3 objects ---
-            // Fountain: no blockers, 3 steps, 1 gold each
+            // --- 1. Garden: 3 objects ---
             var fountain = CreateObject("Fountain", totalSteps: 3, costPerStep: 1, blockedBy: null);
-
-            // Bench: no blockers, 2 steps, 1 gold each
             var bench = CreateObject("Bench", totalSteps: 2, costPerStep: 1, blockedBy: null);
-
-            // Gazebo: blocked by Fountain, 4 steps, 2 gold each
             var gazebo = CreateObject("Gazebo", totalSteps: 4, costPerStep: 2, blockedBy: new[] { fountain });
-
             var garden = CreateEnvironment("Garden", new[] { fountain, bench, gazebo });
 
-            // --- Town Square environment: 2 objects ---
-            // Clock Tower: no blockers, 5 steps, 2 gold each
+            // --- 2. House: 3 objects ---
+            var mailbox = CreateObject("Mailbox", totalSteps: 2, costPerStep: 1, blockedBy: null);
+            var frontDoor = CreateObject("FrontDoor", totalSteps: 3, costPerStep: 2, blockedBy: null);
+            var rooftop = CreateObject("Rooftop", totalSteps: 5, costPerStep: 3, blockedBy: new[] { frontDoor });
+            var house = CreateEnvironment("House", new[] { mailbox, frontDoor, rooftop });
+
+            // --- 3. Town Square: 3 objects ---
             var clockTower = CreateObject("ClockTower", totalSteps: 5, costPerStep: 2, blockedBy: null);
-
-            // Statue: blocked by Clock Tower, 3 steps, 3 gold each
             var statue = CreateObject("Statue", totalSteps: 3, costPerStep: 3, blockedBy: new[] { clockTower });
+            var bandstand = CreateObject("Bandstand", totalSteps: 4, costPerStep: 2, blockedBy: null);
+            var townSquare = CreateEnvironment("TownSquare", new[] { clockTower, statue, bandstand });
 
-            var townSquare = CreateEnvironment("TownSquare", new[] { clockTower, statue });
+            // --- 4. Harbor: 3 objects ---
+            var lighthouse = CreateObject("Lighthouse", totalSteps: 6, costPerStep: 3, blockedBy: null);
+            var fishingBoat = CreateObject("FishingBoat", totalSteps: 4, costPerStep: 2, blockedBy: null);
+            var pier = CreateObject("Pier", totalSteps: 5, costPerStep: 4, blockedBy: new[] { lighthouse, fishingBoat });
+            var harbor = CreateEnvironment("Harbor", new[] { lighthouse, fishingBoat, pier });
 
             // --- World Data ---
             var worldData = ScriptableObject.CreateInstance<WorldData>();
-            worldData.environments = new[] { garden, townSquare };
+            worldData.environments = new[] { garden, house, townSquare, harbor };
             AssetDatabase.CreateAsset(worldData, $"{DataDir}/WorldData.asset");
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            Debug.Log("[CreateTestWorldData] Test world data created in Assets/Data/");
+            Debug.Log("[CreateTestWorldData] Test world data created: Garden, House, Town Square, Harbor");
         }
 
         private static RestorableObjectData CreateObject(string displayName, int totalSteps, int costPerStep,

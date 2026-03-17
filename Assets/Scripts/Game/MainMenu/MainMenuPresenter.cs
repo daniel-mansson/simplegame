@@ -19,6 +19,7 @@ namespace SimpleGame.Game.MainMenu
         private readonly ProgressionService _progression;
         private readonly GameSessionService _session;
         private readonly EnvironmentData _currentEnvironment;
+        private readonly bool _hasNextEnvironment;
 
         private UniTaskCompletionSource<MainMenuAction> _actionTcs;
         private string _lastRestoredObjectName;
@@ -28,7 +29,8 @@ namespace SimpleGame.Game.MainMenu
                                  IGoldenPieceService goldenPieces,
                                  ProgressionService progression,
                                  GameSessionService session,
-                                 EnvironmentData currentEnvironment)
+                                 EnvironmentData currentEnvironment,
+                                 bool hasNextEnvironment = false)
             : base(view)
         {
             _metaProgression = metaProgression;
@@ -36,6 +38,7 @@ namespace SimpleGame.Game.MainMenu
             _progression = progression;
             _session = session;
             _currentEnvironment = currentEnvironment;
+            _hasNextEnvironment = hasNextEnvironment;
         }
 
         /// <summary>Name of the last object that was fully restored (for popup).</summary>
@@ -46,6 +49,8 @@ namespace SimpleGame.Game.MainMenu
             View.OnSettingsClicked += HandleSettingsClicked;
             View.OnPlayClicked += HandlePlayClicked;
             View.OnObjectTapped += HandleObjectTapped;
+            View.OnResetProgressClicked += HandleResetProgressClicked;
+            View.OnNextEnvironmentClicked += HandleNextEnvironmentClicked;
 
             RefreshView();
         }
@@ -55,6 +60,8 @@ namespace SimpleGame.Game.MainMenu
             View.OnSettingsClicked -= HandleSettingsClicked;
             View.OnPlayClicked -= HandlePlayClicked;
             View.OnObjectTapped -= HandleObjectTapped;
+            View.OnResetProgressClicked -= HandleResetProgressClicked;
+            View.OnNextEnvironmentClicked -= HandleNextEnvironmentClicked;
             _actionTcs?.TrySetCanceled();
             _actionTcs = null;
         }
@@ -75,6 +82,9 @@ namespace SimpleGame.Game.MainMenu
             View.UpdateEnvironmentName(_currentEnvironment.environmentName);
             View.UpdateBalance($"{_goldenPieces.Balance} Golden Pieces");
             View.UpdateLevelDisplay($"Level {_progression.CurrentLevel}");
+
+            var envComplete = _metaProgression.IsEnvironmentComplete(_currentEnvironment);
+            View.SetNextEnvironmentVisible(envComplete && _hasNextEnvironment);
 
             var objects = _currentEnvironment.objects;
             var displayData = new ObjectDisplayData[objects.Length];
@@ -103,6 +113,16 @@ namespace SimpleGame.Game.MainMenu
         {
             _session.ResetForNewGame(_progression.CurrentLevel);
             _actionTcs?.TrySetResult(MainMenuAction.Play);
+        }
+
+        private void HandleResetProgressClicked()
+        {
+            _actionTcs?.TrySetResult(MainMenuAction.ResetProgress);
+        }
+
+        private void HandleNextEnvironmentClicked()
+        {
+            _actionTcs?.TrySetResult(MainMenuAction.NextEnvironment);
         }
 
         private void HandleObjectTapped(int index)

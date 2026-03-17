@@ -65,5 +65,13 @@ namespace SimpleGame.Game.Services
             _saveService.Save(latest);
             _saveData = latest;
         }
+
+        /// <inheritdoc/>
+        public void ResetAll()
+        {
+            _saveData.goldenPieces = 0;
+            Save();
+            Debug.Log("[GoldenPieceService] Balance reset to 0.");
+        }
     }
 }

@@ -7,6 +7,8 @@ namespace SimpleGame.Game.MainMenu
     {
         event Action OnSettingsClicked;
         event Action OnPlayClicked;
+        event Action OnResetProgressClicked;
+        event Action OnNextEnvironmentClicked;
 
         /// <summary>
         /// Fired when an object is tapped. The int is the object index
@@ -18,5 +20,8 @@ namespace SimpleGame.Game.MainMenu
         void UpdateBalance(string text);
         void UpdateLevelDisplay(string text);
         void UpdateObjects(ObjectDisplayData[] objects);
+
+        /// <summary>Show or hide the Next Environment button.</summary>
+        void SetNextEnvironmentVisible(bool visible);
     }
 }

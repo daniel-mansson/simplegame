@@ -7,6 +7,8 @@ namespace SimpleGame.Game.MainMenu
     {
         Settings,
         Play,
-        ObjectRestored
+        ObjectRestored,
+        ResetProgress,
+        NextEnvironment
     }
 }

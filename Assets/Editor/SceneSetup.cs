@@ -221,14 +221,27 @@ public static class SceneSetup
         CreateButton("PlayButton", "Play", canvas.transform, out var playButtonGO);
         SetRect(playButtonGO, new Vector2(0.3f, 0.1f), new Vector2(0.7f, 0.22f));
 
+        // Next Environment button (hidden by default — shown when env is complete)
+        CreateButton("NextEnvironmentButton", "Next Environment →", canvas.transform, out var nextEnvButtonGO);
+        SetRect(nextEnvButtonGO, new Vector2(0.3f, 0.01f), new Vector2(0.7f, 0.09f));
+        nextEnvButtonGO.GetComponent<Image>().color = new Color(0.2f, 0.6f, 0.2f, 1f);
+        nextEnvButtonGO.SetActive(false);
+
         // Settings button
         CreateButton("SettingsButton", "Settings", canvas.transform, out var settingsButtonGO);
         SetRect(settingsButtonGO, new Vector2(0.7f, 0.88f), new Vector2(0.95f, 0.98f));
+
+        // Reset Progress button
+        CreateButton("ResetProgressButton", "Reset Progress", canvas.transform, out var resetButtonGO);
+        SetRect(resetButtonGO, new Vector2(0.05f, 0.88f), new Vector2(0.35f, 0.98f));
+        resetButtonGO.GetComponent<Image>().color = new Color(0.7f, 0.2f, 0.2f, 1f);
 
         // Wire MainMenuView
         var mainMenuView = canvas.gameObject.AddComponent<MainMenuView>();
         WireSerializedField(mainMenuView, "_settingsButton", settingsButtonGO.GetComponent<Button>());
         WireSerializedField(mainMenuView, "_playButton", playButtonGO.GetComponent<Button>());
+        WireSerializedField(mainMenuView, "_resetProgressButton", resetButtonGO.GetComponent<Button>());
+        WireSerializedField(mainMenuView, "_nextEnvironmentButton", nextEnvButtonGO.GetComponent<Button>());
         WireSerializedField(mainMenuView, "_environmentNameText", envNameGO.GetComponent<Text>());
         WireSerializedField(mainMenuView, "_balanceText", balanceGO.GetComponent<Text>());
         WireSerializedField(mainMenuView, "_levelDisplayText", levelGO.GetComponent<Text>());

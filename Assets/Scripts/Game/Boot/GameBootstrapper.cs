@@ -99,7 +99,8 @@ namespace SimpleGame.Game.Boot
                             Debug.LogError("[GameBootstrapper] MainMenuSceneController not found in scene.");
                             return;
                         }
-                        ctrl.Initialize(_uiFactory, _popupManager, _metaProgressionService);
+                        ctrl.Initialize(_uiFactory, _popupManager, _metaProgressionService,
+                                       _progressionService, _goldenPieceService);
                         var next = await ctrl.RunAsync();
                         await _screenManager.ShowScreenAsync(next);
                         break;

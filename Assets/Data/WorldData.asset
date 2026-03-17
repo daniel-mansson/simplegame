@@ -14,4 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: SimpleGame.Game::SimpleGame.Game.Meta.WorldData
   environments:
   - {fileID: 11400000, guid: f059f92b6d647484cb281ddde93c6015, type: 2}
+  - {fileID: 11400000, guid: bfbf8fa48ca18ac44a54c5436a2e358c, type: 2}
   - {fileID: 11400000, guid: 59960d760282a12408f0a509ba3f6a92, type: 2}
+  - {fileID: 11400000, guid: f7fc73e5dba9f3c4493aa2a157107408, type: 2}

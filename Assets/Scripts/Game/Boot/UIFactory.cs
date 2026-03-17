@@ -29,9 +29,11 @@ namespace SimpleGame.Game.Boot
             _goldenPieces = goldenPieces;
         }
 
-        public MainMenuPresenter CreateMainMenuPresenter(IMainMenuView view, EnvironmentData currentEnvironment)
+        public MainMenuPresenter CreateMainMenuPresenter(IMainMenuView view, EnvironmentData currentEnvironment,
+                                                          bool hasNextEnvironment = false)
         {
-            return new MainMenuPresenter(view, _metaProgression, _goldenPieces, _progression, _session, currentEnvironment);
+            return new MainMenuPresenter(view, _metaProgression, _goldenPieces, _progression, _session,
+                                         currentEnvironment, hasNextEnvironment);
         }
 
         public SettingsPresenter CreateSettingsPresenter(ISettingsView view)

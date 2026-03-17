@@ -30,5 +30,12 @@ namespace SimpleGame.Game.Services
             Debug.Log($"[ProgressionService] Level {_currentLevel} complete — score: {score}");
             _currentLevel++;
         }
+
+        /// <summary>Reset level back to 1 (for debug/reset).</summary>
+        public void ResetLevel()
+        {
+            _currentLevel = 1;
+            Debug.Log("[ProgressionService] Level reset to 1.");
+        }
     }
 }

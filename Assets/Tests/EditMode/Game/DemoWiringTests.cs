@@ -22,6 +22,8 @@ namespace SimpleGame.Tests.Game
     {
         public event Action OnSettingsClicked;
         public event Action OnPlayClicked;
+        public event Action OnResetProgressClicked;
+        public event Action OnNextEnvironmentClicked;
         public event Action<int> OnObjectTapped;
 
         public string LastEnvironmentNameText { get; private set; }
@@ -29,10 +31,12 @@ namespace SimpleGame.Tests.Game
         public string LastLevelDisplayText { get; private set; }
         public ObjectDisplayData[] LastObjects { get; private set; }
         public int UpdateObjectsCallCount { get; private set; }
+        public bool NextEnvironmentVisible { get; private set; }
 
         public void UpdateEnvironmentName(string text) => LastEnvironmentNameText = text;
         public void UpdateBalance(string text) => LastBalanceText = text;
         public void UpdateLevelDisplay(string text) => LastLevelDisplayText = text;
+        public void SetNextEnvironmentVisible(bool visible) => NextEnvironmentVisible = visible;
 
         public void UpdateObjects(ObjectDisplayData[] objects)
         {
@@ -43,6 +47,8 @@ namespace SimpleGame.Tests.Game
         public void SimulateSettingsClicked() => OnSettingsClicked?.Invoke();
         public void SimulatePlayClicked() => OnPlayClicked?.Invoke();
         public void SimulateObjectTapped(int index) => OnObjectTapped?.Invoke(index);
+        public void SimulateResetProgressClicked() => OnResetProgressClicked?.Invoke();
+        public void SimulateNextEnvironmentClicked() => OnNextEnvironmentClicked?.Invoke();
     }
 
     // ---------------------------------------------------------------------------

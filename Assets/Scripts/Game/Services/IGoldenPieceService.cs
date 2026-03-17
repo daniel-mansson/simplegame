@@ -24,5 +24,8 @@ namespace SimpleGame.Game.Services
 
         /// <summary>Persist the current balance to the save service.</summary>
         void Save();
+
+        /// <summary>Reset balance to zero and persist (for debug/reset).</summary>
+        void ResetAll();
     }
 }

@@ -14,6 +14,9 @@ namespace SimpleGame.Game.MainMenu
     /// Shows the current environment with restorable objects, golden piece
     /// balance, and play button. Handles object restoration inline with
     /// ObjectRestored celebration popup. Returns ScreenId for navigation.
+    ///
+    /// ResetProgress: shows confirm dialog, then resets all services and recreates presenter.
+    /// NextEnvironment: advances to the next environment and recreates presenter.
     /// </summary>
     public class MainMenuSceneController : MonoBehaviour, ISceneController
     {
@@ -54,14 +57,20 @@ namespace SimpleGame.Game.MainMenu
         private UIFactory _uiFactory;
         private PopupManager<PopupId> _popupManager;
         private MetaProgressionService _metaProgression;
+        private ProgressionService _progression;
+        private IGoldenPieceService _goldenPieces;
 
         /// <summary>Inject dependencies. Called by the boot loop before RunAsync.</summary>
         public void Initialize(UIFactory uiFactory, PopupManager<PopupId> popupManager,
-                               MetaProgressionService metaProgression = null)
+                               MetaProgressionService metaProgression = null,
+                               ProgressionService progression = null,
+                               IGoldenPieceService goldenPieces = null)
         {
             _uiFactory = uiFactory;
             _popupManager = popupManager;
             _metaProgression = metaProgression;
+            _progression = progression;
+            _goldenPieces = goldenPieces;
         }
 
         /// <summary>
@@ -78,56 +87,88 @@ namespace SimpleGame.Game.MainMenu
 
         public async UniTask<ScreenId> RunAsync(CancellationToken ct = default)
         {
-            // Determine current environment
-            var currentEnv = GetCurrentEnvironment();
-
-            var presenter = _uiFactory.CreateMainMenuPresenter(ActiveMainMenuView, currentEnv);
-            presenter.Initialize();
-            try
+            while (true)
             {
-                while (true)
+                // Determine current environment each iteration (may change after reset/next)
+                var (currentEnv, envIndex) = GetCurrentEnvironment();
+                bool hasNext = HasNextEnvironment(envIndex);
+
+                var presenter = _uiFactory.CreateMainMenuPresenter(ActiveMainMenuView, currentEnv, hasNext);
+                presenter.Initialize();
+                try
                 {
-                    ct.ThrowIfCancellationRequested();
-
-                    var action = await presenter.WaitForAction();
-
-                    if (action == MainMenuAction.Settings)
-                        return ScreenId.Settings;
-
-                    if (action == MainMenuAction.Play)
-                        return ScreenId.InGame;
-
-                    if (action == MainMenuAction.ObjectRestored)
+                    while (true)
                     {
-                        await HandleObjectRestoredPopupAsync(presenter.LastRestoredObjectName, ct);
-                        presenter.RefreshView();
+                        ct.ThrowIfCancellationRequested();
+
+                        var action = await presenter.WaitForAction();
+
+                        if (action == MainMenuAction.Settings)
+                            return ScreenId.Settings;
+
+                        if (action == MainMenuAction.Play)
+                            return ScreenId.InGame;
+
+                        if (action == MainMenuAction.ObjectRestored)
+                        {
+                            await HandleObjectRestoredPopupAsync(presenter.LastRestoredObjectName, ct);
+                            presenter.RefreshView();
+                        }
+
+                        if (action == MainMenuAction.ResetProgress)
+                        {
+                            var confirmed = await ShowConfirmDialogAsync("Reset all progress?", ct);
+                            if (confirmed)
+                            {
+                                _metaProgression?.ResetAll();
+                                _goldenPieces?.ResetAll();
+                                _progression?.ResetLevel();
+                                Debug.Log("[MainMenuSceneController] All progress reset.");
+                                break; // break inner loop → recreate presenter with fresh state
+                            }
+                            // Not confirmed — continue the inner loop
+                            presenter.RefreshView();
+                        }
+
+                        if (action == MainMenuAction.NextEnvironment)
+                        {
+                            break; // break inner loop → recreate presenter with next env
+                        }
                     }
                 }
-            }
-            finally
-            {
-                presenter.Dispose();
+                finally
+                {
+                    presenter.Dispose();
+                }
             }
         }
 
-        private EnvironmentData GetCurrentEnvironment()
+        private (EnvironmentData env, int index) GetCurrentEnvironment()
         {
             if (_metaProgression == null || _metaProgression.WorldData == null
                 || _metaProgression.WorldData.environments == null
                 || _metaProgression.WorldData.environments.Length == 0)
             {
                 Debug.LogWarning("[MainMenuSceneController] No world data available.");
-                return null;
+                return (null, -1);
             }
 
-            // Find the first non-complete environment, or fall back to the last one
             var envs = _metaProgression.WorldData.environments;
             for (int i = 0; i < envs.Length; i++)
             {
                 if (!_metaProgression.IsEnvironmentComplete(envs[i]))
-                    return envs[i];
+                    return (envs[i], i);
             }
-            return envs[envs.Length - 1]; // All complete — show last
+            return (envs[envs.Length - 1], envs.Length - 1);
+        }
+
+        private bool HasNextEnvironment(int currentIndex)
+        {
+            if (_metaProgression == null || _metaProgression.WorldData == null
+                || _metaProgression.WorldData.environments == null)
+                return false;
+
+            return currentIndex >= 0 && currentIndex < _metaProgression.WorldData.environments.Length - 1;
         }
 
         private async UniTask HandleObjectRestoredPopupAsync(string objectName, CancellationToken ct)
@@ -142,6 +183,26 @@ namespace SimpleGame.Game.MainMenu
                 await _popupManager.ShowPopupAsync(PopupId.ObjectRestored, ct);
                 await presenter.WaitForContinue();
                 await _popupManager.DismissPopupAsync(ct);
+            }
+            finally
+            {
+                presenter.Dispose();
+            }
+        }
+
+        private async UniTask<bool> ShowConfirmDialogAsync(string message, CancellationToken ct)
+        {
+            var view = ActiveConfirmDialogView;
+            if (view == null) return false;
+
+            var presenter = _uiFactory.CreateConfirmDialogPresenter(view);
+            presenter.Initialize(message);
+            try
+            {
+                await _popupManager.ShowPopupAsync(PopupId.ConfirmDialog, ct);
+                var result = await presenter.WaitForConfirmation();
+                await _popupManager.DismissPopupAsync(ct);
+                return result;
             }
             finally
             {
