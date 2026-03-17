@@ -10,7 +10,7 @@ A complete game flow skeleton — main screen with meta world, stub gameplay wit
 
 ## Current State
 
-**M006 complete.** Full Puzzle Tap game skeleton built — meta world data model (ScriptableObjects), golden piece economy, heart-based stub gameplay, 6 popups (LevelComplete, LevelFailed, RewardedAd, IAPPurchase, ObjectRestored, ConfirmDialog), object restoration, environment progression, and PlayerPrefs persistence. All wired end-to-end with text-stub visuals.
+**M007 S01 complete.** `IViewResolver` interface introduced in Core, `UnityPopupContainer` renamed to `UnityViewContainer` (GUID preserved), `Get<T>()` implemented via `GetComponentInChildren<T>(true)`. `MockViewResolver` test double and 5 new tests in `ViewContainerTests.cs`. All reference files updated; `rg "UnityPopupContainer" Assets/` returns exit 1. S02 next: wire scene controllers to use IViewResolver.Get<T>(), switch GameBootstrapper to SerializeField refs.
 
 **M001–M005 complete.** MVP pattern, screen management, popup system, transitions, input blocking, assembly separation, SceneController architecture, boot-from-any-scene, full game loop, LitMotion prefab transitions — all proven and tested.
 
@@ -30,7 +30,7 @@ A complete game flow skeleton — main screen with meta world, stub gameplay wit
 - **SceneController pattern**: Per-scene MonoBehaviour with `RunAsync()` — loops internally, returns `ScreenId` for navigation. GameBootstrapper drives the navigation loop.
 - **Hybrid scene management**: Persistent Boot scene with additive scene loading for screen scenes (MainMenu, Settings, InGame)
 - **UniTask**: All async operations use UniTask
-- **Popup pre-instantiation**: `UnityPopupContainer` shows/hides pre-instantiated popup GameObjects in Boot scene via `SetActive`
+- **Popup pre-instantiation**: `UnityViewContainer` shows/hides pre-instantiated popup GameObjects in Boot scene via `SetActive`; exposes `IViewResolver.Get<T>()` for view resolution without scene scanning
 - **Presenter results**: Presenters expose awaitable result methods (`WaitForAction`, `WaitForBack`, `WaitForConfirmation`, `WaitForContinue`, `WaitForChoice`) — no outbound callbacks
 - **Boot injection**: `BootInjector` `[RuntimeInitializeOnLoadMethod]` loads Boot additively if not present (play-from-any-scene)
 - **Service-mediated context**: `GameSessionService` passes context between scenes; controllers read what they need
@@ -38,7 +38,8 @@ A complete game flow skeleton — main screen with meta world, stub gameplay wit
 - **ScriptableObject data**: WorldData/EnvironmentData/RestorableObjectData define meta-world structure
 - **Interface-backed persistence**: IMetaSaveService with PlayerPrefs JSON implementation; reload-then-merge pattern for multi-service shared persistence
 - **Golden piece economy**: GoldenPieceService (earn/spend/persist) + HeartService (per-level, 3 hearts)
-- **6 popup types**: ConfirmDialog, LevelComplete, LevelFailed, RewardedAd, IAPPurchase, ObjectRestored — all in UnityPopupContainer
+- **6 popup types**: ConfirmDialog, LevelComplete, LevelFailed, RewardedAd, IAPPurchase, ObjectRestored — all in UnityViewContainer
+- **IViewResolver**: `IViewResolver` interface in Core (`T Get<T>() where T : class`) implemented by `UnityViewContainer` via `GetComponentInChildren<T>(true)`
 - **Auto-resolving presenters**: InGamePresenter auto-resolves Win/Lose based on game state
 - **Presenter→view data transfer**: ObjectDisplayData struct decouples presenter from view
 - **Testing**: `SimpleGame.Tests.Core` + `SimpleGame.Tests.Game`; 164+ tests passing

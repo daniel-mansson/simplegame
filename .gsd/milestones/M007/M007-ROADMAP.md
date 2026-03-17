@@ -53,7 +53,7 @@ This milestone is complete only when all are true:
 
 ## Slices
 
-- [ ] **S01: IViewResolver + Container Refactor** `risk:medium` `depends:[]`
+- [x] **S01: IViewResolver + Container Refactor** `risk:medium` `depends:[]`
   > After this: renamed container in Boot holds all 6 popup views as inactive children and exposes Get<IMyView>(), show/hide by PopupId still works, verified by tests
 
 - [ ] **S02: Scene Controller View Resolution + Boot SerializeField Refs** `risk:medium` `depends:[S01]`
