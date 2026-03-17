@@ -1,7 +1,7 @@
 # GSD State
 
 **Active Milestone:** M007: Prefab-Based View Management
-**Active Slice:** S02: Scene Controller View Resolution + Boot SerializeField Refs
+**Active Slice:** S03: Scene Root Convention + Final Cleanup
 **Phase:** executing
 **Requirements Status:** 18 active · 41 validated · 10 deferred · 4 out of scope
 
@@ -21,4 +21,4 @@
 - None
 
 ## Next Action
-Execute T01 of S02 (Wire IViewResolver into scene controller Initialize).
+Execute T01 of S03 (Replace FindFirstObjectByType with scene root convention).
