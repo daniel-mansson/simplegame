@@ -104,9 +104,9 @@ namespace SimpleGame.Tests.Game
         [TearDown]
         public void TearDown()
         {
-            Object.DestroyImmediate(_fountain);
-            Object.DestroyImmediate(_testEnv);
-            Object.DestroyImmediate(_testWorld);
+            UnityEngine.Object.DestroyImmediate(_fountain);
+            UnityEngine.Object.DestroyImmediate(_testEnv);
+            UnityEngine.Object.DestroyImmediate(_testWorld);
         }
 
         // -----------------------------------------------------------------------
@@ -129,7 +129,7 @@ namespace SimpleGame.Tests.Game
             var result = await task;
             Assert.AreEqual(ScreenId.MainMenu, result);
 
-            Object.DestroyImmediate(go);
+            UnityEngine.Object.DestroyImmediate(go);
         }
 
         [Test]
@@ -151,7 +151,7 @@ namespace SimpleGame.Tests.Game
             var result2 = await task2;
 
             Assert.AreEqual(ScreenId.MainMenu, result2);
-            Object.DestroyImmediate(go);
+            UnityEngine.Object.DestroyImmediate(go);
         }
 
         // -----------------------------------------------------------------------
@@ -174,7 +174,7 @@ namespace SimpleGame.Tests.Game
             var result = await task;
             Assert.AreEqual(ScreenId.Settings, result);
 
-            Object.DestroyImmediate(go);
+            UnityEngine.Object.DestroyImmediate(go);
         }
 
         [Test]
@@ -193,7 +193,7 @@ namespace SimpleGame.Tests.Game
             var result = await task;
             Assert.AreEqual(ScreenId.InGame, result);
 
-            Object.DestroyImmediate(go);
+            UnityEngine.Object.DestroyImmediate(go);
         }
 
         /// <summary>In-memory mock save service for controller tests.</summary>

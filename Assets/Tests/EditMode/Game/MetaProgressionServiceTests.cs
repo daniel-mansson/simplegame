@@ -41,11 +41,11 @@ namespace SimpleGame.Tests.Game
         [TearDown]
         public void TearDown()
         {
-            Object.DestroyImmediate(_fountain);
-            Object.DestroyImmediate(_bench);
-            Object.DestroyImmediate(_gazebo);
-            Object.DestroyImmediate(_garden);
-            Object.DestroyImmediate(_worldData);
+            UnityEngine.Object.DestroyImmediate(_fountain);
+            UnityEngine.Object.DestroyImmediate(_bench);
+            UnityEngine.Object.DestroyImmediate(_gazebo);
+            UnityEngine.Object.DestroyImmediate(_garden);
+            UnityEngine.Object.DestroyImmediate(_worldData);
         }
 
         // --- Basic progression ---
