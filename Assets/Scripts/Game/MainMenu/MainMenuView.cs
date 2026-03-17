@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -6,7 +7,7 @@ namespace SimpleGame.Game.MainMenu
 {
     /// <summary>
     /// Unity MonoBehaviour implementation of IMainMenuView.
-    /// Text-stub UI for the main screen with meta world.
+    /// Dynamically creates tappable buttons for each restorable object.
     /// Has zero references to presenters, services, or managers.
     /// </summary>
     public class MainMenuView : MonoBehaviour, IMainMenuView
@@ -16,13 +17,13 @@ namespace SimpleGame.Game.MainMenu
         [SerializeField] private Text _environmentNameText;
         [SerializeField] private Text _balanceText;
         [SerializeField] private Text _levelDisplayText;
-        [SerializeField] private Text _objectsText;
+        [SerializeField] private RectTransform _objectsContainer;
 
         public event Action OnSettingsClicked;
         public event Action OnPlayClicked;
         public event Action<int> OnObjectTapped;
 
-        private ObjectDisplayData[] _currentObjects;
+        private readonly List<GameObject> _objectButtons = new List<GameObject>();
 
         private void Awake()
         {
@@ -36,25 +37,64 @@ namespace SimpleGame.Game.MainMenu
 
         public void UpdateObjects(ObjectDisplayData[] objects)
         {
-            _currentObjects = objects;
-            // Text-stub: render objects as a simple text list
-            var sb = new System.Text.StringBuilder();
+            // Clear existing buttons
+            foreach (var go in _objectButtons)
+                Destroy(go);
+            _objectButtons.Clear();
+
             for (int i = 0; i < objects.Length; i++)
             {
                 var obj = objects[i];
-                var status = obj.IsComplete ? "[DONE]"
-                    : obj.IsBlocked ? "[BLOCKED]"
-                    : $"[{obj.Progress}] (tap: {obj.CostPerStep}gp)";
-                sb.AppendLine($"{obj.Name} {status}");
+                var index = i; // capture for closure
+
+                var label = obj.IsComplete ? $"{obj.Name} [DONE]"
+                    : obj.IsBlocked ? $"{obj.Name} [BLOCKED]"
+                    : $"{obj.Name} [{obj.Progress}] — {obj.CostPerStep}gp";
+
+                var btnGO = CreateObjectButton(label, obj.IsComplete || obj.IsBlocked);
+                btnGO.GetComponent<Button>().onClick.AddListener(() => OnObjectTapped?.Invoke(index));
+                _objectButtons.Add(btnGO);
             }
-            _objectsText.text = sb.ToString();
         }
 
         /// <summary>
-        /// Call from UI button to simulate tapping an object at the given index.
-        /// In real UI, each object would have its own button.
-        /// For stub UI, this can be called from a debug button or test.
+        /// Call from UI or test to simulate tapping an object at the given index.
         /// </summary>
         public void TapObject(int index) => OnObjectTapped?.Invoke(index);
+
+        private GameObject CreateObjectButton(string label, bool disabled)
+        {
+            var go = new GameObject("ObjectButton", typeof(RectTransform));
+            go.transform.SetParent(_objectsContainer, false);
+
+            var rect = go.GetComponent<RectTransform>();
+            rect.sizeDelta = new Vector2(0, 60);
+
+            var image = go.AddComponent<Image>();
+            image.color = disabled
+                ? new Color(0.2f, 0.2f, 0.2f, 0.6f)
+                : new Color(0.2f, 0.5f, 0.3f, 0.9f);
+
+            var btn = go.AddComponent<Button>();
+            if (disabled)
+                btn.interactable = false;
+
+            var textGO = new GameObject("Text", typeof(RectTransform));
+            textGO.transform.SetParent(go.transform, false);
+            var textRect = textGO.GetComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.sizeDelta = Vector2.zero;
+            textRect.anchoredPosition = Vector2.zero;
+
+            var text = textGO.AddComponent<Text>();
+            text.text = label;
+            text.alignment = TextAnchor.MiddleCenter;
+            text.fontSize = 22;
+            text.color = disabled ? Color.gray : Color.white;
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+            return go;
+        }
     }
 }

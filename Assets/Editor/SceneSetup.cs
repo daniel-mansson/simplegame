@@ -196,10 +196,26 @@ public static class SceneSetup
         var levelGO = CreateText("LevelText", "Level 1", canvas.transform,
             new Vector2(0.3f, 0.7f), new Vector2(0.7f, 0.78f), 28);
 
-        // Objects list (text display)
-        var objectsGO = CreateText("ObjectsText", "Objects will appear here", canvas.transform,
-            new Vector2(0.05f, 0.25f), new Vector2(0.95f, 0.68f), 18);
-        objectsGO.GetComponent<Text>().alignment = TextAnchor.UpperLeft;
+        // Objects container — VerticalLayoutGroup for dynamically created buttons
+        var objectsContainerGO = new GameObject("ObjectsContainer", typeof(RectTransform));
+        objectsContainerGO.transform.SetParent(canvas.transform, false);
+        var objectsRect = objectsContainerGO.GetComponent<RectTransform>();
+        objectsRect.anchorMin = new Vector2(0.05f, 0.25f);
+        objectsRect.anchorMax = new Vector2(0.95f, 0.68f);
+        objectsRect.sizeDelta = Vector2.zero;
+        objectsRect.anchoredPosition = Vector2.zero;
+
+        var vlg = objectsContainerGO.AddComponent<VerticalLayoutGroup>();
+        vlg.spacing = 8;
+        vlg.childForceExpandWidth = true;
+        vlg.childForceExpandHeight = false;
+        vlg.childControlWidth = true;
+        vlg.childControlHeight = false;
+        vlg.padding = new RectOffset(10, 10, 10, 10);
+
+        // ContentSizeFitter so the container grows with its children
+        var fitter = objectsContainerGO.AddComponent<ContentSizeFitter>();
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
         // Play button
         CreateButton("PlayButton", "Play", canvas.transform, out var playButtonGO);
@@ -216,7 +232,7 @@ public static class SceneSetup
         WireSerializedField(mainMenuView, "_environmentNameText", envNameGO.GetComponent<Text>());
         WireSerializedField(mainMenuView, "_balanceText", balanceGO.GetComponent<Text>());
         WireSerializedField(mainMenuView, "_levelDisplayText", levelGO.GetComponent<Text>());
-        WireSerializedField(mainMenuView, "_objectsText", objectsGO.GetComponent<Text>());
+        WireSerializedField(mainMenuView, "_objectsContainer", objectsContainerGO.GetComponent<RectTransform>());
 
         // MainMenuSceneController
         var sceneControllerGO = new GameObject("MainMenuSceneController");
