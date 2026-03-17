@@ -14,6 +14,8 @@ A complete game flow skeleton — main screen with meta world, stub gameplay wit
 
 **M001–M005 complete.** MVP pattern, screen management, popup system, transitions, input blocking, assembly separation, SceneController architecture, boot-from-any-scene, full game loop, LitMotion prefab transitions — all proven and tested.
 
+**M007 in progress.** Refactoring popup view wiring from scene-placed GameObjects with FindFirstObjectByType to prefab-based organization under a generic IViewResolver container. Eliminates all implicit scene scanning from production code.
+
 **Test count:** 164+ edit-mode tests passing across Core and Game assemblies.
 
 ## Architecture / Key Patterns
@@ -53,3 +55,4 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 - [x] M004: Game Loop — meta-progression, context passing, InGame scene, win/lose flow, full menu→play→outcome→menu loop
 - [x] M005: Prefab-Based Transitions — LitMotion tweening, prefab-driven transition visuals, extensible for future complex transitions
 - [x] M006: Puzzle Tap Game Skeleton — all screens, popups, domain services, meta world data model, persistence, ad/IAP stubs, full game flow
+- [ ] M007: Prefab-Based View Management — refactor popup wiring to prefab-based IViewResolver, eliminate FindFirstObjectByType

@@ -104,7 +104,116 @@ Use it to track what is actively in scope, what has been validated by completed 
 
 
 
+### R069 — Popup views are individual prefabs
+- Class: core-capability
+- Status: active
+- Description: Each popup view (ConfirmDialog, LevelComplete, LevelFailed, RewardedAd, IAPPurchase, ObjectRestored) exists as its own prefab rather than being placed directly in a scene.
+- Why it matters: Prefab-based organization is the standard Unity pattern — enables reuse, clean hierarchy, and future instantiation-based management.
+- Source: user
+- Primary owning slice: M007/S01
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Popup prefabs held as inactive children under the container in Boot scene.
+
+### R070 — Generic view resolver interface (IViewResolver) in Core
+- Class: core-capability
+- Status: active
+- Description: A Core interface `IViewResolver` with `T Get<T>() where T : class` enables generic resolution of view interfaces without scene scanning.
+- Why it matters: Decouples view resolution from Unity scene queries. Keeps Core game-agnostic.
+- Source: user
+- Primary owning slice: M007/S01
+- Supporting slices: M007/S02
+- Validation: unmapped
+- Notes: Separate from IPopupContainer — single responsibility.
+
+### R071 — Popup container renamed and implements IViewResolver
+- Class: core-capability
+- Status: active
+- Description: UnityPopupContainer is renamed to reflect its expanded role and implements both IPopupContainer<PopupId> and IViewResolver.
+- Why it matters: Single component handles both popup show/hide and view interface resolution.
+- Source: user
+- Primary owning slice: M007/S01
+- Supporting slices: M007/S02
+- Validation: unmapped
+- Notes: Name TBD — agent discretion (ViewContainer, PopupViewContainer, etc.).
+
+### R072 — Scene controllers get popup views via IViewResolver
+- Class: core-capability
+- Status: active
+- Description: Scene controllers receive IViewResolver in their Initialize() method and use Get<T>() to resolve popup view interfaces instead of FindFirstObjectByType.
+- Why it matters: Eliminates implicit scene scanning. Makes view dependencies explicit.
+- Source: user
+- Primary owning slice: M007/S02
+- Supporting slices: none
+- Validation: unmapped
+- Notes: SetViewsForTesting test seam must still work for test doubles.
+
+### R073 — GameBootstrapper uses SerializeField refs for boot infrastructure
+- Class: core-capability
+- Status: active
+- Description: GameBootstrapper has [SerializeField] references to UnityInputBlocker, UnityTransitionPlayer, and the popup container — no FindFirstObjectByType for boot infrastructure.
+- Why it matters: Explicit wiring, no scene scanning at boot time.
+- Source: user
+- Primary owning slice: M007/S02
+- Supporting slices: none
+- Validation: unmapped
+- Notes: These are all in the Boot scene, so SerializeField refs are straightforward.
+
+### R074 — Scene controllers resolved via scene root convention
+- Class: core-capability
+- Status: active
+- Description: After additive scene load, the GameBootstrapper finds scene controllers via a scene root convention (e.g. querying root GameObjects of the loaded scene) instead of FindFirstObjectByType.
+- Why it matters: Eliminates the last FindFirstObjectByType usage from production code.
+- Source: user
+- Primary owning slice: M007/S03
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Exact convention (root query, scene loader return value, etc.) is agent discretion.
+
+### R075 — Zero FindFirstObjectByType calls in production code
+- Class: constraint
+- Status: active
+- Description: No FindFirstObjectByType, FindObjectOfType, FindObjectsOfType, or FindAnyObjectByType anywhere in Assets/Scripts/.
+- Why it matters: Forces explicit wiring everywhere — no implicit scene scanning.
+- Source: user
+- Primary owning slice: M007/S03
+- Supporting slices: M007/S01, M007/S02
+- Validation: unmapped
+- Notes: Verified by grep across Assets/Scripts/.
+
+### R076 — All existing tests pass after refactor
+- Class: quality-attribute
+- Status: active
+- Description: All 164+ edit-mode tests pass in Unity batchmode after the refactor.
+- Why it matters: Refactor must not break existing behavior.
+- Source: inferred
+- Primary owning slice: M007/S03
+- Supporting slices: M007/S01, M007/S02
+- Validation: unmapped
+- Notes: Verified by Unity batchmode test run.
+
+### R077 — Functionally identical behavior end-to-end
+- Class: constraint
+- Status: active
+- Description: The game flow, popup behavior, transitions, and all user-visible interactions remain identical after the refactor.
+- Why it matters: This is a structural refactor, not a feature change.
+- Source: user
+- Primary owning slice: M007/S03
+- Supporting slices: M007/S01, M007/S02
+- Validation: unmapped
+- Notes: Verified by human UAT play-through.
+
 ## Deferred
+
+### R078 — Popup instantiation from prefabs
+- Class: core-capability
+- Status: deferred
+- Description: Container instantiates popup views from prefab references on demand instead of holding pre-instantiated inactive children.
+- Why it matters: Reduces memory footprint and enables dynamic popup loading.
+- Source: user (mentioned as future possibility)
+- Primary owning slice: none
+- Validation: unmapped
+- Notes: M007 uses inactive children as stepping stone. Instantiation is a future improvement.
 
 ### R060 — Real puzzle board with piece placement
 - Class: core-capability
@@ -544,13 +653,23 @@ Use it to track what is actively in scope, what has been validated by completed 
 | R066 | differentiator | deferred | none | none | unmapped |
 | R067 | differentiator | deferred | none | none | unmapped |
 | R068 | quality-attribute | deferred | none | none | unmapped |
+| R069 | core-capability | active | M007/S01 | none | mapped |
+| R070 | core-capability | active | M007/S01 | M007/S02 | mapped |
+| R071 | core-capability | active | M007/S01 | M007/S02 | mapped |
+| R072 | core-capability | active | M007/S02 | none | mapped |
+| R073 | core-capability | active | M007/S02 | none | mapped |
+| R074 | core-capability | active | M007/S03 | none | mapped |
+| R075 | constraint | active | M007/S03 | M007/S01, M007/S02 | mapped |
+| R076 | quality-attribute | active | M007/S03 | M007/S01, M007/S02 | mapped |
+| R077 | constraint | active | M007/S03 | M007/S01, M007/S02 | mapped |
+| R078 | core-capability | deferred | none | none | unmapped |
 
 ## Coverage Summary
 
-- Total requirements: 68
-- Active: 9
+- Total requirements: 79
+- Active: 18
 - Validated: 42
-- Deferred: 13
+- Deferred: 14
 - Out of scope: 4
 - Unmapped active requirements: 0
 - Note: Some validated/deferred requirements (R018, R019, R041, R042, R044) have traceability table entries only — no full body section.
