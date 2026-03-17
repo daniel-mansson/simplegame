@@ -1,7 +1,7 @@
 # GSD State
 
 **Active Milestone:** M007: Prefab-Based View Management
-**Active Slice:** S01: IViewResolver + Container Refactor
+**Active Slice:** S02: Scene Controller View Resolution + Boot SerializeField Refs
 **Phase:** executing
 **Requirements Status:** 18 active · 41 validated · 10 deferred · 4 out of scope
 
@@ -14,15 +14,11 @@
 - ✅ **M006:** Puzzle Tap Game Skeleton
 - 🔄 **M007:** Prefab-Based View Management
 
-## S01 Task Status
-- [ ] **T01:** Create IViewResolver, rename UnityPopupContainer → UnityViewContainer, implement Get<T>(), update all references
-- [ ] **T02:** Add MockViewResolver + ViewContainerTests proving Get<T>() resolution
-
 ## Recent Decisions
-- None new (D041-D046 already recorded cover all S01 decisions)
+- None recorded
 
 ## Blockers
 - None
 
 ## Next Action
-Execute T01 — create IViewResolver interface, rename container, update references.
+Execute T01 of S02 (Wire IViewResolver into scene controller Initialize).
