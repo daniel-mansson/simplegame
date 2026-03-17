@@ -81,6 +81,13 @@ This is the only production file that changes. No interfaces, types, or test fil
 - Scene structure: each screen scene has exactly one root GameObject carrying the scene controller component (`MainMenuSceneController`, `SettingsSceneController`, `InGameSceneController`).
 - `ScreenId` enum values `MainMenu`, `Settings`, `InGame` match scene file names exactly.
 
+## Observability Impact
+
+- **Signals that change:** The 3 `FindFirstObjectByType` calls are replaced with `FindSceneController<T>(sceneName)`. The null-check + `Debug.LogError` error paths are preserved unchanged — failure visibility is identical.
+- **How a future agent inspects this task:** Run `rg "FindSceneController" Assets/Scripts/Game/Boot/GameBootstrapper.cs` — should show 4 lines (1 definition + 3 call sites). Run `rg "GetSceneByName|GetRootGameObjects|IsValid" Assets/Scripts/Game/Boot/GameBootstrapper.cs` to confirm the scene root convention APIs are present.
+- **Failure state visible:** If the loaded scene is not yet fully initialised when `FindSceneController<T>` runs, `scene.IsValid()` returns false and the method returns null — the existing `Debug.LogError("[GameBootstrapper] XyzSceneController not found in scene.")` fires immediately, naming the missing controller. No silent failures possible.
+- **No new log noise:** The helper is a pure lookup; it does not emit any logs itself — failures surface only through the existing error guards at each call site.
+
 ## Expected Output
 
 - `Assets/Scripts/Game/Boot/GameBootstrapper.cs` — modified: new `FindSceneController<T>` helper method added; 3 `FindFirstObjectByType` calls replaced; zero `FindObject*` variants remaining in entire file

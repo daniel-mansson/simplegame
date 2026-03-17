@@ -96,7 +96,7 @@ namespace SimpleGame.Game.Boot
                 {
                     case ScreenId.MainMenu:
                     {
-                        var ctrl = FindFirstObjectByType<MainMenuSceneController>();
+                        var ctrl = FindSceneController<MainMenuSceneController>(current.Value.ToString());
                         if (ctrl == null)
                         {
                             Debug.LogError("[GameBootstrapper] MainMenuSceneController not found in scene.");
@@ -110,7 +110,7 @@ namespace SimpleGame.Game.Boot
                     }
                     case ScreenId.Settings:
                     {
-                        var ctrl = FindFirstObjectByType<SettingsSceneController>();
+                        var ctrl = FindSceneController<SettingsSceneController>(current.Value.ToString());
                         if (ctrl == null)
                         {
                             Debug.LogError("[GameBootstrapper] SettingsSceneController not found in scene.");
@@ -123,7 +123,7 @@ namespace SimpleGame.Game.Boot
                     }
                     case ScreenId.InGame:
                     {
-                        var ctrl = FindFirstObjectByType<InGameSceneController>();
+                        var ctrl = FindSceneController<InGameSceneController>(current.Value.ToString());
                         if (ctrl == null)
                         {
                             Debug.LogError("[GameBootstrapper] InGameSceneController not found in scene.");
@@ -151,6 +151,18 @@ namespace SimpleGame.Game.Boot
                 if (scene.name == nameof(ScreenId.MainMenu)) return ScreenId.MainMenu;
                 if (scene.name == nameof(ScreenId.Settings)) return ScreenId.Settings;
                 if (scene.name == nameof(ScreenId.InGame)) return ScreenId.InGame;
+            }
+            return null;
+        }
+
+        private static T FindSceneController<T>(string sceneName) where T : Component
+        {
+            var scene = UnityEngine.SceneManagement.SceneManager.GetSceneByName(sceneName);
+            if (!scene.IsValid()) return null;
+            foreach (var root in scene.GetRootGameObjects())
+            {
+                var controller = root.GetComponent<T>();
+                if (controller != null) return controller;
             }
             return null;
         }

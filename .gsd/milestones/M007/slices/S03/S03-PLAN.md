@@ -26,6 +26,14 @@
 - Unity batchmode test run: all 169+ tests pass
 - Human UAT: full game flow play-through confirms identical behavior
 
+## Observability / Diagnostics
+
+- **Runtime signals:** `GameBootstrapper` emits `Debug.Log("[GameBootstrapper] Boot sequence started.")` and `Debug.Log("[GameBootstrapper] Infrastructure ready. Starting navigation loop.")` at startup. Each `FindSceneController<T>` failure path emits `Debug.LogError("[GameBootstrapper] XyzSceneController not found in scene.")` — these are visible in the Unity Console and in batchmode logs.
+- **Inspection surface:** After this slice, the scene root convention is the sole lookup path. To inspect the lookup: attach a debugger or add a temporary `Debug.Log` inside `FindSceneController<T>` after `scene.GetRootGameObjects()` to confirm the scene is valid and root objects are returned.
+- **Failure visibility:** If `FindSceneController<T>` returns null (scene not loaded or controller missing), the existing `Debug.LogError` + `return` guard halts the navigation loop with a clear message identifying which controller was not found. No silent failures — every null result produces a logged error.
+- **Redaction constraints:** No user data or secrets pass through these log paths; no redaction needed.
+- **Verification diagnostic:** `rg "FindSceneController|GetSceneByName|GetRootGameObjects|IsValid" Assets/Scripts/Game/Boot/GameBootstrapper.cs` confirms the scene root convention APIs are present post-refactor.
+
 ## Integration Closure
 
 - Upstream surfaces consumed: `GameBootstrapper.cs` with S02's `[SerializeField]` fields and `IViewResolver` passing already wired; `ScreenId` enum → scene name mapping (proven by `ShowScreenAsync` and `DetectAlreadyLoadedScreen`)
@@ -34,7 +42,7 @@
 
 ## Tasks
 
-- [ ] **T01: Replace FindFirstObjectByType with scene root convention in GameBootstrapper** `est:20m`
+- [x] **T01: Replace FindFirstObjectByType with scene root convention in GameBootstrapper** `est:20m`
   - Why: Eliminates the last 3 `FindFirstObjectByType` calls in all production code, completing R074 and R075
   - Files: `Assets/Scripts/Game/Boot/GameBootstrapper.cs`
   - Do: Add a private `FindSceneController<T>(string sceneName)` helper that uses `SceneManager.GetSceneByName()` → `scene.IsValid()` guard → `scene.GetRootGameObjects()` → `GetComponent<T>()` loop. Replace all 3 `FindFirstObjectByType<XyzSceneController>()` calls with `FindSceneController<XyzSceneController>(current.Value.ToString())`. Follow existing fully-qualified `UnityEngine.SceneManagement.SceneManager` style or add a `using` at the top.
