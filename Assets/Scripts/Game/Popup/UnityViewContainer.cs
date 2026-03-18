@@ -115,13 +115,19 @@ namespace SimpleGame.Game.Popup
         {
             var sortOrder = BasePopupSortOrder + (depthIndex * SortOrderStep);
 
-            // Add or reuse Canvas on the popup root for sort order override
+            // Add or reuse Canvas on the popup root for sort order override.
+            // A nested Canvas with overrideSorting=true detaches from the parent canvas
+            // for rendering AND input — it needs its own GraphicRaycaster so buttons
+            // inside it receive pointer events (parent's raycaster won't reach them).
             var canvas = popup.GetComponent<Canvas>();
             if (canvas == null)
                 canvas = popup.AddComponent<Canvas>();
 
             canvas.overrideSorting = true;
             canvas.sortingOrder = sortOrder;
+
+            if (popup.GetComponent<UnityEngine.UI.GraphicRaycaster>() == null)
+                popup.AddComponent<UnityEngine.UI.GraphicRaycaster>();
         }
 
         private GameObject GetPopupObject(PopupId popupId)
