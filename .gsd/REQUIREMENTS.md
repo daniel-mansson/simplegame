@@ -225,6 +225,72 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Validation: validated
 - Notes: SceneSetup fully regenerates Boot scene. TMP_Text fields wired. _canvasGroup/_panel wired on all 6 views.
 
+### R084 — In-scene screen switching within a scene
+- Class: core-capability
+- Status: active
+- Description: Scenes can contain multiple named screens (full-panel GameObjects). An `InSceneScreenManager` switches the active screen by SetActive, maintaining a back stack. One screen is active at a time.
+- Why it matters: Enables shop, game modes, and other full-panel features without scene load overhead. Scales better than a flat scene with everything always loaded.
+- Source: user
+- Primary owning slice: M009/S01
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Generic in Core (no game types). MainMenu wires it with MainMenuScreenId (Home, Shop). Instant swap — no animation this milestone.
+
+### R085 — Popup stacking with correct visual layering
+- Class: core-capability
+- Status: active
+- Description: Multiple popups can be shown simultaneously. Only the top popup is interactive. The dim overlay sits between the bottom and top popup: bottom popup is visually dimmed, top popup is unobscured.
+- Why it matters: Enables multi-step flows (LevelFailed → shop) without losing the first popup's state.
+- Source: user
+- Primary owning slice: M009/S02
+- Supporting slices: M009/S03
+- Validation: unmapped
+- Notes: Implemented via per-popup Canvas with OverrideSorting. Sort scheme: base 50, +100 per depth. Blocker at 100.
+
+### R086 — Coins currency, persisted, separate from golden pieces
+- Class: primary-user-loop
+- Status: active
+- Description: `CoinsService` tracks a coin balance. Coins are earned via shop purchases. Balance persists via MetaSaveData. Separate from the existing golden pieces currency.
+- Why it matters: Coins drive the Continue monetization flow. Needs to survive session restarts.
+- Source: user
+- Primary owning slice: M009/S03
+- Supporting slices: none
+- Validation: unmapped
+- Notes: `MetaSaveData.coins` int field added. CoinsService follows GoldenPieceService pattern exactly.
+
+### R087 — LevelFailed Continue option costing 100 coins
+- Class: primary-user-loop
+- Status: active
+- Description: LevelFailed popup has a Continue button. Costs 100 coins. If balance sufficient: deducts and continues. If insufficient: opens Shop popup stacked on LevelFailed.
+- Why it matters: Primary monetization touchpoint. Demonstrates popup stacking and coin spending in the critical fail flow.
+- Source: user
+- Primary owning slice: M009/S03
+- Supporting slices: M009/S02
+- Validation: unmapped
+- Notes: `LevelFailedChoice.Continue` added. LevelFailed popup gets a fourth button.
+
+### R088 — Shop with fake IAP coin packs
+- Class: primary-user-loop
+- Status: active
+- Description: Shop has three coin pack tiers (e.g. 500/€1.99, 1200/€3.99, 2500/€7.99). Each uses fake IAP flow (existing IAPPurchasePresenter pattern). Purchase grants coins. Accessible from MainMenu (screen) and from LevelFailed (stacked popup).
+- Why it matters: Proves the full monetization flow end-to-end, even with a stub payment.
+- Source: user
+- Primary owning slice: M009/S03
+- Supporting slices: M009/S01, M009/S02
+- Validation: unmapped
+- Notes: No real store SDK. IAPPurchasePresenter extended or ShopPresenter wraps it for multi-pack selection.
+
+### R089 — Contextual coin balance overlay HUD
+- Class: primary-user-loop
+- Status: active
+- Description: An overlay HUD canvas (sort order between blocker and popups) shows the current coin balance. Appears and disappears with LitMotion animation when explicitly shown/hidden by the current context (e.g. shown when LevelFailed opens, hidden after dismiss).
+- Why it matters: Makes coin balance visible at moments of spending/earning without cluttering persistent UI.
+- Source: user
+- Primary owning slice: M009/S04
+- Supporting slices: M009/S03
+- Validation: unmapped
+- Notes: `ICurrencyOverlay` interface. `UnityCurrencyOverlay` MonoBehaviour. Canvas sort order 120 (between blocker 100 and popups 150+).
+
 ## Deferred
 
 ### R078 — Popup instantiation from prefabs
@@ -711,13 +777,19 @@ Use it to track what is actively in scope, what has been validated by completed 
 | R081 | core-capability | validated | M008/S01 | M008/S03 | validated |
 | R082 | differentiator | validated | M008/S02 | M008/S03 | validated |
 | R083 | core-capability | validated | M008/S03 | M008/S02 | validated |
+| R084 | core-capability | active | M009/S01 | none | mapped |
+| R085 | core-capability | active | M009/S02 | M009/S03 | mapped |
+| R086 | primary-user-loop | active | M009/S03 | none | mapped |
+| R087 | primary-user-loop | active | M009/S03 | M009/S02 | mapped |
+| R088 | primary-user-loop | active | M009/S03 | M009/S01, M009/S02 | mapped |
+| R089 | primary-user-loop | active | M009/S04 | M009/S03 | mapped |
 
 ## Coverage Summary
 
-- Total requirements: 84
-- Active: 18
+- Total requirements: 90
+- Active: 24
 - Validated: 47
 - Deferred: 14
 - Out of scope: 4
 - Unmapped active requirements: 0
-- Note: R079–R083 validated by M008. Some validated/deferred requirements (R018, R019, R041, R042, R044) have traceability table entries only — no full body section.
+- Note: R079–R083 validated by M008. R084–R089 active for M009. Some validated/deferred requirements (R018, R019, R041, R042, R044) have traceability table entries only — no full body section.
