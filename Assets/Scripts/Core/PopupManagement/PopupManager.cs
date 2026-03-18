@@ -101,8 +101,8 @@ namespace SimpleGame.Core.PopupManagement
         }
 
         /// <summary>
-        /// Dismisses all open popups in LIFO order. Unblocks input and fires the overlay
-        /// fade-out when the stack becomes empty, then awaits each popup exit animation.
+        /// Dismisses all open popups in LIFO order. Unblocks input per popup;
+        /// fires the overlay fade-out when the stack becomes empty (not awaited).
         /// No-ops if an operation is in progress or the stack is empty.
         /// </summary>
         public async UniTask DismissAllAsync(CancellationToken ct = default)
@@ -116,11 +116,11 @@ namespace SimpleGame.Core.PopupManagement
                 while (_stack.Count > 0)
                 {
                     var popupId = _stack.Pop();
+                    _inputBlocker.Unblock();
 
                     if (_stack.Count == 0)
                     {
-                        // Last popup — unblock and start overlay fade-out before animation
-                        _inputBlocker.Unblock();
+                        // Last popup — fire overlay fade-out in background before await
                         _inputBlocker.FadeOutAsync(ct).Forget();
                     }
 

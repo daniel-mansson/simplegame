@@ -1,7 +1,7 @@
 {
   "name": "SimpleGame.Game",
   "rootNamespace": "SimpleGame.Game",
-  "references": ["SimpleGame.Core", "UniTask", "UnityEngine.UI"],
+  "references": ["SimpleGame.Core", "UniTask", "UnityEngine.UI", "Unity.TextMeshPro"],
   "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,

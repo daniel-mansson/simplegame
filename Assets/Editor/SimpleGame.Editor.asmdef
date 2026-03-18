@@ -1,7 +1,7 @@
 {
   "name": "SimpleGame.Editor",
   "rootNamespace": "SimpleGame.Editor",
-  "references": ["SimpleGame.Core", "SimpleGame.Game", "UnityEngine.UI", "UnityEditor.UI"],
+  "references": ["SimpleGame.Core", "SimpleGame.Game", "UnityEngine.UI", "UnityEditor.UI", "Unity.TextMeshPro", "Unity.TextMeshPro.Editor"],
   "includePlatforms": ["Editor"],
   "excludePlatforms": [],
   "allowUnsafeCode": false,

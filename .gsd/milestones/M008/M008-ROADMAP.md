@@ -54,7 +54,7 @@ This milestone is complete only when all are true:
 - [x] **S01: Animation Plumbing** `risk:high` `depends:[]`
   > After this: PopupManager, UnityInputBlocker, IPopupView, and UnityViewContainer all wired for async animation. Opening a popup in play mode logs "AnimateIn called" and closing logs "AnimateOut called" with correct input timing.
 
-- [ ] **S02: TMP Prefab Kit** `risk:medium` `depends:[S01]`
+- [x] **S02: TMP Prefab Kit** `risk:medium` `depends:[S01]`
   > After this: TMP in asmdefs, 8 prefab assets exist (BigPopup, SmallPopup, 3 buttons, 3 text styles). ConfirmDialog rebuilt from prefabs as proof-of-concept.
 
 - [ ] **S03: Wire All Popups to Prefabs** `risk:low` `depends:[S02]`
