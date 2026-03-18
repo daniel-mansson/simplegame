@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c1f4b076a880cff4bba59114f2c726a9, type: 3}
+  m_Name: DemoPieceRenderConfig
+  m_EditorClassIdentifier: SimpleJigsaw.Runtime::SimpleJigsaw.PieceRenderConfig
+  PieceShader: {fileID: 4800000, guid: c67764c59add49e4f942a4842715923b, type: 3}
+  FrontTexture: {fileID: 0}
+  SideTexture: {fileID: 0}
+  BackTexture: {fileID: 0}
+  SideTint: {r: 0.76, g: 0.6, b: 0.42, a: 1}
+  SideTilingScale: 10
+  BackTint: {r: 0.6, g: 0.47, b: 0.33, a: 1}
+  PieceThickness: 0.05
+  EdgeSubdivisions: 20
+  OutlineEnabled: 1
+  OutlineColor: {r: 1, g: 1, b: 1, a: 1}
+  OutlineWidth: 3

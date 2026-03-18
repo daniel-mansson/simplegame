@@ -1,0 +1,14 @@
+{
+    "name": "SimpleGame.Editor.JigsawDemo",
+    "rootNamespace": "",
+    "references": ["SimpleJigsaw.Runtime"],
+    "includePlatforms": ["Editor"],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

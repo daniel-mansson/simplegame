@@ -44,7 +44,7 @@ This milestone is complete only when all are true:
 
 ## Slices
 
-- [ ] **S01: Submodule & Package Registration** `risk:medium` `depends:[]`
+- [x] **S01: Submodule & Package Registration** `risk:medium` `depends:[]`
   > After this: Unity resolves `com.simple-magic-studios.simple-jigsaw` as a local editable package with correct displayName and no compile errors; `git submodule status` shows the tracked commit.
 
 - [ ] **S02: Jigsaw Demo Scene** `risk:low` `depends:[S01]`
