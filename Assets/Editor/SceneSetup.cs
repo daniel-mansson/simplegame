@@ -387,29 +387,24 @@ public static class SceneSetup
             new Vector2(0.05f, 0.88f), new Vector2(0.2f, 0.97f), 28);
 
         // Piece counter
-        var pieceCounterGO = CreateText("PieceCounterText", "0/10", canvas.transform,
+        var pieceCounterGO = CreateText("PieceCounterText", "0/0", canvas.transform,
             new Vector2(0.3f, 0.72f), new Vector2(0.7f, 0.85f), 36);
 
-        // Place correct button
-        CreateButton("PlaceCorrectButton", "Place Correct", canvas.transform, out var placeCorrectGO);
-        SetRect(placeCorrectGO, new Vector2(0.55f, 0.35f), new Vector2(0.9f, 0.55f));
-
-        // Place incorrect button
-        CreateButton("PlaceIncorrectButton", "Place Incorrect", canvas.transform, out var placeIncorrectGO);
-        SetRect(placeIncorrectGO, new Vector2(0.1f, 0.35f), new Vector2(0.45f, 0.55f));
-
-        // Wire InGameView
+        // Wire InGameView (no placeholder buttons — tapping is handled by PieceTapHandler)
         var inGameView = canvas.gameObject.AddComponent<InGameView>();
-        WireSerializedField(inGameView, "_placeCorrectButton", placeCorrectGO.GetComponent<Button>());
-        WireSerializedField(inGameView, "_placeIncorrectButton", placeIncorrectGO.GetComponent<Button>());
         WireSerializedField(inGameView, "_heartsText", heartsGO.GetComponent<Text>());
         WireSerializedField(inGameView, "_pieceCounterText", pieceCounterGO.GetComponent<Text>());
         WireSerializedField(inGameView, "_levelText", levelGO.GetComponent<Text>());
+
+        // PuzzleParent — empty GameObject where jigsaw piece meshes are spawned at runtime
+        var puzzleParentGO = new GameObject("PuzzleParent");
+        puzzleParentGO.transform.SetParent(null); // root-level, not under canvas
 
         // InGameSceneController
         var sceneControllerGO = new GameObject("InGameSceneController");
         var inGameController = sceneControllerGO.AddComponent<InGameSceneController>();
         WireSerializedField(inGameController, "_inGameView", inGameView);
+        WireSerializedField(inGameController, "_puzzleParent", puzzleParentGO.transform);
 
         bool saved = EditorSceneManager.SaveScene(scene, InGamePath);
         Debug.Log(saved ? "[SceneSetup] InGame scene saved." : "[SceneSetup] ERROR saving InGame scene.");

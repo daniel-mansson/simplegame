@@ -1,11 +1,14 @@
+using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using SimpleGame.Core;
 using SimpleGame.Core.PopupManagement;
 using SimpleGame.Game.Boot;
 using SimpleGame.Game.Popup;
+using SimpleGame.Game.Puzzle;
 using SimpleGame.Game.Services;
 using SimpleGame.Puzzle;
+using SimpleJigsaw;
 using UnityEngine;
 namespace SimpleGame.Game.InGame
 {
@@ -26,6 +29,16 @@ namespace SimpleGame.Game.InGame
         [SerializeField] private int _defaultLevelId = 1;
         [SerializeField] private int _defaultTotalPieces = 10;
         [SerializeField] private int _goldenPiecesPerWin = 5;
+
+        [Header("Puzzle Rendering")]
+        [SerializeField] private SimpleJigsaw.GridLayoutConfig _gridLayoutConfig;
+        [SerializeField] private SimpleJigsaw.PieceRenderConfig _pieceRenderConfig;
+        [SerializeField] private Transform _puzzleParent;
+        [SerializeField] private int _puzzleSeed = 42;
+        [SerializeField] private int _seedPieceId = 0;
+
+        /// <summary>Spawned piece GameObjects — destroyed on scene unload.</summary>
+        private List<GameObject> _spawnedPieces;
 
         /// <summary>The active puzzle level for the current run. Set in RunAsync.</summary>
         private IPuzzleLevel _currentLevel;
@@ -114,9 +127,30 @@ namespace SimpleGame.Game.InGame
                 _session.ResetForNewGame(_defaultLevelId, _defaultTotalPieces);
             }
 
-            // Determine the level factory: use injected factory, or fall back to stub.
-            // S04 replaces the stub factory with JigsawLevelFactory.Build.
-            var factory = _levelFactory ?? (() => BuildStubLevel(_session.TotalPieces));
+            // Determine the level factory: use injected factory, or real jigsaw, or fallback stub.
+            // S04: use JigsawLevelFactory when a GridLayoutConfig is assigned.
+            System.Func<IPuzzleLevel> factory;
+            if (_levelFactory != null)
+            {
+                factory = _levelFactory;
+            }
+            else if (_gridLayoutConfig != null)
+            {
+                var buildResult = JigsawLevelFactory.Build(
+                    _gridLayoutConfig, _puzzleSeed,
+                    seedPieceIds: new[] { _seedPieceId });
+
+                // Spawn piece GameObjects with tap handlers (once per scene load)
+                SpawnPieces(buildResult.RawBoard);
+
+                factory = () => JigsawLevelFactory.Build(
+                    _gridLayoutConfig, _puzzleSeed,
+                    seedPieceIds: new[] { _seedPieceId }).Level;
+            }
+            else
+            {
+                factory = () => BuildStubLevel(_session.TotalPieces);
+            }
 
             while (true)
             {
@@ -296,6 +330,39 @@ namespace SimpleGame.Game.InGame
         /// The factory is called at the start of each retry to ensure fresh deck state.
         /// </summary>
         public void SetLevelFactory(System.Func<IPuzzleLevel> factory) => _levelFactory = factory;
+
+        /// <summary>
+        /// Spawns piece GameObjects using PieceObjectFactory and attaches PieceTapHandler to each.
+        /// Called once at scene start when a GridLayoutConfig is assigned.
+        /// </summary>
+        private void SpawnPieces(SimpleJigsaw.PuzzleBoard rawBoard)
+        {
+            if (_inGameView == null) return;
+
+            var parent = _puzzleParent != null ? _puzzleParent : transform;
+            var config = _pieceRenderConfig;
+
+            List<GameObject> pieces;
+            if (config != null && config.PieceShader != null)
+                pieces = SimpleJigsaw.PieceObjectFactory.CreateAll(rawBoard, config, parent);
+            else
+                pieces = SimpleJigsaw.PieceObjectFactory.CreateAll(rawBoard,
+                    new UnityEngine.Material(UnityEngine.Shader.Find("Standard") ??
+                                             UnityEngine.Shader.Find("Universal Render Pipeline/Lit")),
+                    parent);
+
+            _spawnedPieces = pieces;
+
+            // Attach tap handler to each piece — no game logic, just forwards the ID to the view
+            for (int i = 0; i < pieces.Count; i++)
+            {
+                var pieceId = rawBoard.Pieces[i].Id;
+                var handler = pieces[i].AddComponent<PieceTapHandler>();
+                handler.Initialize(pieceId, _inGameView);
+            }
+
+            Debug.Log($"[InGameSceneController] Spawned {pieces.Count} pieces with tap handlers.");
+        }
 
         /// <summary>
         /// Builds a stub linear-chain level: piece 0 is the seed, each subsequent
