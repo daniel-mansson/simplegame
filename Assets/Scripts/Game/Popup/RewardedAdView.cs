@@ -1,5 +1,6 @@
 using System;
 using SimpleGame.Core.MVP;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -13,7 +14,7 @@ namespace SimpleGame.Game.Popup
     {
         [SerializeField] private Button _watchButton;
         [SerializeField] private Button _skipButton;
-        [SerializeField] private Text _statusText;
+        [SerializeField] private TMP_Text _statusText;
 
         public event Action OnWatchClicked;
         public event Action OnSkipClicked;

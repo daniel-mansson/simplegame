@@ -1,5 +1,6 @@
 using System;
 using SimpleGame.Core.MVP;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -13,9 +14,9 @@ namespace SimpleGame.Game.Popup
     {
         [SerializeField] private Button _purchaseButton;
         [SerializeField] private Button _cancelButton;
-        [SerializeField] private Text _itemNameText;
-        [SerializeField] private Text _priceText;
-        [SerializeField] private Text _statusText;
+        [SerializeField] private TMP_Text _itemNameText;
+        [SerializeField] private TMP_Text _priceText;
+        [SerializeField] private TMP_Text _statusText;
 
         public event Action OnPurchaseClicked;
         public event Action OnCancelClicked;

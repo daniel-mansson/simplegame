@@ -1,5 +1,6 @@
 using System;
 using SimpleGame.Core.MVP;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -12,7 +13,7 @@ namespace SimpleGame.Game.Popup
     public class ObjectRestoredView : PopupViewBase, IObjectRestoredView
     {
         [SerializeField] private Button _continueButton;
-        [SerializeField] private Text _objectNameText;
+        [SerializeField] private TMP_Text _objectNameText;
 
         public event Action OnContinueClicked;
 

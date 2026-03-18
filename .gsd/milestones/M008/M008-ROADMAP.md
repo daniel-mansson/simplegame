@@ -57,7 +57,7 @@ This milestone is complete only when all are true:
 - [x] **S02: TMP Prefab Kit** `risk:medium` `depends:[S01]`
   > After this: TMP in asmdefs, 8 prefab assets exist (BigPopup, SmallPopup, 3 buttons, 3 text styles). ConfirmDialog rebuilt from prefabs as proof-of-concept.
 
-- [ ] **S03: Wire All Popups to Prefabs** `risk:low` `depends:[S02]`
+- [x] **S03: Wire All Popups to Prefabs** `risk:low` `depends:[S02]`
   > After this: All 6 popup views use prefab components. SceneSetup regenerates Boot scene cleanly. All 6 popups usable via PopupManager.
 
 - [ ] **S04: Integration Verification** `risk:low` `depends:[S03]`

@@ -87,7 +87,6 @@ GameObject:
   - component: {fileID: 5908037436332958105}
   - component: {fileID: 6967374933953351828}
   - component: {fileID: 5621915291613886299}
-  - component: {fileID: 114500207221255490}
   m_Layer: 0
   m_Name: BigPopupWindow
   m_TagString: Untagged
@@ -165,17 +164,3 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
---- !u!114 &114500207221255490
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3819014185004630531}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bbc42d7a6587d7f44a486ee3b7c42e98, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: SimpleGame.Core::SimpleGame.Core.MVP.PopupWindowShell
-  _canvasGroup: {fileID: 5621915291613886299}
-  _panel: {fileID: 1273336704213657654}

@@ -1,4 +1,3 @@
-using SimpleGame.Core.MVP;
 using TMPro;
 using UnityEditor;
 using UnityEngine;
@@ -94,10 +93,9 @@ public static class PrefabKitSetup
         panelImage.color = PanelColor;
         panelImage.raycastTarget = true;
 
-        // Wire PopupViewBase serialized fields on the root
-        var viewBase = root.AddComponent<PopupWindowShell>();
-        WireField(viewBase, "_canvasGroup", canvasGroup);
-        WireField(viewBase, "_panel", panelRect);
+        // No PopupWindowShell here — SceneSetup adds the concrete view component
+        // (ConfirmDialogView, LevelCompleteView, etc.) on the root and wires _canvasGroup/_panel.
+        // The prefab is a pure structural template: CanvasGroup root + Panel child.
 
         SavePrefab(root, UIPrefabDir, name);
         Object.DestroyImmediate(root);

@@ -1,5 +1,6 @@
 using System;
 using SimpleGame.Core.MVP;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -14,8 +15,8 @@ namespace SimpleGame.Game.Popup
         [SerializeField] private Button _retryButton;
         [SerializeField] private Button _watchAdButton;
         [SerializeField] private Button _quitButton;
-        [SerializeField] private Text _scoreText;
-        [SerializeField] private Text _levelText;
+        [SerializeField] private TMP_Text _scoreText;
+        [SerializeField] private TMP_Text _levelText;
 
         public event Action OnRetryClicked;
         public event Action OnWatchAdClicked;

@@ -1,5 +1,6 @@
 using System;
 using SimpleGame.Core.MVP;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -14,7 +15,7 @@ namespace SimpleGame.Game.Popup
     {
         [SerializeField] private Button _confirmButton;
         [SerializeField] private Button _cancelButton;
-        [SerializeField] private Text _messageText;
+        [SerializeField] private TMP_Text _messageText;
 
         public event Action OnConfirmClicked;
         public event Action OnCancelClicked;

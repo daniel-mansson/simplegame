@@ -5,6 +5,7 @@ using SimpleGame.Game.InGame;
 using SimpleGame.Game.MainMenu;
 using SimpleGame.Game.Popup;
 using SimpleGame.Game.Settings;
+using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -79,7 +80,7 @@ public static class SceneSetup
         var inputBlockerCanvasGroup = inputBlockerCanvas.gameObject.AddComponent<CanvasGroup>();
         inputBlockerCanvasGroup.blocksRaycasts = false;
         inputBlockerCanvasGroup.interactable = true;
-        inputBlockerCanvasGroup.alpha = 1f;
+        inputBlockerCanvasGroup.alpha = 0f;
         var inputBlocker = inputBlockerCanvas.gameObject.AddComponent<UnityInputBlocker>();
         WireSerializedField(inputBlocker, "_canvasGroup", inputBlockerCanvasGroup);
         WireSerializedField(bootstrapper, "_inputBlocker", inputBlocker);
@@ -97,80 +98,96 @@ public static class SceneSetup
             Debug.LogWarning("[SceneSetup] TransitionOverlay.prefab not found.");
         }
 
+        // Load UI prefabs
+        var bigWindowPrefab   = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/UI/BigPopupWindow.prefab");
+        var smallWindowPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/UI/SmallPopupWindow.prefab");
+        var positiveBtnPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/UI/Buttons/PositiveButton.prefab");
+        var destructBtnPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/UI/Buttons/DestructiveButton.prefab");
+        var neutralBtnPrefab  = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/UI/Buttons/NeutralButton.prefab");
+
+        if (bigWindowPrefab == null || smallWindowPrefab == null)
+            Debug.LogWarning("[SceneSetup] Window prefabs not found — run Tools/Setup/Create UI Prefab Kit first.");
+
         // Popup Canvas (sort order 300)
         CreateFullScreenCanvas("PopupCanvas", 300, out var popupCanvas);
         var popupContainer = popupCanvas.gameObject.AddComponent<UnityViewContainer>();
         WireSerializedField(bootstrapper, "_viewContainer", popupContainer);
 
-        // --- ConfirmDialog popup ---
-        var confirmDialogGO = CreatePopupDialog(popupCanvas.transform, "ConfirmDialogPopup",
-            "Are you sure?", null, null,
-            new[] { ("ConfirmButton", "OK"), ("CancelButton", "Cancel") });
-        var confirmDialogView = confirmDialogGO.AddComponent<ConfirmDialogView>();
-        WireSerializedField(confirmDialogView, "_confirmButton", confirmDialogGO.transform.Find("Panel/ConfirmButton").GetComponent<Button>());
-        WireSerializedField(confirmDialogView, "_cancelButton", confirmDialogGO.transform.Find("Panel/CancelButton").GetComponent<Button>());
-        WireSerializedField(confirmDialogView, "_messageText", confirmDialogGO.transform.Find("Panel/TitleText").GetComponent<Text>());
-        WireSerializedField(popupContainer, "_confirmDialogPopup", confirmDialogGO);
-        confirmDialogGO.SetActive(false);
+        // ── ConfirmDialog ─────────────────────────────────────────────────────
+        var confirmRoot  = InstantiateWindowPrefab(bigWindowPrefab, popupCanvas.transform, "ConfirmDialogPopup");
+        var confirmPanel = confirmRoot.transform.Find("Panel");
+        var confirmView  = confirmRoot.AddComponent<ConfirmDialogView>();
+        WireSerializedField(confirmView, "_canvasGroup", confirmRoot.GetComponent<CanvasGroup>());
+        WireSerializedField(confirmView, "_panel",       confirmPanel.GetComponent<RectTransform>());
+        WireSerializedField(confirmView, "_messageText", CreateTMPText("TitleText", "Are you sure?", confirmPanel, new Vector2(0.1f, 0.65f), new Vector2(0.9f, 0.88f), 28));
+        WireSerializedField(confirmView, "_confirmButton", InstantiateButton(positiveBtnPrefab,  "ConfirmButton", "OK",     confirmPanel, new Vector2(0.08f, 0.08f), new Vector2(0.45f, 0.30f)));
+        WireSerializedField(confirmView, "_cancelButton",  InstantiateButton(neutralBtnPrefab,   "CancelButton",  "Cancel", confirmPanel, new Vector2(0.55f, 0.08f), new Vector2(0.92f, 0.30f)));
+        WireSerializedField(popupContainer, "_confirmDialogPopup", confirmRoot);
+        confirmRoot.SetActive(false);
 
-        // --- LevelComplete popup ---
-        var levelCompleteGO = CreatePopupDialog(popupCanvas.transform, "LevelCompletePopup",
-            "Level Complete!", "Score: 0", "+0 Golden Pieces",
-            new[] { ("ContinueButton", "Continue") });
-        var levelCompleteView = levelCompleteGO.AddComponent<LevelCompleteView>();
-        WireSerializedField(levelCompleteView, "_continueButton", levelCompleteGO.transform.Find("Panel/ContinueButton").GetComponent<Button>());
-        WireSerializedField(levelCompleteView, "_scoreText", levelCompleteGO.transform.Find("Panel/ScoreText").GetComponent<Text>());
-        WireSerializedField(levelCompleteView, "_levelText", levelCompleteGO.transform.Find("Panel/TitleText").GetComponent<Text>());
-        WireSerializedField(levelCompleteView, "_goldenPiecesText", levelCompleteGO.transform.Find("Panel/LevelText").GetComponent<Text>());
-        WireSerializedField(popupContainer, "_levelCompletePopup", levelCompleteGO);
-        levelCompleteGO.SetActive(false);
+        // ── LevelComplete ─────────────────────────────────────────────────────
+        var lvlCompleteRoot  = InstantiateWindowPrefab(bigWindowPrefab, popupCanvas.transform, "LevelCompletePopup");
+        var lvlCompletePanel = lvlCompleteRoot.transform.Find("Panel");
+        var lvlCompleteView  = lvlCompleteRoot.AddComponent<LevelCompleteView>();
+        WireSerializedField(lvlCompleteView, "_canvasGroup", lvlCompleteRoot.GetComponent<CanvasGroup>());
+        WireSerializedField(lvlCompleteView, "_panel",       lvlCompletePanel.GetComponent<RectTransform>());
+        WireSerializedField(lvlCompleteView, "_levelText",       CreateTMPText("TitleText",       "Level Complete!", lvlCompletePanel, new Vector2(0.1f, 0.72f), new Vector2(0.9f, 0.92f), 30));
+        WireSerializedField(lvlCompleteView, "_scoreText",       CreateTMPText("ScoreText",       "Score: 0",        lvlCompletePanel, new Vector2(0.15f, 0.52f), new Vector2(0.85f, 0.70f), 24));
+        WireSerializedField(lvlCompleteView, "_goldenPiecesText", CreateTMPText("GoldenPiecesText", "+0 Pieces",      lvlCompletePanel, new Vector2(0.15f, 0.34f), new Vector2(0.85f, 0.52f), 20));
+        WireSerializedField(lvlCompleteView, "_continueButton",  InstantiateButton(positiveBtnPrefab, "ContinueButton", "Continue", lvlCompletePanel, new Vector2(0.25f, 0.08f), new Vector2(0.75f, 0.30f)));
+        WireSerializedField(popupContainer, "_levelCompletePopup", lvlCompleteRoot);
+        lvlCompleteRoot.SetActive(false);
 
-        // --- LevelFailed popup ---
-        var levelFailedGO = CreatePopupDialog(popupCanvas.transform, "LevelFailedPopup",
-            "Level Failed!", "Score: 0", "Level 1",
-            new[] { ("RetryButton", "Retry"), ("WatchAdButton", "Watch Ad"), ("QuitButton", "Quit") });
-        var levelFailedView = levelFailedGO.AddComponent<LevelFailedView>();
-        WireSerializedField(levelFailedView, "_retryButton", levelFailedGO.transform.Find("Panel/RetryButton").GetComponent<Button>());
-        WireSerializedField(levelFailedView, "_watchAdButton", levelFailedGO.transform.Find("Panel/WatchAdButton").GetComponent<Button>());
-        WireSerializedField(levelFailedView, "_quitButton", levelFailedGO.transform.Find("Panel/QuitButton").GetComponent<Button>());
-        WireSerializedField(levelFailedView, "_scoreText", levelFailedGO.transform.Find("Panel/ScoreText").GetComponent<Text>());
-        WireSerializedField(levelFailedView, "_levelText", levelFailedGO.transform.Find("Panel/LevelText").GetComponent<Text>());
-        WireSerializedField(popupContainer, "_levelFailedPopup", levelFailedGO);
-        levelFailedGO.SetActive(false);
+        // ── LevelFailed ───────────────────────────────────────────────────────
+        var lvlFailedRoot  = InstantiateWindowPrefab(bigWindowPrefab, popupCanvas.transform, "LevelFailedPopup");
+        var lvlFailedPanel = lvlFailedRoot.transform.Find("Panel");
+        var lvlFailedView  = lvlFailedRoot.AddComponent<LevelFailedView>();
+        WireSerializedField(lvlFailedView, "_canvasGroup", lvlFailedRoot.GetComponent<CanvasGroup>());
+        WireSerializedField(lvlFailedView, "_panel",       lvlFailedPanel.GetComponent<RectTransform>());
+        WireSerializedField(lvlFailedView, "_levelText",  CreateTMPText("TitleText",  "Level Failed!", lvlFailedPanel, new Vector2(0.1f, 0.72f), new Vector2(0.9f, 0.92f), 30));
+        WireSerializedField(lvlFailedView, "_scoreText",  CreateTMPText("ScoreText",  "Score: 0",      lvlFailedPanel, new Vector2(0.15f, 0.52f), new Vector2(0.85f, 0.70f), 24));
+        WireSerializedField(lvlFailedView, "_retryButton",    InstantiateButton(positiveBtnPrefab,  "RetryButton",    "Retry",    lvlFailedPanel, new Vector2(0.04f, 0.08f), new Vector2(0.34f, 0.30f)));
+        WireSerializedField(lvlFailedView, "_watchAdButton",  InstantiateButton(neutralBtnPrefab,   "WatchAdButton",  "Watch Ad", lvlFailedPanel, new Vector2(0.37f, 0.08f), new Vector2(0.63f, 0.30f)));
+        WireSerializedField(lvlFailedView, "_quitButton",     InstantiateButton(destructBtnPrefab,  "QuitButton",     "Quit",     lvlFailedPanel, new Vector2(0.66f, 0.08f), new Vector2(0.96f, 0.30f)));
+        WireSerializedField(popupContainer, "_levelFailedPopup", lvlFailedRoot);
+        lvlFailedRoot.SetActive(false);
 
-        // --- RewardedAd popup ---
-        var rewardedAdGO = CreatePopupDialog(popupCanvas.transform, "RewardedAdPopup",
-            "Watch Ad?", "Watch a short ad for a reward", null,
-            new[] { ("WatchButton", "Watch"), ("SkipButton", "Skip") });
-        var rewardedAdView = rewardedAdGO.AddComponent<RewardedAdView>();
-        WireSerializedField(rewardedAdView, "_watchButton", rewardedAdGO.transform.Find("Panel/WatchButton").GetComponent<Button>());
-        WireSerializedField(rewardedAdView, "_skipButton", rewardedAdGO.transform.Find("Panel/SkipButton").GetComponent<Button>());
-        WireSerializedField(rewardedAdView, "_statusText", rewardedAdGO.transform.Find("Panel/ScoreText").GetComponent<Text>());
-        WireSerializedField(popupContainer, "_rewardedAdPopup", rewardedAdGO);
-        rewardedAdGO.SetActive(false);
+        // ── RewardedAd ────────────────────────────────────────────────────────
+        var rewardedRoot  = InstantiateWindowPrefab(smallWindowPrefab, popupCanvas.transform, "RewardedAdPopup");
+        var rewardedPanel = rewardedRoot.transform.Find("Panel");
+        var rewardedView  = rewardedRoot.AddComponent<RewardedAdView>();
+        WireSerializedField(rewardedView, "_canvasGroup", rewardedRoot.GetComponent<CanvasGroup>());
+        WireSerializedField(rewardedView, "_panel",       rewardedPanel.GetComponent<RectTransform>());
+        WireSerializedField(rewardedView, "_statusText", CreateTMPText("StatusText", "Watch a short ad for a reward?", rewardedPanel, new Vector2(0.1f, 0.45f), new Vector2(0.9f, 0.88f), 22));
+        WireSerializedField(rewardedView, "_watchButton", InstantiateButton(positiveBtnPrefab, "WatchButton", "Watch", rewardedPanel, new Vector2(0.08f, 0.08f), new Vector2(0.45f, 0.36f)));
+        WireSerializedField(rewardedView, "_skipButton",  InstantiateButton(neutralBtnPrefab,  "SkipButton",  "Skip",  rewardedPanel, new Vector2(0.55f, 0.08f), new Vector2(0.92f, 0.36f)));
+        WireSerializedField(popupContainer, "_rewardedAdPopup", rewardedRoot);
+        rewardedRoot.SetActive(false);
 
-        // --- IAPPurchase popup ---
-        var iapGO = CreatePopupDialog(popupCanvas.transform, "IAPPurchasePopup",
-            "Purchase", "50 Golden Pieces", "$0.99",
-            new[] { ("PurchaseButton", "Buy"), ("CancelButton", "Cancel") });
-        var iapView = iapGO.AddComponent<IAPPurchaseView>();
-        WireSerializedField(iapView, "_purchaseButton", iapGO.transform.Find("Panel/PurchaseButton").GetComponent<Button>());
-        WireSerializedField(iapView, "_cancelButton", iapGO.transform.Find("Panel/CancelButton").GetComponent<Button>());
-        WireSerializedField(iapView, "_itemNameText", iapGO.transform.Find("Panel/TitleText").GetComponent<Text>());
-        WireSerializedField(iapView, "_priceText", iapGO.transform.Find("Panel/ScoreText").GetComponent<Text>());
-        WireSerializedField(iapView, "_statusText", iapGO.transform.Find("Panel/LevelText").GetComponent<Text>());
-        WireSerializedField(popupContainer, "_iapPurchasePopup", iapGO);
-        iapGO.SetActive(false);
+        // ── IAPPurchase ───────────────────────────────────────────────────────
+        var iapRoot  = InstantiateWindowPrefab(smallWindowPrefab, popupCanvas.transform, "IAPPurchasePopup");
+        var iapPanel = iapRoot.transform.Find("Panel");
+        var iapView  = iapRoot.AddComponent<IAPPurchaseView>();
+        WireSerializedField(iapView, "_canvasGroup", iapRoot.GetComponent<CanvasGroup>());
+        WireSerializedField(iapView, "_panel",       iapPanel.GetComponent<RectTransform>());
+        WireSerializedField(iapView, "_itemNameText", CreateTMPText("ItemNameText", "50 Golden Pieces", iapPanel, new Vector2(0.1f, 0.65f), new Vector2(0.9f, 0.88f), 26));
+        WireSerializedField(iapView, "_priceText",    CreateTMPText("PriceText",    "$0.99",             iapPanel, new Vector2(0.2f, 0.45f), new Vector2(0.8f, 0.63f), 28));
+        WireSerializedField(iapView, "_statusText",   CreateTMPText("StatusText",   "",                  iapPanel, new Vector2(0.1f, 0.30f), new Vector2(0.9f, 0.44f), 18));
+        WireSerializedField(iapView, "_purchaseButton", InstantiateButton(positiveBtnPrefab,  "PurchaseButton", "Buy",    iapPanel, new Vector2(0.08f, 0.05f), new Vector2(0.45f, 0.28f)));
+        WireSerializedField(iapView, "_cancelButton",   InstantiateButton(destructBtnPrefab,  "CancelButton",   "Cancel", iapPanel, new Vector2(0.55f, 0.05f), new Vector2(0.92f, 0.28f)));
+        WireSerializedField(popupContainer, "_iapPurchasePopup", iapRoot);
+        iapRoot.SetActive(false);
 
-        // --- ObjectRestored popup ---
-        var objRestoredGO = CreatePopupDialog(popupCanvas.transform, "ObjectRestoredPopup",
-            "Object Restored!", null, null,
-            new[] { ("ContinueButton", "Continue") });
-        var objRestoredView = objRestoredGO.AddComponent<ObjectRestoredView>();
-        WireSerializedField(objRestoredView, "_continueButton", objRestoredGO.transform.Find("Panel/ContinueButton").GetComponent<Button>());
-        WireSerializedField(objRestoredView, "_objectNameText", objRestoredGO.transform.Find("Panel/TitleText").GetComponent<Text>());
-        WireSerializedField(popupContainer, "_objectRestoredPopup", objRestoredGO);
-        objRestoredGO.SetActive(false);
+        // ── ObjectRestored ────────────────────────────────────────────────────
+        var objRestoredRoot  = InstantiateWindowPrefab(smallWindowPrefab, popupCanvas.transform, "ObjectRestoredPopup");
+        var objRestoredPanel = objRestoredRoot.transform.Find("Panel");
+        var objRestoredView  = objRestoredRoot.AddComponent<ObjectRestoredView>();
+        WireSerializedField(objRestoredView, "_canvasGroup", objRestoredRoot.GetComponent<CanvasGroup>());
+        WireSerializedField(objRestoredView, "_panel",       objRestoredPanel.GetComponent<RectTransform>());
+        WireSerializedField(objRestoredView, "_objectNameText", CreateTMPText("ObjectNameText", "Object Restored!", objRestoredPanel, new Vector2(0.1f, 0.55f), new Vector2(0.9f, 0.88f), 28));
+        WireSerializedField(objRestoredView, "_continueButton",  InstantiateButton(positiveBtnPrefab, "ContinueButton", "Continue", objRestoredPanel, new Vector2(0.25f, 0.10f), new Vector2(0.75f, 0.38f)));
+        WireSerializedField(popupContainer, "_objectRestoredPopup", objRestoredRoot);
+        objRestoredRoot.SetActive(false);
 
         bool saved = EditorSceneManager.SaveScene(scene, BootPath);
         Debug.Log(saved ? "[SceneSetup] Boot scene saved." : "[SceneSetup] ERROR saving Boot scene.");
@@ -379,6 +396,101 @@ public static class SceneSetup
     private static void CreateButton(string name, string label, Transform parent, out GameObject result)
         => SceneSetupHelpers.CreateButton(name, label, parent, out result);
 
+    /// <summary>
+    /// Instantiates a window prefab as a non-prefab-connected child of <paramref name="parent"/>.
+    /// Renames it to <paramref name="name"/>. Returns the root GameObject.
+    /// </summary>
+    private static GameObject InstantiateWindowPrefab(GameObject prefab, Transform parent, string name)
+    {
+        if (prefab == null)
+        {
+            // Fallback: plain GO if prefab missing
+            Debug.LogWarning($"[SceneSetup] Window prefab null — creating plain root for {name}");
+            var fallback = new GameObject(name);
+            fallback.transform.SetParent(parent, false);
+            var fbRect = fallback.AddComponent<RectTransform>();
+            SetStretchRect(fbRect);
+            fallback.AddComponent<CanvasGroup>();
+            var panel = new GameObject("Panel");
+            panel.transform.SetParent(fallback.transform, false);
+            panel.AddComponent<RectTransform>();
+            return fallback;
+        }
+
+        var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
+        PrefabUtility.UnpackPrefabInstance(go, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+        go.name = name;
+        return go;
+    }
+
+    /// <summary>
+    /// Instantiates a button prefab as a non-prefab-connected child of <paramref name="parent"/>,
+    /// renames it, sets its label, and positions it via anchor rect.
+    /// Returns the Button component.
+    /// </summary>
+    private static Button InstantiateButton(GameObject prefab, string name, string label,
+        Transform parent, Vector2 anchorMin, Vector2 anchorMax)
+    {
+        GameObject go;
+        if (prefab != null)
+        {
+            go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
+            PrefabUtility.UnpackPrefabInstance(go, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+        }
+        else
+        {
+            go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.AddComponent<RectTransform>();
+            go.AddComponent<Image>().color = new Color(0.2f, 0.4f, 0.8f, 1f);
+            go.AddComponent<Button>();
+            var labelGO = new GameObject("Label");
+            labelGO.transform.SetParent(go.transform, false);
+            var tmp = labelGO.AddComponent<TextMeshProUGUI>();
+            tmp.text = label;
+            tmp.fontSize = 20;
+            tmp.color = Color.white;
+            tmp.alignment = TextAlignmentOptions.Center;
+            var lRect = labelGO.GetComponent<RectTransform>();
+            SetStretchRect(lRect);
+        }
+
+        go.name = name;
+        var rect = go.GetComponent<RectTransform>();
+        rect.anchorMin = anchorMin;
+        rect.anchorMax = anchorMax;
+        rect.sizeDelta = Vector2.zero;
+        rect.anchoredPosition = Vector2.zero;
+
+        // Update label text
+        var tmpLabel = go.GetComponentInChildren<TextMeshProUGUI>();
+        if (tmpLabel != null) tmpLabel.text = label;
+
+        return go.GetComponent<Button>();
+    }
+
+    /// <summary>
+    /// Creates a TMP_Text child inside <paramref name="parent"/> and returns the component.
+    /// </summary>
+    private static TMP_Text CreateTMPText(string name, string defaultText, Transform parent,
+        Vector2 anchorMin, Vector2 anchorMax, int fontSize)
+    {
+        var go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+        var tmp = go.AddComponent<TextMeshProUGUI>();
+        tmp.text = defaultText;
+        tmp.fontSize = fontSize;
+        tmp.color = Color.white;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.enableWordWrapping = true;
+        var rect = go.GetComponent<RectTransform>();
+        rect.anchorMin = anchorMin;
+        rect.anchorMax = anchorMax;
+        rect.sizeDelta = Vector2.zero;
+        rect.anchoredPosition = Vector2.zero;
+        return tmp;
+    }
+
     private static GameObject CreateText(string name, string defaultText, Transform parent,
         Vector2 anchorMin, Vector2 anchorMax, int fontSize)
     {
@@ -395,91 +507,6 @@ public static class SceneSetup
         rect.sizeDelta = Vector2.zero;
         rect.anchoredPosition = Vector2.zero;
         return go;
-    }
-
-    private static GameObject CreatePopupDialog(Transform parent, string name,
-        string titleDefault, string scoreDefault, string levelDefault,
-        (string name, string label)[] buttons)
-    {
-        var root = new GameObject(name);
-        root.transform.SetParent(parent, false);
-        root.AddComponent<Canvas>();
-        root.AddComponent<CanvasGroup>();
-        root.AddComponent<GraphicRaycaster>();
-        var rootRect = root.GetComponent<RectTransform>();
-        rootRect.anchorMin = Vector2.zero;
-        rootRect.anchorMax = Vector2.one;
-        rootRect.sizeDelta = Vector2.zero;
-
-        var panel = new GameObject("Panel");
-        panel.transform.SetParent(root.transform, false);
-        var panelImage = panel.AddComponent<Image>();
-        panelImage.color = new Color(0.1f, 0.1f, 0.1f, 0.9f);
-        SetStretchRect(panel.GetComponent<RectTransform>());
-
-        // Title
-        var titleGO = new GameObject("TitleText");
-        titleGO.transform.SetParent(panel.transform, false);
-        var titleText = titleGO.AddComponent<Text>();
-        titleText.text = titleDefault ?? "";
-        titleText.alignment = TextAnchor.MiddleCenter;
-        titleText.fontSize = 30;
-        titleText.color = Color.white;
-        var titleRect = titleGO.GetComponent<RectTransform>();
-        titleRect.anchorMin = new Vector2(0.1f, 0.7f);
-        titleRect.anchorMax = new Vector2(0.9f, 0.9f);
-        titleRect.sizeDelta = Vector2.zero;
-
-        // Score text (may be null)
-        if (scoreDefault != null)
-        {
-            var scoreGO = new GameObject("ScoreText");
-            scoreGO.transform.SetParent(panel.transform, false);
-            var scoreTextComp = scoreGO.AddComponent<Text>();
-            scoreTextComp.text = scoreDefault;
-            scoreTextComp.alignment = TextAnchor.MiddleCenter;
-            scoreTextComp.fontSize = 24;
-            scoreTextComp.color = Color.white;
-            var scoreRect = scoreGO.GetComponent<RectTransform>();
-            scoreRect.anchorMin = new Vector2(0.2f, 0.52f);
-            scoreRect.anchorMax = new Vector2(0.8f, 0.68f);
-            scoreRect.sizeDelta = Vector2.zero;
-        }
-
-        // Level text (may be null)
-        if (levelDefault != null)
-        {
-            var levelGO = new GameObject("LevelText");
-            levelGO.transform.SetParent(panel.transform, false);
-            var levelTextComp = levelGO.AddComponent<Text>();
-            levelTextComp.text = levelDefault;
-            levelTextComp.alignment = TextAnchor.MiddleCenter;
-            levelTextComp.fontSize = 20;
-            levelTextComp.color = Color.white;
-            var levelRect = levelGO.GetComponent<RectTransform>();
-            levelRect.anchorMin = new Vector2(0.2f, 0.38f);
-            levelRect.anchorMax = new Vector2(0.8f, 0.52f);
-            levelRect.sizeDelta = Vector2.zero;
-        }
-
-        // Buttons
-        float buttonWidth = 0.22f;
-        float gap = 0.04f;
-        float totalWidth = buttons.Length * buttonWidth + (buttons.Length - 1) * gap;
-        float startX = 0.5f - totalWidth / 2f;
-
-        for (int i = 0; i < buttons.Length; i++)
-        {
-            float x = startX + i * (buttonWidth + gap);
-            CreateButton(buttons[i].name, buttons[i].label, panel.transform, out var btnGO);
-            var btnRect = btnGO.GetComponent<RectTransform>();
-            btnRect.anchorMin = new Vector2(x, 0.1f);
-            btnRect.anchorMax = new Vector2(x + buttonWidth, 0.32f);
-            btnRect.sizeDelta = Vector2.zero;
-            btnRect.anchoredPosition = Vector2.zero;
-        }
-
-        return root;
     }
 }
 

@@ -1,5 +1,6 @@
 using System;
 using SimpleGame.Core.MVP;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -12,9 +13,9 @@ namespace SimpleGame.Game.Popup
     public class LevelCompleteView : PopupViewBase, ILevelCompleteView
     {
         [SerializeField] private Button _continueButton;
-        [SerializeField] private Text _scoreText;
-        [SerializeField] private Text _levelText;
-        [SerializeField] private Text _goldenPiecesText;
+        [SerializeField] private TMP_Text _scoreText;
+        [SerializeField] private TMP_Text _levelText;
+        [SerializeField] private TMP_Text _goldenPiecesText;
 
         public event Action OnContinueClicked;
 
