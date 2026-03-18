@@ -21,6 +21,10 @@ namespace SimpleGame.Game.Boot
             if (SceneManager.GetActiveScene().name == "Boot")
                 return;
 
+            // Standalone dev scenes that intentionally run without the game boot flow.
+            if (SceneManager.GetActiveScene().name == "JigsawDemo")
+                return;
+
             // Check whether Boot is already loaded as an additive scene.
             for (int i = 0; i < SceneManager.sceneCount; i++)
             {

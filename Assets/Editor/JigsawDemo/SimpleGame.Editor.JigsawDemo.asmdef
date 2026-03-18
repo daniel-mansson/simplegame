@@ -1,7 +1,7 @@
 {
     "name": "SimpleGame.Editor.JigsawDemo",
     "rootNamespace": "",
-    "references": ["SimpleJigsaw.Runtime"],
+    "references": ["SimpleJigsaw.Runtime", "Unity.RenderPipelines.Universal.Runtime", "Unity.RenderPipelines.Universal.Editor"],
     "includePlatforms": ["Editor"],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
