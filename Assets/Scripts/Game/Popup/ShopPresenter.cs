@@ -76,10 +76,10 @@ namespace SimpleGame.Game.Popup
             _coins?.Earn(coinsGranted);
             _coins?.Save();
 
-            // Show updated balance after purchase
+            // Show updated balance — stay open so player can buy more or close manually
             int newBalance = _coins?.Balance ?? 0;
             View.UpdateStatus($"Your balance: {newBalance} coins\n(+{coinsGranted} added)");
-            _resultTcs?.TrySetResult(true);
+            // Do NOT resolve _resultTcs — player stays in shop until they press cancel/back
         }
 
         private void RefreshStatus()
