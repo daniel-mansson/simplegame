@@ -56,6 +56,9 @@ namespace SimpleGame.Tests.Core
             if (BlockCount > 0)
                 BlockCount--;
         }
+
+        public UniTask FadeInAsync(System.Threading.CancellationToken ct = default) => UniTask.CompletedTask;
+        public UniTask FadeOutAsync(System.Threading.CancellationToken ct = default) => UniTask.CompletedTask;
     }
 
     // ---------------------------------------------------------------------------

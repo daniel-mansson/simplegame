@@ -5,9 +5,21 @@ using Cysharp.Threading.Tasks;
 namespace SimpleGame.Core.PopupManagement
 {
     /// <summary>
-    /// Manages a stack of open popups. Blocks input while any popup is open
-    /// and unblocks it once the stack is empty. Guards against concurrent
-    /// operations with the _isOperating flag (no-op on re-entrant calls).
+    /// Manages a stack of open popups. Orchestrates input blocking and visual
+    /// overlay fade in coordination with popup animations.
+    ///
+    /// Show sequence:
+    ///   1. Block() — input blocked immediately
+    ///   2. FadeInAsync + ShowPopupAsync (AnimateInAsync) run concurrently
+    ///   3. Push popup onto stack
+    ///
+    /// Dismiss sequence:
+    ///   1. Pop popup from stack
+    ///   2. Unblock() — input restored immediately (before animation)
+    ///   3. FadeOutAsync fired and forgotten (overlay fades in background)
+    ///   4. HidePopupAsync (AnimateOutAsync) awaited
+    ///
+    /// Guards against concurrent operations with _isOperating (no-op on re-entrant calls).
     /// </summary>
     public class PopupManager<TPopupId> where TPopupId : struct, System.Enum
     {
@@ -32,8 +44,8 @@ namespace SimpleGame.Core.PopupManagement
         }
 
         /// <summary>
-        /// Shows a popup, blocking input and pushing it onto the stack.
-        /// No-ops if an operation is already in progress.
+        /// Shows a popup: blocks input immediately, then fades the overlay in and
+        /// animates the popup in concurrently. No-ops if an operation is in progress.
         /// </summary>
         public async UniTask ShowPopupAsync(TPopupId popupId, CancellationToken ct = default)
         {
@@ -44,7 +56,12 @@ namespace SimpleGame.Core.PopupManagement
             try
             {
                 _inputBlocker.Block();
-                await _container.ShowPopupAsync(popupId, ct);
+
+                await UniTask.WhenAll(
+                    _inputBlocker.FadeInAsync(ct),
+                    _container.ShowPopupAsync(popupId, ct)
+                );
+
                 _stack.Push(popupId);
             }
             finally
@@ -54,7 +71,8 @@ namespace SimpleGame.Core.PopupManagement
         }
 
         /// <summary>
-        /// Dismisses the top popup. Unblocks input when the stack becomes empty.
+        /// Dismisses the top popup. Unblocks input immediately (before animation),
+        /// fires the overlay fade-out in the background, then awaits the popup exit animation.
         /// No-ops if an operation is in progress or the stack is empty.
         /// </summary>
         public async UniTask DismissPopupAsync(CancellationToken ct = default)
@@ -66,10 +84,15 @@ namespace SimpleGame.Core.PopupManagement
             try
             {
                 var popupId = _stack.Pop();
-                await _container.HidePopupAsync(popupId, ct);
 
                 if (_stack.Count == 0)
+                {
+                    // Last popup — unblock immediately and fire fade-out in background
                     _inputBlocker.Unblock();
+                    _inputBlocker.FadeOutAsync(ct).Forget();
+                }
+
+                await _container.HidePopupAsync(popupId, ct);
             }
             finally
             {
@@ -78,7 +101,8 @@ namespace SimpleGame.Core.PopupManagement
         }
 
         /// <summary>
-        /// Dismisses all open popups in LIFO order, unblocking input once per popup.
+        /// Dismisses all open popups in LIFO order. Unblocks input and fires the overlay
+        /// fade-out when the stack becomes empty, then awaits each popup exit animation.
         /// No-ops if an operation is in progress or the stack is empty.
         /// </summary>
         public async UniTask DismissAllAsync(CancellationToken ct = default)
@@ -92,8 +116,15 @@ namespace SimpleGame.Core.PopupManagement
                 while (_stack.Count > 0)
                 {
                     var popupId = _stack.Pop();
+
+                    if (_stack.Count == 0)
+                    {
+                        // Last popup — unblock and start overlay fade-out before animation
+                        _inputBlocker.Unblock();
+                        _inputBlocker.FadeOutAsync(ct).Forget();
+                    }
+
                     await _container.HidePopupAsync(popupId, ct);
-                    _inputBlocker.Unblock();
                 }
             }
             finally

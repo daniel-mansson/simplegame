@@ -1,14 +1,16 @@
 using System;
+using SimpleGame.Core.MVP;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace SimpleGame.Game.Popup
 {
     /// <summary>
-    /// Unity MonoBehaviour implementation of IConfirmDialogView.
+    /// Unity view implementation of IConfirmDialogView.
+    /// Inherits default bounce-in / scale-out animations from PopupViewBase.
     /// Has zero references to presenters, services, or managers.
     /// </summary>
-    public class ConfirmDialogView : MonoBehaviour, IConfirmDialogView
+    public class ConfirmDialogView : PopupViewBase, IConfirmDialogView
     {
         [SerializeField] private Button _confirmButton;
         [SerializeField] private Button _cancelButton;

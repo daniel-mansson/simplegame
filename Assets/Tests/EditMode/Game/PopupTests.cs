@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
 using NUnit.Framework;
@@ -20,6 +21,8 @@ namespace SimpleGame.Tests.Game
         public void UpdateLevel(string text) => LastLevelText = text;
         public void UpdateGoldenPieces(string text) => LastGoldenPiecesText = text;
         public void SimulateContinueClicked() => OnContinueClicked?.Invoke();
+        public UniTask AnimateInAsync(CancellationToken ct = default) => UniTask.CompletedTask;
+        public UniTask AnimateOutAsync(CancellationToken ct = default) => UniTask.CompletedTask;
     }
 
     internal class MockLevelFailedView : ILevelFailedView
@@ -35,6 +38,8 @@ namespace SimpleGame.Tests.Game
         public void SimulateRetryClicked() => OnRetryClicked?.Invoke();
         public void SimulateWatchAdClicked() => OnWatchAdClicked?.Invoke();
         public void SimulateQuitClicked() => OnQuitClicked?.Invoke();
+        public UniTask AnimateInAsync(CancellationToken ct = default) => UniTask.CompletedTask;
+        public UniTask AnimateOutAsync(CancellationToken ct = default) => UniTask.CompletedTask;
     }
 
     internal class MockRewardedAdView : IRewardedAdView
@@ -46,6 +51,8 @@ namespace SimpleGame.Tests.Game
         public void UpdateStatus(string text) => LastStatusText = text;
         public void SimulateWatchClicked() => OnWatchClicked?.Invoke();
         public void SimulateSkipClicked() => OnSkipClicked?.Invoke();
+        public UniTask AnimateInAsync(CancellationToken ct = default) => UniTask.CompletedTask;
+        public UniTask AnimateOutAsync(CancellationToken ct = default) => UniTask.CompletedTask;
     }
 
     internal class MockIAPPurchaseView : IIAPPurchaseView
@@ -61,6 +68,8 @@ namespace SimpleGame.Tests.Game
         public void UpdateStatus(string text) => LastStatusText = text;
         public void SimulatePurchaseClicked() => OnPurchaseClicked?.Invoke();
         public void SimulateCancelClicked() => OnCancelClicked?.Invoke();
+        public UniTask AnimateInAsync(CancellationToken ct = default) => UniTask.CompletedTask;
+        public UniTask AnimateOutAsync(CancellationToken ct = default) => UniTask.CompletedTask;
     }
 
     internal class MockObjectRestoredView : IObjectRestoredView
@@ -70,6 +79,8 @@ namespace SimpleGame.Tests.Game
 
         public void UpdateObjectName(string text) => LastObjectNameText = text;
         public void SimulateContinueClicked() => OnContinueClicked?.Invoke();
+        public UniTask AnimateInAsync(CancellationToken ct = default) => UniTask.CompletedTask;
+        public UniTask AnimateOutAsync(CancellationToken ct = default) => UniTask.CompletedTask;
     }
 
     // ---------------------------------------------------------------------------

@@ -51,7 +51,7 @@ This milestone is complete only when all are true:
 
 ## Slices
 
-- [ ] **S01: Animation Plumbing** `risk:high` `depends:[]`
+- [x] **S01: Animation Plumbing** `risk:high` `depends:[]`
   > After this: PopupManager, UnityInputBlocker, IPopupView, and UnityViewContainer all wired for async animation. Opening a popup in play mode logs "AnimateIn called" and closing logs "AnimateOut called" with correct input timing.
 
 - [ ] **S02: TMP Prefab Kit** `risk:medium` `depends:[S01]`

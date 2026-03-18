@@ -463,6 +463,8 @@ namespace SimpleGame.Tests.Game
         public bool IsBlocked => _blockCount > 0;
         public void Block() => _blockCount++;
         public void Unblock() => _blockCount = System.Math.Max(0, _blockCount - 1);
+        public UniTask FadeInAsync(System.Threading.CancellationToken ct = default) => UniTask.CompletedTask;
+        public UniTask FadeOutAsync(System.Threading.CancellationToken ct = default) => UniTask.CompletedTask;
     }
 
     internal class MockGoldenPieceService : IGoldenPieceService

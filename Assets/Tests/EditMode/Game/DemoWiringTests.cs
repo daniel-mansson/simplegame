@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
 using NUnit.Framework;
@@ -89,6 +90,8 @@ namespace SimpleGame.Tests.Game
 
         public void SimulateConfirmClicked() => OnConfirmClicked?.Invoke();
         public void SimulateCancelClicked() => OnCancelClicked?.Invoke();
+        public UniTask AnimateInAsync(CancellationToken ct = default) => UniTask.CompletedTask;
+        public UniTask AnimateOutAsync(CancellationToken ct = default) => UniTask.CompletedTask;
     }
 
     // ---------------------------------------------------------------------------

@@ -1,14 +1,15 @@
 using System;
+using SimpleGame.Core.MVP;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace SimpleGame.Game.Popup
 {
     /// <summary>
-    /// Unity MonoBehaviour implementation of IObjectRestoredView.
-    /// Text-stub UI for object restored celebration popup.
+    /// Unity view implementation of IObjectRestoredView.
+    /// Inherits default bounce-in / scale-out animations from PopupViewBase.
     /// </summary>
-    public class ObjectRestoredView : MonoBehaviour, IObjectRestoredView
+    public class ObjectRestoredView : PopupViewBase, IObjectRestoredView
     {
         [SerializeField] private Button _continueButton;
         [SerializeField] private Text _objectNameText;

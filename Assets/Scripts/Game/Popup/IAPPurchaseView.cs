@@ -1,14 +1,15 @@
 using System;
+using SimpleGame.Core.MVP;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace SimpleGame.Game.Popup
 {
     /// <summary>
-    /// Unity MonoBehaviour implementation of IIAPPurchaseView.
-    /// Text-stub UI for IAP purchase popup.
+    /// Unity view implementation of IIAPPurchaseView.
+    /// Inherits default bounce-in / scale-out animations from PopupViewBase.
     /// </summary>
-    public class IAPPurchaseView : MonoBehaviour, IIAPPurchaseView
+    public class IAPPurchaseView : PopupViewBase, IIAPPurchaseView
     {
         [SerializeField] private Button _purchaseButton;
         [SerializeField] private Button _cancelButton;

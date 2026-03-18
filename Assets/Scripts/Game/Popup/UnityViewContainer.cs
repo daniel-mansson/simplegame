@@ -1,5 +1,6 @@
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using SimpleGame.Core.MVP;
 using SimpleGame.Core.PopupManagement;
 using UnityEngine;
 
@@ -7,9 +8,14 @@ namespace SimpleGame.Game.Popup
 {
     /// <summary>
     /// Unity MonoBehaviour implementation of IPopupContainer&lt;PopupId&gt; and IViewResolver.
-    /// Shows and hides pre-instantiated popup GameObjects via SetActive.
-    /// All popups live in the Boot scene and start inactive.
-    /// Uses a switch on PopupId — add new cases as new popups are introduced.
+    /// Shows and hides pre-instantiated popup GameObjects, running their entrance and
+    /// exit animations via IPopupView.AnimateInAsync / AnimateOutAsync.
+    ///
+    /// Show sequence: SetActive(true) → AnimateInAsync (popup bounces in)
+    /// Hide sequence: AnimateOutAsync (popup scales/fades out) → SetActive(false)
+    ///
+    /// If a popup GameObject has no IPopupView component, it shows/hides instantly
+    /// with a warning — safe fallback for popups not yet migrated to PopupViewBase.
     ///
     /// Get&lt;T&gt;() resolves view interfaces via GetComponentInChildren&lt;T&gt;(true),
     /// which searches inactive children — no manual registration required.
@@ -23,20 +29,32 @@ namespace SimpleGame.Game.Popup
         [SerializeField] private GameObject _iapPurchasePopup;
         [SerializeField] private GameObject _objectRestoredPopup;
 
-        public UniTask ShowPopupAsync(PopupId popupId, CancellationToken ct = default)
+        public async UniTask ShowPopupAsync(PopupId popupId, CancellationToken ct = default)
         {
             var popup = GetPopupObject(popupId);
-            if (popup != null)
-                popup.SetActive(true);
-            return UniTask.CompletedTask;
+            if (popup == null) return;
+
+            popup.SetActive(true);
+
+            var view = popup.GetComponentInChildren<IPopupView>(true);
+            if (view != null)
+                await view.AnimateInAsync(ct);
+            else
+                Debug.LogWarning($"[UnityViewContainer] No IPopupView found on {popup.name} — showing without animation.");
         }
 
-        public UniTask HidePopupAsync(PopupId popupId, CancellationToken ct = default)
+        public async UniTask HidePopupAsync(PopupId popupId, CancellationToken ct = default)
         {
             var popup = GetPopupObject(popupId);
-            if (popup != null)
-                popup.SetActive(false);
-            return UniTask.CompletedTask;
+            if (popup == null) return;
+
+            var view = popup.GetComponentInChildren<IPopupView>(true);
+            if (view != null)
+                await view.AnimateOutAsync(ct);
+            else
+                Debug.LogWarning($"[UnityViewContainer] No IPopupView found on {popup.name} — hiding without animation.");
+
+            popup.SetActive(false);
         }
 
         public T Get<T>() where T : class

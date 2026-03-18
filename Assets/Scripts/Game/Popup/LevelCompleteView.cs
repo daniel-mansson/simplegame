@@ -1,14 +1,15 @@
 using System;
+using SimpleGame.Core.MVP;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace SimpleGame.Game.Popup
 {
     /// <summary>
-    /// Unity MonoBehaviour implementation of ILevelCompleteView.
-    /// Text-stub UI for level complete popup.
+    /// Unity view implementation of ILevelCompleteView.
+    /// Inherits default bounce-in / scale-out animations from PopupViewBase.
     /// </summary>
-    public class LevelCompleteView : MonoBehaviour, ILevelCompleteView
+    public class LevelCompleteView : PopupViewBase, ILevelCompleteView
     {
         [SerializeField] private Button _continueButton;
         [SerializeField] private Text _scoreText;

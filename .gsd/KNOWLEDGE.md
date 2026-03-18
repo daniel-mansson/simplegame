@@ -43,11 +43,16 @@ When Unity runs with domain reload disabled (Enter Play Mode Settings), newly cr
 
 ### K004 — IInputBlocker interface: keep mocks in sync
 **Date:** 2026-03-16
+**Updated:** 2026-03-18
 
 When adding members to `IInputBlocker` (in `Assets/Scripts/Core/PopupManagement/IInputBlocker.cs`), all mock implementations in test files must be updated. Known mocks:
 - `MockInputBlocker` in `Assets/Tests/EditMode/Core/PopupManagerTests.cs`
 - `MockInputBlockerGame` in `Assets/Tests/EditMode/Game/SceneControllerTests.cs`
 - `MockInputBlockerForInGame` in `Assets/Tests/EditMode/Game/InGameTests.cs`
+
+Additionally, when adding members to view interfaces that extend `IPopupView` (e.g. `ILevelCompleteView`), mocks in these files also need updating:
+- `MockLevelCompleteView`, `MockLevelFailedView`, `MockRewardedAdView`, `MockIAPPurchaseView`, `MockObjectRestoredView` in `Assets/Tests/EditMode/Game/PopupTests.cs`
+- `MockConfirmDialogView` in `Assets/Tests/EditMode/Game/DemoWiringTests.cs`
 
 ---
 

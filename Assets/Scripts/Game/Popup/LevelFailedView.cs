@@ -1,14 +1,15 @@
 using System;
+using SimpleGame.Core.MVP;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace SimpleGame.Game.Popup
 {
     /// <summary>
-    /// Unity MonoBehaviour implementation of ILevelFailedView.
-    /// Text-stub UI for level failed popup.
+    /// Unity view implementation of ILevelFailedView.
+    /// Inherits default bounce-in / scale-out animations from PopupViewBase.
     /// </summary>
-    public class LevelFailedView : MonoBehaviour, ILevelFailedView
+    public class LevelFailedView : PopupViewBase, ILevelFailedView
     {
         [SerializeField] private Button _retryButton;
         [SerializeField] private Button _watchAdButton;
