@@ -59,4 +59,5 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 - [x] M006: Puzzle Tap Game Skeleton — all screens, popups, domain services, meta world data model, persistence, ad/IAP stubs, full game flow
 - [x] M007: Prefab-Based View Management — IViewResolver in Core, UnityViewContainer, scene root convention, zero FindObject* in production code, 169 tests passing
 - [x] M008: Popup Animation & UI Component Kit — animated blocker overlay, bounce-up/scale-out popup tweens, TMP prefab kit (BigPopup, SmallPopup, button variants, text styles), all existing popups wired to prefab components
-- [ ] M009: In-Scene Screens, Popup Stack, Coins & Overlay HUD — in-scene screen switcher, stackable popups with visual layering, coins currency, Continue button on LevelFailed, shop with fake IAP coin packs, contextual overlay HUD
+- [x] M009: In-Scene Screens, Popup Stack, Coins & Overlay HUD — in-scene screen switcher, stackable popups with visual layering, coins currency, Continue button on LevelFailed, shop with fake IAP coin packs, contextual overlay HUD
+- [ ] M010: Simple Jigsaw Package Integration — simple-jigsaw as editable submodule, local UPM package, standalone demo scene proves puzzle generation pipeline end-to-end
