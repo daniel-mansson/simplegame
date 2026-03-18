@@ -60,7 +60,7 @@ This milestone is complete only when all are true:
 - [x] **S03: Wire All Popups to Prefabs** `risk:low` `depends:[S02]`
   > After this: All 6 popup views use prefab components. SceneSetup regenerates Boot scene cleanly. All 6 popups usable via PopupManager.
 
-- [ ] **S04: Integration Verification** `risk:low` `depends:[S03]`
+- [x] **S04: Integration Verification** `risk:low` `depends:[S03]`
   > After this: Boot scene regenerated and committed, EditMode tests green, console log confirms blocker timing, UAT script written.
 
 ## Boundary Map

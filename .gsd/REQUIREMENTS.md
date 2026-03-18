@@ -172,58 +172,58 @@ Use it to track what is actively in scope, what has been validated by completed 
 
 ### R079 — Animated popup blocker overlay
 - Class: primary-user-loop
-- Status: active
+- Status: validated
 - Description: A visible dim overlay (semi-transparent dark backdrop) sits below the active popup in z-order. Fades in when a popup opens, fades out when a popup closes. Single layer that repositions to track the top popup.
 - Why it matters: Polish essential to game feel — instant show/hide feels jarring.
 - Source: user
 - Primary owning slice: M008/S01
 - Supporting slices: none
-- Validation: unmapped
-- Notes: Input blocking activates at fade-in start; input unblocking activates at fade-out start (before animation completes).
+- Validation: validated
+- Notes: UnityInputBlocker.FadeInAsync/FadeOutAsync with LitMotion. Input blocking activates at fade-in start; input unblocking activates at fade-out start via FadeOutAsync.Forget() before HidePopupAsync.
 
 ### R080 — Input block/unblock timing split
 - Class: quality-attribute
-- Status: active
+- Status: validated
 - Description: Input is blocked the moment the blocker starts fading in. Input is unblocked the moment the blocker starts fading out — not when the fade completes.
 - Why it matters: Ensures responsive feel on dismiss while preventing accidental input during opening.
 - Source: user
 - Primary owning slice: M008/S01
 - Supporting slices: none
-- Validation: unmapped
-- Notes: This changes current behavior where input unblocks only after HidePopupAsync completes.
+- Validation: validated
+- Notes: Implemented in PopupManager.DismissPopupAsync: Unblock() + FadeOutAsync.Forget() before awaiting HidePopupAsync.
 
 ### R081 — Popup animate-in/out contract on IPopupView
 - Class: core-capability
-- Status: active
+- Status: validated
 - Description: IPopupView exposes AnimateInAsync and AnimateOutAsync. PopupViewBase provides default LitMotion implementations. All popup views inherit from PopupViewBase.
 - Why it matters: Allows per-popup animation overrides while providing a consistent default.
 - Source: user
 - Primary owning slice: M008/S01
 - Supporting slices: M008/S03
-- Validation: unmapped
-- Notes: Default: bounce-up in (position Y offset + OutBounce), scale+fade out (scale to 0.85 + alpha 0, InBack).
+- Validation: validated
+- Notes: Default: bounce-up in (Y offset -80px + OutBounce 0.4s), scale+fade out (scale 0.85 + alpha 0, InBack 0.25s). All 6 views inherit PopupViewBase with _canvasGroup/_panel wired.
 
 ### R082 — TMP-based UI prefab kit
 - Class: differentiator
-- Status: active
+- Status: validated
 - Description: Prefab assets: BigPopupWindow, SmallPopupWindow, PositiveButton, DestructiveButton, NeutralButton, TitleText, BodyText, ButtonLabel — all TextMeshPro-based, ready to reskin.
 - Why it matters: Reusable component kit that makes visual iteration fast and consistent across all popups.
 - Source: user
 - Primary owning slice: M008/S02
 - Supporting slices: M008/S03
-- Validation: unmapped
-- Notes: Visual polish is deferred — this milestone creates the structural setup.
+- Validation: validated
+- Notes: 8 prefab assets in Assets/Prefabs/UI/. Visual polish deferred. PrefabKitSetup.cs regenerates them.
 
 ### R083 — All existing popups use prefab components
 - Class: core-capability
-- Status: active
+- Status: validated
 - Description: All 6 popup GameObjects (ConfirmDialog, LevelComplete, LevelFailed, RewardedAd, IAPPurchase, ObjectRestored) are rebuilt in SceneSetup using BigPopup/SmallPopup window shells and prefab buttons/text.
 - Why it matters: Unifies popup visual language; enables reskinning via prefab changes.
 - Source: user
 - Primary owning slice: M008/S03
 - Supporting slices: M008/S02
-- Validation: unmapped
-- Notes: SceneSetup fully regenerates Boot scene with new component wiring.
+- Validation: validated
+- Notes: SceneSetup fully regenerates Boot scene. TMP_Text fields wired. _canvasGroup/_panel wired on all 6 views.
 
 ## Deferred
 
@@ -706,18 +706,18 @@ Use it to track what is actively in scope, what has been validated by completed 
 | R076 | quality-attribute | active | M007/S03 | M007/S01, M007/S02 | mapped |
 | R077 | constraint | active | M007/S03 | M007/S01, M007/S02 | mapped |
 | R078 | core-capability | deferred | none | none | unmapped |
-| R079 | primary-user-loop | active | M008/S01 | none | mapped |
-| R080 | quality-attribute | active | M008/S01 | none | mapped |
-| R081 | core-capability | active | M008/S01 | M008/S03 | mapped |
-| R082 | differentiator | active | M008/S02 | M008/S03 | mapped |
-| R083 | core-capability | active | M008/S03 | M008/S02 | mapped |
+| R079 | primary-user-loop | validated | M008/S01 | none | validated |
+| R080 | quality-attribute | validated | M008/S01 | none | validated |
+| R081 | core-capability | validated | M008/S01 | M008/S03 | validated |
+| R082 | differentiator | validated | M008/S02 | M008/S03 | validated |
+| R083 | core-capability | validated | M008/S03 | M008/S02 | validated |
 
 ## Coverage Summary
 
 - Total requirements: 84
-- Active: 23
-- Validated: 42
+- Active: 18
+- Validated: 47
 - Deferred: 14
 - Out of scope: 4
 - Unmapped active requirements: 0
-- Note: R079–R083 added for M008. Some validated/deferred requirements (R018, R019, R041, R042, R044) have traceability table entries only — no full body section.
+- Note: R079–R083 validated by M008. Some validated/deferred requirements (R018, R019, R041, R042, R044) have traceability table entries only — no full body section.
