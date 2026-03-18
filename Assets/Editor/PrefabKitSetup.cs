@@ -68,6 +68,7 @@ public static class PrefabKitSetup
         CreateRewardedAdPrefab(animConfig);
         CreateIAPPurchasePrefab(animConfig);
         CreateObjectRestoredPrefab(animConfig);
+        CreateShopPrefab(animConfig);
 
         AssetDatabase.Refresh();
         Debug.Log("[PrefabKitSetup] Popup prefabs created in Assets/Prefabs/Game/Popups/.");
@@ -194,6 +195,58 @@ public static class PrefabKitSetup
         WireField(view, "_continueButton",   AddButtonPrefab(panel, "PositiveButton", "ContinueButton", "Continue",       new Vector2(0.25f, 0.10f), new Vector2(0.75f, 0.38f)));
 
         SavePopupPrefab(root, "ObjectRestoredPopup");
+    }
+
+    private static void CreateShopPrefab(PopupAnimationConfig animConfig)
+    {
+        var bigWindow = LoadPrefab(WindowPrefabDir, "BigPopupWindow");
+        var root      = InstantiateNested(bigWindow, "ShopPopup");
+        var panel     = root.transform.Find("Panel");
+
+        var view = root.AddComponent<ShopView>();
+        WireField(view, "_animConfig",  animConfig);
+        WireField(view, "_canvasGroup", root.GetComponent<CanvasGroup>());
+        WireField(view, "_panel",       panel.GetComponent<RectTransform>());
+
+        // Title
+        AddTextPrefab(panel, "TitleText", "TitleText", "Shop", new Vector2(0.15f, 0.82f), new Vector2(0.85f, 0.96f));
+
+        // Three pack buttons with labels
+        var pack0Btn = AddButtonPrefab(panel, "PositiveButton", "Pack0Button", "500 Coins\n€1.99", new Vector2(0.05f, 0.58f), new Vector2(0.95f, 0.76f));
+        var pack1Btn = AddButtonPrefab(panel, "PositiveButton", "Pack1Button", "1200 Coins\n€3.99", new Vector2(0.05f, 0.38f), new Vector2(0.95f, 0.56f));
+        var pack2Btn = AddButtonPrefab(panel, "PositiveButton", "Pack2Button", "2500 Coins\n€7.99", new Vector2(0.05f, 0.18f), new Vector2(0.95f, 0.36f));
+
+        // Cancel button
+        var cancelBtn = AddButtonPrefab(panel, "DestructiveButton", "CancelButton", "Close", new Vector2(0.25f, 0.04f), new Vector2(0.75f, 0.16f));
+
+        // Status text
+        var statusText = AddTextPrefab(panel, "BodyText", "StatusText", "", new Vector2(0.1f, 0.76f), new Vector2(0.9f, 0.84f));
+
+        // Wire arrays via SerializedObject — Unity doesn't support direct array wire via reflection easily,
+        // so we use SerializedObject on the component.
+        var so = new UnityEditor.SerializedObject(view);
+
+        var packButtonsProp = so.FindProperty("_packButtons");
+        packButtonsProp.arraySize = 3;
+        packButtonsProp.GetArrayElementAtIndex(0).objectReferenceValue = pack0Btn;
+        packButtonsProp.GetArrayElementAtIndex(1).objectReferenceValue = pack1Btn;
+        packButtonsProp.GetArrayElementAtIndex(2).objectReferenceValue = pack2Btn;
+
+        // Pack label TMP_Text components (children of the buttons)
+        var pack0Label = pack0Btn.GetComponentInChildren<TextMeshProUGUI>();
+        var pack1Label = pack1Btn.GetComponentInChildren<TextMeshProUGUI>();
+        var pack2Label = pack2Btn.GetComponentInChildren<TextMeshProUGUI>();
+        var packLabelsProp = so.FindProperty("_packLabels");
+        packLabelsProp.arraySize = 3;
+        packLabelsProp.GetArrayElementAtIndex(0).objectReferenceValue = pack0Label;
+        packLabelsProp.GetArrayElementAtIndex(1).objectReferenceValue = pack1Label;
+        packLabelsProp.GetArrayElementAtIndex(2).objectReferenceValue = pack2Label;
+
+        so.FindProperty("_cancelButton").objectReferenceValue = cancelBtn;
+        so.FindProperty("_statusText").objectReferenceValue   = statusText;
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        SavePopupPrefab(root, "ShopPopup");
     }
 
     // ── Nested prefab helpers ─────────────────────────────────────────────────

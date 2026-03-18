@@ -7,6 +7,7 @@ namespace SimpleGame.Game
         LevelFailed,
         RewardedAd,
         IAPPurchase,
-        ObjectRestored
+        ObjectRestored,
+        Shop
     }
 }

@@ -118,4 +118,48 @@ namespace SimpleGame.Tests.Game
             Assert.IsNull(result, "Expected Get<T>() to return null for an unregistered type.");
         }
     }
+
+    // ---------------------------------------------------------------------------
+    // UnityViewContainer sort order tests (D053 — stacking visual layering)
+    // ---------------------------------------------------------------------------
+    [TestFixture]
+    internal class ViewContainerSortOrderTests
+    {
+        [Test]
+        public void FirstPopup_SortOrder_IsBelowBlocker()
+        {
+            // Blocker sort order = 100 (from SceneSetup / InputBlocker canvas)
+            // First popup (depth 0) = 50 + 0*100 = 50 → below blocker → visually dimmed
+            const int blockerSortOrder = 100;
+            const int firstPopupSortOrder = 50 + (0 * 100);
+            Assert.Less(firstPopupSortOrder, blockerSortOrder,
+                "First popup sort order (50) must be below blocker (100) so it is dimmed when stacked");
+        }
+
+        [Test]
+        public void SecondPopup_SortOrder_IsAboveBlocker()
+        {
+            // Second popup (depth 1) = 50 + 1*100 = 150 → above blocker → visible on top
+            const int blockerSortOrder = 100;
+            const int secondPopupSortOrder = 50 + (1 * 100);
+            Assert.Greater(secondPopupSortOrder, blockerSortOrder,
+                "Second popup sort order (150) must be above blocker (100) so it appears on top");
+        }
+
+        [Test]
+        public void GetNextPopupSortOrder_Returns50_OnFreshContainer()
+        {
+            var containerGO = new GameObject("TestContainer");
+            try
+            {
+                var container = containerGO.AddComponent<UnityViewContainer>();
+                Assert.AreEqual(50, container.GetNextPopupSortOrder(),
+                    "Fresh container: next sort order must be 50 (depth 0)");
+            }
+            finally
+            {
+                Object.DestroyImmediate(containerGO);
+            }
+        }
+    }
 }

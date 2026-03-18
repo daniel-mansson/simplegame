@@ -136,6 +136,7 @@ public static class SceneSetup
         WireSerializedField(popupContainer, "_rewardedAdPopup",     InstantiatePopupPrefab("RewardedAdPopup",     popupCanvas.transform));
         WireSerializedField(popupContainer, "_iapPurchasePopup",    InstantiatePopupPrefab("IAPPurchasePopup",    popupCanvas.transform));
         WireSerializedField(popupContainer, "_objectRestoredPopup", InstantiatePopupPrefab("ObjectRestoredPopup", popupCanvas.transform));
+        WireSerializedField(popupContainer, "_shopPopup",           InstantiatePopupPrefab("ShopPopup",           popupCanvas.transform));
 
         bool saved = EditorSceneManager.SaveScene(scene, BootPath);
         Debug.Log(saved ? "[SceneSetup] Boot scene saved." : "[SceneSetup] ERROR saving Boot scene.");
