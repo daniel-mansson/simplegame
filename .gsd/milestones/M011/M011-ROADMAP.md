@@ -52,13 +52,13 @@ This milestone is complete only when all are true:
 - [x] **S01: Pure Puzzle Domain Model** `risk:high` `depends:[]`
   > After this: EditMode tests prove seed placement, neighbor validation, deck draw, and win detection — all in plain C# with zero Unity references; asmdef compiles with `noEngineReferences: true`
 
-- [ ] **S02: Jigsaw Adapter** `risk:medium` `depends:[S01]`
+- [x] **S02: Jigsaw Adapter** `risk:medium` `depends:[S01]`
   > After this: `JigsawLevelFactory.Build(GridLayoutConfig, seed)` returns a valid `IPuzzleLevel` — verified by EditMode test using real `BoardFactory` output; no `SimpleJigsaw.*` type visible outside the factory
 
-- [ ] **S03: InGame Wired to PuzzleSession** `risk:medium` `depends:[S01,S02]`
+- [x] **S03: InGame Wired to PuzzleSession** `risk:medium` `depends:[S01,S02]`
   > After this: Play InGame scene — tap correct piece → placed, counter advances; tap wrong piece → heart lost; all pieces placed → win popup; `IInGameView` mock updated, all tests pass
 
-- [ ] **S04: Tappable Piece GameObjects** `risk:low` `depends:[S02,S03]`
+- [x] **S04: Tappable Piece GameObjects** `risk:low` `depends:[S02,S03]`
   > After this: Pieces render at solved positions in InGame; tapping a piece fires the model; correct/incorrect resolves visually via hearts/counter HUD; `PieceDragger` has zero game-code references
 
 ## Boundary Map
