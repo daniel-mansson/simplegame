@@ -12,11 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d1aebdaffb880c446a997d30e63613df, type: 3}
   m_Name: PopupAnimationConfig
   m_EditorClassIdentifier: SimpleGame.Core::SimpleGame.Core.MVP.PopupAnimationConfig
-  animInDuration: 0.4
-  animInOffsetY: -80
-  animInEase: 29
+  animInDuration: 0.6
+  animInOffsetY: -200
+  animInEase: 23
   animOutDuration: 0.25
   animOutScale: 0.85
-  animOutEase: 25
+  animOutEase: 11
   blockerFadedAlpha: 0.5
   blockerFadeDuration: 0.2

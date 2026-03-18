@@ -15,38 +15,21 @@ namespace SimpleGame.Core.MVP
     ///
     /// Wire <see cref="_canvasGroup"/> and <see cref="_panel"/> in the Inspector or via
     /// SceneSetup. If either is null the animation is skipped with a warning.<br/>
-    /// Wire <see cref="_animConfig"/> for project-wide tuning; if null, built-in defaults
-    /// matching <see cref="PopupAnimationConfig"/> field defaults are used.
+    /// Wire <see cref="_animConfig"/> for project-wide tuning. A default asset is assigned
+    /// on the script itself so every new instance is pre-wired; it should only be null if
+    /// deliberately cleared in the Inspector.
     ///
     /// Override either method in a concrete subclass to replace the default entirely.
     /// </summary>
     public abstract class PopupViewBase : MonoBehaviour, IPopupView
     {
-        // ── Fallback constants (match PopupAnimationConfig field defaults) ────
-
-        private const float FallbackAnimInDuration  = 0.4f;
-        private const float FallbackAnimInOffsetY   = -80f;
-        private const Ease  FallbackAnimInEase      = Ease.OutBounce;
-        private const float FallbackAnimOutDuration = 0.25f;
-        private const float FallbackAnimOutScale    = 0.85f;
-        private const Ease  FallbackAnimOutEase     = Ease.InBack;
-
         // ── Inspector fields ─────────────────────────────────────────────────
 
         [SerializeField] protected CanvasGroup    _canvasGroup;
         [SerializeField] protected RectTransform  _panel;
 
-        [Tooltip("Animation config asset. Leave null to use built-in defaults.")]
+        [Tooltip("Animation config asset. A default is pre-assigned via the script's default references.")]
         [SerializeField] private PopupAnimationConfig _animConfig;
-
-        // ── Convenience accessors ─────────────────────────────────────────────
-
-        private float AnimInDuration  => _animConfig != null ? _animConfig.animInDuration  : FallbackAnimInDuration;
-        private float AnimInOffsetY   => _animConfig != null ? _animConfig.animInOffsetY   : FallbackAnimInOffsetY;
-        private Ease  AnimInEase      => _animConfig != null ? _animConfig.animInEase      : FallbackAnimInEase;
-        private float AnimOutDuration => _animConfig != null ? _animConfig.animOutDuration : FallbackAnimOutDuration;
-        private float AnimOutScale    => _animConfig != null ? _animConfig.animOutScale    : FallbackAnimOutScale;
-        private Ease  AnimOutEase     => _animConfig != null ? _animConfig.animOutEase     : FallbackAnimOutEase;
 
         // ── IPopupView ────────────────────────────────────────────────────────
 
@@ -62,13 +45,13 @@ namespace SimpleGame.Core.MVP
             _panel.localScale   = Vector3.one;
 
             var restingY = _panel.anchoredPosition.y;
-            var startPos = new Vector2(_panel.anchoredPosition.x, restingY + AnimInOffsetY);
+            var startPos = new Vector2(_panel.anchoredPosition.x, restingY + _animConfig.animInOffsetY);
             var endPos   = new Vector2(_panel.anchoredPosition.x, restingY);
 
             _panel.anchoredPosition = startPos;
 
-            await LMotion.Create(startPos, endPos, AnimInDuration)
-                .WithEase(AnimInEase)
+            await LMotion.Create(startPos, endPos, _animConfig.animInDuration)
+                .WithEase(_animConfig.animInEase)
                 .BindToAnchoredPosition(_panel)
                 .ToUniTask(ct);
         }
@@ -80,13 +63,13 @@ namespace SimpleGame.Core.MVP
         {
             if (!ValidateRefs("AnimateOutAsync")) return;
 
-            var targetScale = new Vector3(AnimOutScale, AnimOutScale, 1f);
+            var targetScale = new Vector3(_animConfig.animOutScale, _animConfig.animOutScale, 1f);
 
-            var scaleHandle = LMotion.Create(Vector3.one, targetScale, AnimOutDuration)
-                .WithEase(AnimOutEase)
+            var scaleHandle = LMotion.Create(Vector3.one, targetScale, _animConfig.animOutDuration)
+                .WithEase(_animConfig.animOutEase)
                 .BindToLocalScale(_panel);
 
-            var alphaHandle = LMotion.Create(1f, 0f, AnimOutDuration)
+            var alphaHandle = LMotion.Create(1f, 0f, _animConfig.animOutDuration)
                 .WithEase(Ease.Linear)
                 .Bind(x => _canvasGroup.alpha = x);
 
@@ -104,6 +87,11 @@ namespace SimpleGame.Core.MVP
             if (_canvasGroup == null || _panel == null)
             {
                 Debug.LogWarning($"[{GetType().Name}] {caller}: _canvasGroup or _panel is null — animation skipped. Wire these fields in the Inspector or SceneSetup.");
+                return false;
+            }
+            if (_animConfig == null)
+            {
+                Debug.LogError($"[{GetType().Name}] {caller}: _animConfig is null — animation skipped. Assign a PopupAnimationConfig asset in the Inspector.");
                 return false;
             }
             return true;
