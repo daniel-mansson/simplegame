@@ -263,6 +263,17 @@ public static class SceneSetup
         CreateText("ShopTitleText", "Shop", shopParent,
             new Vector2(0.2f, 0.88f), new Vector2(0.8f, 0.98f), 36);
 
+        // Balance / status text (TMP — ShopView._statusText is TMP_Text)
+        var shopStatusGO = new GameObject("ShopStatusText");
+        shopStatusGO.transform.SetParent(shopParent, false);
+        shopStatusGO.AddComponent<RectTransform>();
+        SetRect(shopStatusGO, new Vector2(0.1f, 0.79f), new Vector2(0.9f, 0.89f));
+        var shopStatusTmp = shopStatusGO.AddComponent<TMPro.TextMeshProUGUI>();
+        shopStatusTmp.text = "Your balance: 0 coins";
+        shopStatusTmp.fontSize = 22;
+        shopStatusTmp.alignment = TMPro.TextAlignmentOptions.Center;
+        shopStatusTmp.color = Color.white;
+
         // ShopBack button
         CreateButton("ShopBackButton", "← Back", shopParent, out var shopBackButtonGO);
         SetRect(shopBackButtonGO, new Vector2(0.05f, 0.88f), new Vector2(0.35f, 0.98f));
@@ -281,11 +292,16 @@ public static class SceneSetup
         SetRect(pack3GO, new Vector2(0.1f, 0.31f), new Vector2(0.9f, 0.44f));
         pack3GO.GetComponent<Image>().color = new Color(0.2f, 0.5f, 0.9f, 1f);
 
-        // ShopView component on the ShopPanel (resolved by IViewResolver.Get<IShopView>())
         var shopView = shopPanelGO.AddComponent<ShopView>();
-        // Wire _packButtons array
+        WireSerializedField(shopView, "_cancelButton", shopBackButtonGO.GetComponent<Button>());
+        // Wire status text for balance display
         {
             var so = new UnityEditor.SerializedObject(shopView);
+            var statusProp = so.FindProperty("_statusText");
+            if (statusProp != null)
+                statusProp.objectReferenceValue = shopStatusTmp;
+            else
+                Debug.LogWarning("[SceneSetup] _statusText property not found on ShopView");
             var arr = so.FindProperty("_packButtons");
             if (arr != null)
             {
@@ -293,10 +309,9 @@ public static class SceneSetup
                 arr.GetArrayElementAtIndex(0).objectReferenceValue = pack1GO.GetComponent<Button>();
                 arr.GetArrayElementAtIndex(1).objectReferenceValue = pack2GO.GetComponent<Button>();
                 arr.GetArrayElementAtIndex(2).objectReferenceValue = pack3GO.GetComponent<Button>();
-                so.ApplyModifiedPropertiesWithoutUndo();
             }
+            so.ApplyModifiedPropertiesWithoutUndo();
         }
-        WireSerializedField(shopView, "_cancelButton", shopBackButtonGO.GetComponent<Button>());
 
         // ── MainMenuView on Canvas root (wires home-screen buttons only) ──────
         var mainMenuView = canvas.gameObject.AddComponent<MainMenuView>();

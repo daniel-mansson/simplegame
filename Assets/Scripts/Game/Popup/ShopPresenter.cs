@@ -40,7 +40,7 @@ namespace SimpleGame.Game.Popup
             for (int i = 0; i < Packs.Length; i++)
                 View.UpdatePackLabel(i, Packs[i].label);
 
-            View.UpdateStatus("Choose a coin pack.");
+            RefreshStatus();
         }
 
         public override void Dispose()
@@ -76,8 +76,16 @@ namespace SimpleGame.Game.Popup
             _coins?.Earn(coinsGranted);
             _coins?.Save();
 
-            View.UpdateStatus($"+{coinsGranted} coins added!");
+            // Show updated balance after purchase
+            int newBalance = _coins?.Balance ?? 0;
+            View.UpdateStatus($"Your balance: {newBalance} coins\n(+{coinsGranted} added)");
             _resultTcs?.TrySetResult(true);
+        }
+
+        private void RefreshStatus()
+        {
+            int balance = _coins?.Balance ?? 0;
+            View.UpdateStatus($"Your balance: {balance} coins");
         }
 
         private void HandleCancelClicked()
