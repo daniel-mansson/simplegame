@@ -31,7 +31,6 @@ public static class PrefabKitSetup
     private static readonly Vector4 BigPanelRect   = new Vector4(0.1f, 0.2f, 0.9f, 0.8f);
     private static readonly Vector4 SmallPanelRect = new Vector4(0.15f, 0.3f, 0.85f, 0.7f);
 
-    private static readonly Color DimColor         = new Color(0f, 0f, 0f, 0.75f);
     private static readonly Color PanelColor       = new Color(0.12f, 0.12f, 0.12f, 0.97f);
     private static readonly Color PositiveColor    = new Color(0.18f, 0.55f, 0.22f, 1f);
     private static readonly Color DestructiveColor = new Color(0.65f, 0.18f, 0.18f, 1f);
@@ -61,19 +60,16 @@ public static class PrefabKitSetup
 
     /// <summary>
     /// Creates a popup window shell prefab.
-    /// Root: full-screen, has CanvasGroup (for PopupViewBase._canvasGroup) + dim background Image.
+    /// Root: full-screen, CanvasGroup only (for PopupViewBase._canvasGroup). No dim image —
+    /// the InputBlocker owns the visual overlay.
     /// Panel child: centered rect, dark background Image, RectTransform (for PopupViewBase._panel).
     /// </summary>
     private static void CreateWindowPrefab(string name, Vector4 panelAnchors)
     {
-        // Root — full screen, CanvasGroup, dim background
+        // Root — full screen, CanvasGroup only (no dim Image — InputBlocker owns the overlay)
         var root = new GameObject(name);
         var rootRect = root.AddComponent<RectTransform>();
         SetStretchRect(rootRect);
-
-        var dimImage = root.AddComponent<Image>();
-        dimImage.color = DimColor;
-        dimImage.raycastTarget = true;
 
         var canvasGroup = root.AddComponent<CanvasGroup>();
         canvasGroup.alpha = 1f;
