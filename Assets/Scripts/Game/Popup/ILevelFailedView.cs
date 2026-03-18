@@ -8,7 +8,9 @@ namespace SimpleGame.Game.Popup
         event Action OnRetryClicked;
         event Action OnWatchAdClicked;
         event Action OnQuitClicked;
+        event Action OnContinueClicked;
         void UpdateScore(string text);
         void UpdateLevel(string text);
+        void UpdateContinueCost(string text);
     }
 }

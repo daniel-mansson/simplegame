@@ -244,7 +244,7 @@ namespace SimpleGame.Tests.Game
             var go = new UnityEngine.GameObject("InGameCtrl");
             var ctrl = go.AddComponent<InGameSceneController>();
             _session.ResetForNewGame(1, totalPieces: 3);
-            ctrl.Initialize(_factory, _progression, _session, _popupManager, _goldenPieces, _hearts, null);
+            ctrl.Initialize(_factory, _progression, _session, _popupManager, _goldenPieces, _hearts, null, null);
 
             var view = new MockInGameView();
             var completeView = new MockLevelCompleteView();
@@ -274,7 +274,7 @@ namespace SimpleGame.Tests.Game
             var go = new UnityEngine.GameObject("InGameCtrl");
             var ctrl = go.AddComponent<InGameSceneController>();
             _session.ResetForNewGame(1, totalPieces: 5);
-            ctrl.Initialize(_factory, _progression, _session, _popupManager, _goldenPieces, _hearts, null);
+            ctrl.Initialize(_factory, _progression, _session, _popupManager, _goldenPieces, _hearts, null, null);
 
             var view = new MockInGameView();
             var failedView = new MockLevelFailedView();
@@ -304,7 +304,7 @@ namespace SimpleGame.Tests.Game
             var go = new UnityEngine.GameObject("InGameCtrl");
             var ctrl = go.AddComponent<InGameSceneController>();
             _session.ResetForNewGame(1, totalPieces: 2);
-            ctrl.Initialize(_factory, _progression, _session, _popupManager, _goldenPieces, _hearts, null);
+            ctrl.Initialize(_factory, _progression, _session, _popupManager, _goldenPieces, _hearts, null, null);
 
             var view = new MockInGameView();
             var completeView = new MockLevelCompleteView();
@@ -337,7 +337,7 @@ namespace SimpleGame.Tests.Game
         {
             var go = new UnityEngine.GameObject("InGameCtrl");
             var ctrl = go.AddComponent<InGameSceneController>();
-            ctrl.Initialize(_factory, _progression, _session, _popupManager, _goldenPieces, _hearts, null);
+            ctrl.Initialize(_factory, _progression, _session, _popupManager, _goldenPieces, _hearts, null, null);
 
             var view = new MockInGameView();
             var completeView = new MockLevelCompleteView();
@@ -363,7 +363,7 @@ namespace SimpleGame.Tests.Game
             var go = new UnityEngine.GameObject("InGameCtrl");
             var ctrl = go.AddComponent<InGameSceneController>();
             _session.ResetForNewGame(1, totalPieces: 5);
-            ctrl.Initialize(_factory, _progression, _session, _popupManager, _goldenPieces, _hearts, null);
+            ctrl.Initialize(_factory, _progression, _session, _popupManager, _goldenPieces, _hearts, null, null);
 
             var view = new MockInGameView();
             var completeView = new MockLevelCompleteView();
@@ -409,7 +409,7 @@ namespace SimpleGame.Tests.Game
             var go = new UnityEngine.GameObject("InGameCtrl");
             var ctrl = go.AddComponent<InGameSceneController>();
             _session.ResetForNewGame(1, totalPieces: 3);
-            ctrl.Initialize(_factory, _progression, _session, _popupManager, _goldenPieces, _hearts, null);
+            ctrl.Initialize(_factory, _progression, _session, _popupManager, _goldenPieces, _hearts, null, null);
 
             var view = new MockInGameView();
             var completeView = new MockLevelCompleteView();

@@ -5,7 +5,6 @@ using SimpleGame.Game.Boot;
 using SimpleGame.Game.Popup;
 using SimpleGame.Game.Services;
 using UnityEngine;
-
 namespace SimpleGame.Game.InGame
 {
     /// <summary>
@@ -62,13 +61,14 @@ namespace SimpleGame.Game.InGame
         private GameSessionService _session;
         private IGoldenPieceService _goldenPieces;
         private IHeartService _hearts;
+        private ICoinsService _coins;
         private PopupManager<PopupId> _popupManager;
 
         /// <summary>Inject dependencies. Called by the boot loop before RunAsync.</summary>
         public void Initialize(UIFactory uiFactory, ProgressionService progression,
                                GameSessionService session, PopupManager<PopupId> popupManager,
                                IGoldenPieceService goldenPieces = null, IHeartService hearts = null,
-                               IViewResolver viewResolver = null)
+                               ICoinsService coins = null, IViewResolver viewResolver = null)
         {
             _uiFactory = uiFactory;
             _progression = progression;
@@ -76,6 +76,7 @@ namespace SimpleGame.Game.InGame
             _popupManager = popupManager;
             _goldenPieces = goldenPieces;
             _hearts = hearts;
+            _coins = coins;
             _viewResolver = viewResolver;
         }
 
@@ -139,6 +140,13 @@ namespace SimpleGame.Game.InGame
                                 continue;
                             }
 
+                            if (choice == LevelFailedChoice.Continue)
+                            {
+                                // Coins already spent in HandleLevelFailedPopupAsync
+                                presenter.RestoreHeartsAndContinue();
+                                continue;
+                            }
+
                             // Retry: break inner loop to create fresh presenter
                             _session.CurrentScore = 0;
                             break;
@@ -180,12 +188,58 @@ namespace SimpleGame.Game.InGame
             try
             {
                 await _popupManager.ShowPopupAsync(PopupId.LevelFailed, ct);
-                var choice = await presenter.WaitForChoice();
-                if (choice == LevelFailedChoice.Retry || choice == LevelFailedChoice.WatchAd)
+
+                while (true)
                 {
-                    await _popupManager.DismissPopupAsync(ct);
+                    var choice = await presenter.WaitForChoice();
+
+                    if (choice == LevelFailedChoice.Retry || choice == LevelFailedChoice.WatchAd || choice == LevelFailedChoice.Quit)
+                    {
+                        if (choice == LevelFailedChoice.Retry || choice == LevelFailedChoice.WatchAd)
+                            await _popupManager.DismissPopupAsync(ct);
+                        return choice;
+                    }
+
+                    if (choice == LevelFailedChoice.Continue)
+                    {
+                        const int continueCost = 100;
+                        if (_coins != null && _coins.TrySpend(continueCost))
+                        {
+                            _coins.Save();
+                            await _popupManager.DismissPopupAsync(ct);
+                            return LevelFailedChoice.Continue;
+                        }
+                        else
+                        {
+                            // Can't afford — open shop popup stacked on top
+                            await HandleShopPopupAsync(ct);
+                            // After shop closes, loop back to WaitForChoice (balance may have changed)
+                        }
+                    }
                 }
-                return choice;
+            }
+            finally
+            {
+                presenter.Dispose();
+            }
+        }
+
+        private async UniTask HandleShopPopupAsync(CancellationToken ct)
+        {
+            var view = _viewResolver?.Get<IShopView>();
+            if (view == null)
+            {
+                Debug.LogWarning("[InGameSceneController] ShopView not found — cannot open shop.");
+                return;
+            }
+
+            var presenter = _uiFactory.CreateShopPresenter(view);
+            presenter.Initialize();
+            try
+            {
+                await _popupManager.ShowPopupAsync(PopupId.Shop, ct);
+                await presenter.WaitForResult();
+                await _popupManager.DismissPopupAsync(ct);
             }
             finally
             {

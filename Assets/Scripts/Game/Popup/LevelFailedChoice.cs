@@ -4,6 +4,7 @@ namespace SimpleGame.Game.Popup
     {
         Retry,
         WatchAd,
-        Quit
+        Quit,
+        Continue
     }
 }

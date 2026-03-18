@@ -18,6 +18,9 @@ namespace SimpleGame.Game.Services
         /// <summary>Golden puzzle piece balance.</summary>
         public int goldenPieces;
 
+        /// <summary>Coin balance (separate from golden pieces; used for Continue and shop).</summary>
+        public int coins;
+
         /// <summary>Per-object restoration progress.</summary>
         public List<ObjectProgress> objectProgress = new List<ObjectProgress>();
 

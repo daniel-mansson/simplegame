@@ -8,7 +8,6 @@ using SimpleGame.Game.Meta;
 using SimpleGame.Game.Popup;
 using SimpleGame.Game.Services;
 using UnityEngine;
-
 namespace SimpleGame.Game.MainMenu
 {
     /// <summary>
@@ -70,12 +69,14 @@ namespace SimpleGame.Game.MainMenu
         private MetaProgressionService _metaProgression;
         private ProgressionService _progression;
         private IGoldenPieceService _goldenPieces;
+        private ICoinsService _coins;
 
         /// <summary>Inject dependencies. Called by the boot loop before RunAsync.</summary>
         public void Initialize(UIFactory uiFactory, PopupManager<PopupId> popupManager,
                                MetaProgressionService metaProgression = null,
                                ProgressionService progression = null,
                                IGoldenPieceService goldenPieces = null,
+                               ICoinsService coins = null,
                                IViewResolver viewResolver = null)
         {
             _uiFactory = uiFactory;
@@ -83,6 +84,7 @@ namespace SimpleGame.Game.MainMenu
             _metaProgression = metaProgression;
             _progression = progression;
             _goldenPieces = goldenPieces;
+            _coins = coins;
             _viewResolver = viewResolver;
 
             // Build InSceneScreenManager if panels are wired
@@ -178,6 +180,7 @@ namespace SimpleGame.Game.MainMenu
                         {
                             if (_useInSceneScreenManager)
                                 _screenManager.ShowScreen(MainMenuScreenId.Shop);
+                            await HandleShopScreenAsync(ct);
                         }
 
                         if (action == MainMenuAction.CloseShop)
@@ -194,8 +197,33 @@ namespace SimpleGame.Game.MainMenu
             }
         }
 
-        private (EnvironmentData env, int index) GetCurrentEnvironment()
+        private async UniTask HandleShopScreenAsync(CancellationToken ct)
         {
+            var view = _viewResolver?.Get<IShopView>();
+            if (view == null)
+            {
+                Debug.LogWarning("[MainMenuSceneController] ShopView not found — shop screen will show without presenter.");
+                return;
+            }
+
+            var presenter = _uiFactory.CreateShopPresenter(view);
+            presenter.Initialize();
+            try
+            {
+                // Wait for the player to cancel (purchase resolves then loops back automatically
+                // since there's no "done" vs "cancelled" distinction needed in the screen flow)
+                await presenter.WaitForResult();
+                // After result, go back to Home screen
+                if (_useInSceneScreenManager)
+                    _screenManager.GoBack();
+            }
+            finally
+            {
+                presenter.Dispose();
+            }
+        }
+
+        private (EnvironmentData env, int index) GetCurrentEnvironment()        {
             if (_metaProgression == null || _metaProgression.WorldData == null
                 || _metaProgression.WorldData.environments == null
                 || _metaProgression.WorldData.environments.Length == 0)

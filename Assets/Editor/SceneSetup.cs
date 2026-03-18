@@ -231,7 +231,8 @@ public static class SceneSetup
         homePanelRect.sizeDelta = Vector2.zero;
         homePanelGO.SetActive(true);
 
-        // ShopPanel — placeholder for S03 ShopView; starts inactive
+        // ShopPanel — shop screen managed by InSceneScreenManager
+        // ShopView is added here so IViewResolver.Get<IShopView>() can resolve it
         var shopPanelGO = new GameObject("ShopPanel", typeof(RectTransform));
         shopPanelGO.transform.SetParent(canvas.transform, false);
         var shopPanelRect = shopPanelGO.GetComponent<RectTransform>();

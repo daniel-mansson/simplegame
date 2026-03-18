@@ -30,14 +30,18 @@ namespace SimpleGame.Tests.Game
         public event Action OnRetryClicked;
         public event Action OnWatchAdClicked;
         public event Action OnQuitClicked;
+        public event Action OnContinueClicked;
         public string LastScoreText { get; private set; }
         public string LastLevelText { get; private set; }
+        public string LastContinueCostText { get; private set; }
 
         public void UpdateScore(string text) => LastScoreText = text;
         public void UpdateLevel(string text) => LastLevelText = text;
+        public void UpdateContinueCost(string text) => LastContinueCostText = text;
         public void SimulateRetryClicked() => OnRetryClicked?.Invoke();
         public void SimulateWatchAdClicked() => OnWatchAdClicked?.Invoke();
         public void SimulateQuitClicked() => OnQuitClicked?.Invoke();
+        public void SimulateContinueClicked() => OnContinueClicked?.Invoke();
         public UniTask AnimateInAsync(CancellationToken ct = default) => UniTask.CompletedTask;
         public UniTask AnimateOutAsync(CancellationToken ct = default) => UniTask.CompletedTask;
     }
@@ -79,6 +83,27 @@ namespace SimpleGame.Tests.Game
 
         public void UpdateObjectName(string text) => LastObjectNameText = text;
         public void SimulateContinueClicked() => OnContinueClicked?.Invoke();
+        public UniTask AnimateInAsync(CancellationToken ct = default) => UniTask.CompletedTask;
+        public UniTask AnimateOutAsync(CancellationToken ct = default) => UniTask.CompletedTask;
+    }
+
+    internal class MockShopView : IShopView
+    {
+        public event Action<int> OnPackClicked;
+        public event Action OnCancelClicked;
+
+        public string[] LastPackLabels { get; } = new string[3];
+        public string LastStatusText { get; private set; }
+
+        public void UpdatePackLabel(int packIndex, string text)
+        {
+            if (packIndex >= 0 && packIndex < LastPackLabels.Length)
+                LastPackLabels[packIndex] = text;
+        }
+
+        public void UpdateStatus(string text) => LastStatusText = text;
+        public void SimulatePackClicked(int index) => OnPackClicked?.Invoke(index);
+        public void SimulateCancelClicked() => OnCancelClicked?.Invoke();
         public UniTask AnimateInAsync(CancellationToken ct = default) => UniTask.CompletedTask;
         public UniTask AnimateOutAsync(CancellationToken ct = default) => UniTask.CompletedTask;
     }

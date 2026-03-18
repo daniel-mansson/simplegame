@@ -42,6 +42,7 @@ namespace SimpleGame.Game.Boot
         private IMetaSaveService _metaSaveService;
         private MetaProgressionService _metaProgressionService;
         private GoldenPieceService _goldenPieceService;
+        private CoinsService _coinsService;
 
         private async UniTaskVoid Start()
         {
@@ -55,6 +56,7 @@ namespace SimpleGame.Game.Boot
             _metaSaveService = new PlayerPrefsMetaSaveService();
             _metaProgressionService = new MetaProgressionService(_worldData, _metaSaveService);
             _goldenPieceService = new GoldenPieceService(_metaSaveService);
+            _coinsService = new CoinsService(_metaSaveService);
 
             // --- Build infrastructure ---
             var inputBlocker = _inputBlocker;
@@ -66,7 +68,8 @@ namespace SimpleGame.Game.Boot
             _screenManager = new ScreenManager<ScreenId>(sceneLoader, transitionPlayer, inputBlocker,
                 onBeforeSceneUnload: _popupManager.DismissAllAsync);
             _uiFactory = new UIFactory(gameService, _progressionService, _sessionService,
-                                       _heartService, _metaProgressionService, _goldenPieceService);
+                                       _heartService, _metaProgressionService, _goldenPieceService,
+                                       _coinsService);
 
             Debug.Log("[GameBootstrapper] Infrastructure ready. Starting navigation loop.");
 
@@ -103,7 +106,7 @@ namespace SimpleGame.Game.Boot
                             return;
                         }
                         ctrl.Initialize(_uiFactory, _popupManager, _metaProgressionService,
-                                       _progressionService, _goldenPieceService, popupContainer);
+                                       _progressionService, _goldenPieceService, _coinsService, popupContainer);
                         var next = await ctrl.RunAsync();
                         await _screenManager.ShowScreenAsync(next);
                         break;
@@ -130,7 +133,7 @@ namespace SimpleGame.Game.Boot
                             return;
                         }
                         ctrl.Initialize(_uiFactory, _progressionService, _sessionService,
-                                       _popupManager, _goldenPieceService, _heartService, popupContainer);
+                                       _popupManager, _goldenPieceService, _heartService, _coinsService, popupContainer);
                         var next = await ctrl.RunAsync();
                         await _screenManager.ShowScreenAsync(next);
                         break;

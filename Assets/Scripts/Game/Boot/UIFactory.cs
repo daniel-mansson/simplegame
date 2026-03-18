@@ -15,11 +15,13 @@ namespace SimpleGame.Game.Boot
         private readonly IHeartService _hearts;
         private readonly MetaProgressionService _metaProgression;
         private readonly IGoldenPieceService _goldenPieces;
+        private readonly ICoinsService _coins;
 
         public UIFactory(GameService gameService, ProgressionService progression,
                          GameSessionService session, IHeartService hearts = null,
                          MetaProgressionService metaProgression = null,
-                         IGoldenPieceService goldenPieces = null)
+                         IGoldenPieceService goldenPieces = null,
+                         ICoinsService coins = null)
         {
             _gameService = gameService;
             _progression = progression;
@@ -27,6 +29,7 @@ namespace SimpleGame.Game.Boot
             _hearts = hearts;
             _metaProgression = metaProgression;
             _goldenPieces = goldenPieces;
+            _coins = coins;
         }
 
         public MainMenuPresenter CreateMainMenuPresenter(IMainMenuView view, EnvironmentData currentEnvironment,
@@ -64,6 +67,11 @@ namespace SimpleGame.Game.Boot
         public ObjectRestoredPresenter CreateObjectRestoredPresenter(IObjectRestoredView view)
         {
             return new ObjectRestoredPresenter(view);
+        }
+
+        public ShopPresenter CreateShopPresenter(IShopView view)
+        {
+            return new ShopPresenter(view, _coins);
         }
     }
 }
