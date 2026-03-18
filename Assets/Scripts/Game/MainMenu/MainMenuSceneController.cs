@@ -28,6 +28,7 @@ namespace SimpleGame.Game.MainMenu
         [SerializeField] private ConfirmDialogView _confirmDialogView;
         [SerializeField] private GameObject _homePanel;
         [SerializeField] private GameObject _shopPanel;
+        [SerializeField] private ShopView _shopView;
 
         private IViewResolver _viewResolver;
         private IMainMenuView _mainMenuViewOverride;
@@ -195,12 +196,11 @@ namespace SimpleGame.Game.MainMenu
 
         private async UniTask HandleShopScreenAsync(MainMenuPresenter homePresenter, CancellationToken ct)
         {
-            // Get the ShopView (lives in the ShopPanel, resolved via IViewResolver or GetComponentInChildren)
-            var shopView = _viewResolver?.Get<IShopView>();
+            // ShopView lives in the ShopPanel — resolved via direct SerializeField, not viewResolver
+            var shopView = _shopView as IShopView;
             if (shopView == null)
             {
-                Debug.LogWarning("[MainMenuSceneController] ShopView not found in ShopPanel.");
-                // Wait for Back button (CloseShop) so the screen at least closes
+                Debug.LogWarning("[MainMenuSceneController] ShopView not wired — waiting for Back button.");
                 await homePresenter.WaitForCloseShopAsync();
                 return;
             }

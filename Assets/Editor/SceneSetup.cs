@@ -332,6 +332,7 @@ public static class SceneSetup
         WireSerializedField(mainMenuController, "_mainMenuView", mainMenuView);
         WireSerializedField(mainMenuController, "_homePanel", homePanelGO);
         WireSerializedField(mainMenuController, "_shopPanel", shopPanelGO);
+        WireSerializedField(mainMenuController, "_shopView", shopView);
 
         bool saved = EditorSceneManager.SaveScene(scene, MainMenuPath);
         Debug.Log(saved ? "[SceneSetup] MainMenu scene saved." : "[SceneSetup] ERROR saving MainMenu scene.");
