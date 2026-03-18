@@ -1,5 +1,6 @@
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using SimpleGame.Core;
 using SimpleGame.Core.PopupManagement;
 using SimpleGame.Game.Boot;
 using SimpleGame.Game.Popup;
@@ -62,13 +63,15 @@ namespace SimpleGame.Game.InGame
         private IGoldenPieceService _goldenPieces;
         private IHeartService _hearts;
         private ICoinsService _coins;
+        private ICurrencyOverlay _overlay;
         private PopupManager<PopupId> _popupManager;
 
         /// <summary>Inject dependencies. Called by the boot loop before RunAsync.</summary>
         public void Initialize(UIFactory uiFactory, ProgressionService progression,
                                GameSessionService session, PopupManager<PopupId> popupManager,
                                IGoldenPieceService goldenPieces = null, IHeartService hearts = null,
-                               ICoinsService coins = null, IViewResolver viewResolver = null)
+                               ICoinsService coins = null, IViewResolver viewResolver = null,
+                               ICurrencyOverlay overlay = null)
         {
             _uiFactory = uiFactory;
             _progression = progression;
@@ -78,6 +81,7 @@ namespace SimpleGame.Game.InGame
             _hearts = hearts;
             _coins = coins;
             _viewResolver = viewResolver;
+            _overlay = overlay;
         }
 
         /// <summary>
@@ -185,6 +189,14 @@ namespace SimpleGame.Game.InGame
 
             var presenter = _uiFactory.CreateLevelFailedPresenter(view);
             presenter.Initialize(_session.CurrentScore, _session.CurrentLevelId);
+
+            // Show overlay with current coin balance
+            if (_overlay != null)
+            {
+                _overlay.UpdateBalance($"Coins: {_coins?.Balance ?? 0}");
+                await _overlay.ShowAsync(ct);
+            }
+
             try
             {
                 await _popupManager.ShowPopupAsync(PopupId.LevelFailed, ct);
@@ -206,6 +218,7 @@ namespace SimpleGame.Game.InGame
                         if (_coins != null && _coins.TrySpend(continueCost))
                         {
                             _coins.Save();
+                            _overlay?.UpdateBalance($"Coins: {_coins.Balance}");
                             await _popupManager.DismissPopupAsync(ct);
                             return LevelFailedChoice.Continue;
                         }
@@ -213,7 +226,8 @@ namespace SimpleGame.Game.InGame
                         {
                             // Can't afford — open shop popup stacked on top
                             await HandleShopPopupAsync(ct);
-                            // After shop closes, loop back to WaitForChoice (balance may have changed)
+                            // Update balance display after shop
+                            _overlay?.UpdateBalance($"Coins: {_coins?.Balance ?? 0}");
                         }
                     }
                 }
@@ -221,6 +235,9 @@ namespace SimpleGame.Game.InGame
             finally
             {
                 presenter.Dispose();
+                // Hide overlay when LevelFailed is dismissed
+                if (_overlay != null)
+                    _overlay.HideAsync(ct).Forget();
             }
         }
 

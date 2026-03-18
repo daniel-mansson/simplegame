@@ -1,6 +1,8 @@
 using Cysharp.Threading.Tasks;
+using SimpleGame.Core;
 using SimpleGame.Core.PopupManagement;
 using SimpleGame.Core.ScreenManagement;
+using SimpleGame.Core.Unity;
 using SimpleGame.Core.Unity.PopupManagement;
 using SimpleGame.Core.Unity.ScreenManagement;
 using SimpleGame.Core.Unity.TransitionManagement;
@@ -32,6 +34,7 @@ namespace SimpleGame.Game.Boot
         [SerializeField] private UnityInputBlocker _inputBlocker;
         [SerializeField] private UnityTransitionPlayer _transitionPlayer;
         [SerializeField] private UnityViewContainer _viewContainer;
+        [SerializeField] private UnityCurrencyOverlay _currencyOverlay;
 
         private ScreenManager<ScreenId> _screenManager;
         private PopupManager<PopupId> _popupManager;
@@ -133,7 +136,7 @@ namespace SimpleGame.Game.Boot
                             return;
                         }
                         ctrl.Initialize(_uiFactory, _progressionService, _sessionService,
-                                       _popupManager, _goldenPieceService, _heartService, _coinsService, popupContainer);
+                                       _popupManager, _goldenPieceService, _heartService, _coinsService, popupContainer, _currencyOverlay);
                         var next = await ctrl.RunAsync();
                         await _screenManager.ShowScreenAsync(next);
                         break;

@@ -6,6 +6,7 @@ using SimpleGame.Game.InGame;
 using SimpleGame.Game.MainMenu;
 using SimpleGame.Game.Popup;
 using SimpleGame.Game.Settings;
+using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -122,6 +123,31 @@ public static class SceneSetup
         {
             Debug.LogWarning("[SceneSetup] TransitionOverlay.prefab not found.");
         }
+
+        // Currency Overlay Canvas (sort order 120 — above blocker 100, below stacked popups 150+)
+        CreateFullScreenCanvas("CurrencyOverlay", 120, out var overlayCanvas);
+        var overlayCanvasGroup = overlayCanvas.gameObject.AddComponent<CanvasGroup>();
+        overlayCanvasGroup.alpha = 0f;
+        overlayCanvasGroup.blocksRaycasts = false;
+
+        // Coin balance text
+        var balanceLabelGO = new GameObject("CoinsBalanceText");
+        balanceLabelGO.transform.SetParent(overlayCanvas.transform, false);
+        var balanceRect = balanceLabelGO.AddComponent<RectTransform>();
+        balanceRect.anchorMin = new Vector2(0.6f, 0.88f);
+        balanceRect.anchorMax = new Vector2(0.98f, 0.99f);
+        balanceRect.sizeDelta = Vector2.zero;
+        balanceRect.anchoredPosition = Vector2.zero;
+        var balanceTmp = balanceLabelGO.AddComponent<TMPro.TextMeshProUGUI>();
+        balanceTmp.text = "Coins: 0";
+        balanceTmp.alignment = TMPro.TextAlignmentOptions.Right;
+        balanceTmp.fontSize = 22;
+        balanceTmp.color = Color.white;
+
+        var overlayComponent = overlayCanvas.gameObject.AddComponent<SimpleGame.Core.Unity.UnityCurrencyOverlay>();
+        WireSerializedField(overlayComponent, "_canvasGroup", overlayCanvasGroup);
+        WireSerializedField(overlayComponent, "_balanceText", balanceTmp);
+        WireSerializedField(bootstrapper, "_currencyOverlay", overlayComponent);
 
         // Popup Canvas (sort order 300)
         CreateFullScreenCanvas("PopupCanvas", 300, out var popupCanvas);
