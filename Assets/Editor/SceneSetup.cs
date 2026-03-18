@@ -6,7 +6,6 @@ using SimpleGame.Game.InGame;
 using SimpleGame.Game.MainMenu;
 using SimpleGame.Game.Popup;
 using SimpleGame.Game.Settings;
-using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -94,6 +93,18 @@ public static class SceneSetup
         inputBlockerCanvasGroup.blocksRaycasts = false;
         inputBlockerCanvasGroup.interactable = true;
         inputBlockerCanvasGroup.alpha = 0f;
+
+        // Full-screen dark Image child — the CanvasGroup alpha animation fades this in/out.
+        // Without a visual element the blocker canvas renders nothing regardless of alpha.
+        var blockerImageGO = new GameObject("BlockerImage");
+        blockerImageGO.transform.SetParent(inputBlockerCanvas.transform, false);
+        var blockerRect = blockerImageGO.AddComponent<RectTransform>();
+        blockerRect.anchorMin = Vector2.zero;
+        blockerRect.anchorMax = Vector2.one;
+        blockerRect.offsetMin = Vector2.zero;
+        blockerRect.offsetMax = Vector2.zero;
+        blockerImageGO.AddComponent<Image>().color = new Color(0f, 0f, 0f, 1f);
+
         var inputBlocker = inputBlockerCanvas.gameObject.AddComponent<UnityInputBlocker>();
         WireSerializedField(inputBlocker, "_canvasGroup", inputBlockerCanvasGroup);
         WireSerializedField(inputBlocker, "_animConfig",  animConfig);
@@ -112,102 +123,19 @@ public static class SceneSetup
             Debug.LogWarning("[SceneSetup] TransitionOverlay.prefab not found.");
         }
 
-        // Load UI prefabs
-        var bigWindowPrefab   = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/UI/BigPopupWindow.prefab");
-        var smallWindowPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/UI/SmallPopupWindow.prefab");
-        var positiveBtnPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/UI/Buttons/PositiveButton.prefab");
-        var destructBtnPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/UI/Buttons/DestructiveButton.prefab");
-        var neutralBtnPrefab  = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/UI/Buttons/NeutralButton.prefab");
-
-        if (bigWindowPrefab == null || smallWindowPrefab == null)
-            Debug.LogWarning("[SceneSetup] Window prefabs not found — run Tools/Setup/Create UI Prefab Kit first.");
-
         // Popup Canvas (sort order 300)
         CreateFullScreenCanvas("PopupCanvas", 300, out var popupCanvas);
         var popupContainer = popupCanvas.gameObject.AddComponent<UnityViewContainer>();
         WireSerializedField(bootstrapper, "_viewContainer", popupContainer);
 
-        // ── ConfirmDialog ─────────────────────────────────────────────────────
-        var confirmRoot  = InstantiateWindowPrefab(bigWindowPrefab, popupCanvas.transform, "ConfirmDialogPopup");
-        var confirmPanel = confirmRoot.transform.Find("Panel");
-        var confirmView  = confirmRoot.AddComponent<ConfirmDialogView>();
-        WireSerializedField(confirmView, "_animConfig",   animConfig);
-        WireSerializedField(confirmView, "_canvasGroup", confirmRoot.GetComponent<CanvasGroup>());
-        WireSerializedField(confirmView, "_panel",       confirmPanel.GetComponent<RectTransform>());
-        WireSerializedField(confirmView, "_messageText", CreateTMPText("TitleText", "Are you sure?", confirmPanel, new Vector2(0.1f, 0.65f), new Vector2(0.9f, 0.88f), 28));
-        WireSerializedField(confirmView, "_confirmButton", InstantiateButton(positiveBtnPrefab,  "ConfirmButton", "OK",     confirmPanel, new Vector2(0.08f, 0.08f), new Vector2(0.45f, 0.30f)));
-        WireSerializedField(confirmView, "_cancelButton",  InstantiateButton(neutralBtnPrefab,   "CancelButton",  "Cancel", confirmPanel, new Vector2(0.55f, 0.08f), new Vector2(0.92f, 0.30f)));
-        WireSerializedField(popupContainer, "_confirmDialogPopup", confirmRoot);
-        confirmRoot.SetActive(false);
-
-        // ── LevelComplete ─────────────────────────────────────────────────────
-        var lvlCompleteRoot  = InstantiateWindowPrefab(bigWindowPrefab, popupCanvas.transform, "LevelCompletePopup");
-        var lvlCompletePanel = lvlCompleteRoot.transform.Find("Panel");
-        var lvlCompleteView  = lvlCompleteRoot.AddComponent<LevelCompleteView>();
-        WireSerializedField(lvlCompleteView, "_animConfig",   animConfig);
-        WireSerializedField(lvlCompleteView, "_canvasGroup", lvlCompleteRoot.GetComponent<CanvasGroup>());
-        WireSerializedField(lvlCompleteView, "_panel",       lvlCompletePanel.GetComponent<RectTransform>());
-        WireSerializedField(lvlCompleteView, "_levelText",       CreateTMPText("TitleText",       "Level Complete!", lvlCompletePanel, new Vector2(0.1f, 0.72f), new Vector2(0.9f, 0.92f), 30));
-        WireSerializedField(lvlCompleteView, "_scoreText",       CreateTMPText("ScoreText",       "Score: 0",        lvlCompletePanel, new Vector2(0.15f, 0.52f), new Vector2(0.85f, 0.70f), 24));
-        WireSerializedField(lvlCompleteView, "_goldenPiecesText", CreateTMPText("GoldenPiecesText", "+0 Pieces",      lvlCompletePanel, new Vector2(0.15f, 0.34f), new Vector2(0.85f, 0.52f), 20));
-        WireSerializedField(lvlCompleteView, "_continueButton",  InstantiateButton(positiveBtnPrefab, "ContinueButton", "Continue", lvlCompletePanel, new Vector2(0.25f, 0.08f), new Vector2(0.75f, 0.30f)));
-        WireSerializedField(popupContainer, "_levelCompletePopup", lvlCompleteRoot);
-        lvlCompleteRoot.SetActive(false);
-
-        // ── LevelFailed ───────────────────────────────────────────────────────
-        var lvlFailedRoot  = InstantiateWindowPrefab(bigWindowPrefab, popupCanvas.transform, "LevelFailedPopup");
-        var lvlFailedPanel = lvlFailedRoot.transform.Find("Panel");
-        var lvlFailedView  = lvlFailedRoot.AddComponent<LevelFailedView>();
-        WireSerializedField(lvlFailedView, "_animConfig",   animConfig);
-        WireSerializedField(lvlFailedView, "_canvasGroup", lvlFailedRoot.GetComponent<CanvasGroup>());
-        WireSerializedField(lvlFailedView, "_panel",       lvlFailedPanel.GetComponent<RectTransform>());
-        WireSerializedField(lvlFailedView, "_levelText",  CreateTMPText("TitleText",  "Level Failed!", lvlFailedPanel, new Vector2(0.1f, 0.72f), new Vector2(0.9f, 0.92f), 30));
-        WireSerializedField(lvlFailedView, "_scoreText",  CreateTMPText("ScoreText",  "Score: 0",      lvlFailedPanel, new Vector2(0.15f, 0.52f), new Vector2(0.85f, 0.70f), 24));
-        WireSerializedField(lvlFailedView, "_retryButton",    InstantiateButton(positiveBtnPrefab,  "RetryButton",    "Retry",    lvlFailedPanel, new Vector2(0.04f, 0.08f), new Vector2(0.34f, 0.30f)));
-        WireSerializedField(lvlFailedView, "_watchAdButton",  InstantiateButton(neutralBtnPrefab,   "WatchAdButton",  "Watch Ad", lvlFailedPanel, new Vector2(0.37f, 0.08f), new Vector2(0.63f, 0.30f)));
-        WireSerializedField(lvlFailedView, "_quitButton",     InstantiateButton(destructBtnPrefab,  "QuitButton",     "Quit",     lvlFailedPanel, new Vector2(0.66f, 0.08f), new Vector2(0.96f, 0.30f)));
-        WireSerializedField(popupContainer, "_levelFailedPopup", lvlFailedRoot);
-        lvlFailedRoot.SetActive(false);
-
-        // ── RewardedAd ────────────────────────────────────────────────────────
-        var rewardedRoot  = InstantiateWindowPrefab(smallWindowPrefab, popupCanvas.transform, "RewardedAdPopup");
-        var rewardedPanel = rewardedRoot.transform.Find("Panel");
-        var rewardedView  = rewardedRoot.AddComponent<RewardedAdView>();
-        WireSerializedField(rewardedView, "_animConfig",   animConfig);
-        WireSerializedField(rewardedView, "_canvasGroup", rewardedRoot.GetComponent<CanvasGroup>());
-        WireSerializedField(rewardedView, "_panel",       rewardedPanel.GetComponent<RectTransform>());
-        WireSerializedField(rewardedView, "_statusText", CreateTMPText("StatusText", "Watch a short ad for a reward?", rewardedPanel, new Vector2(0.1f, 0.45f), new Vector2(0.9f, 0.88f), 22));
-        WireSerializedField(rewardedView, "_watchButton", InstantiateButton(positiveBtnPrefab, "WatchButton", "Watch", rewardedPanel, new Vector2(0.08f, 0.08f), new Vector2(0.45f, 0.36f)));
-        WireSerializedField(rewardedView, "_skipButton",  InstantiateButton(neutralBtnPrefab,  "SkipButton",  "Skip",  rewardedPanel, new Vector2(0.55f, 0.08f), new Vector2(0.92f, 0.36f)));
-        WireSerializedField(popupContainer, "_rewardedAdPopup", rewardedRoot);
-        rewardedRoot.SetActive(false);
-
-        // ── IAPPurchase ───────────────────────────────────────────────────────
-        var iapRoot  = InstantiateWindowPrefab(smallWindowPrefab, popupCanvas.transform, "IAPPurchasePopup");
-        var iapPanel = iapRoot.transform.Find("Panel");
-        var iapView  = iapRoot.AddComponent<IAPPurchaseView>();
-        WireSerializedField(iapView, "_animConfig",   animConfig);
-        WireSerializedField(iapView, "_canvasGroup", iapRoot.GetComponent<CanvasGroup>());
-        WireSerializedField(iapView, "_panel",       iapPanel.GetComponent<RectTransform>());
-        WireSerializedField(iapView, "_itemNameText", CreateTMPText("ItemNameText", "50 Golden Pieces", iapPanel, new Vector2(0.1f, 0.65f), new Vector2(0.9f, 0.88f), 26));
-        WireSerializedField(iapView, "_priceText",    CreateTMPText("PriceText",    "$0.99",             iapPanel, new Vector2(0.2f, 0.45f), new Vector2(0.8f, 0.63f), 28));
-        WireSerializedField(iapView, "_statusText",   CreateTMPText("StatusText",   "",                  iapPanel, new Vector2(0.1f, 0.30f), new Vector2(0.9f, 0.44f), 18));
-        WireSerializedField(iapView, "_purchaseButton", InstantiateButton(positiveBtnPrefab,  "PurchaseButton", "Buy",    iapPanel, new Vector2(0.08f, 0.05f), new Vector2(0.45f, 0.28f)));
-        WireSerializedField(iapView, "_cancelButton",   InstantiateButton(destructBtnPrefab,  "CancelButton",   "Cancel", iapPanel, new Vector2(0.55f, 0.05f), new Vector2(0.92f, 0.28f)));
-        WireSerializedField(popupContainer, "_iapPurchasePopup", iapRoot);
-        iapRoot.SetActive(false);
-
-        // ── ObjectRestored ────────────────────────────────────────────────────
-        var objRestoredRoot  = InstantiateWindowPrefab(smallWindowPrefab, popupCanvas.transform, "ObjectRestoredPopup");
-        var objRestoredPanel = objRestoredRoot.transform.Find("Panel");
-        var objRestoredView  = objRestoredRoot.AddComponent<ObjectRestoredView>();
-        WireSerializedField(objRestoredView, "_animConfig",   animConfig);
-        WireSerializedField(objRestoredView, "_canvasGroup", objRestoredRoot.GetComponent<CanvasGroup>());
-        WireSerializedField(objRestoredView, "_panel",       objRestoredPanel.GetComponent<RectTransform>());
-        WireSerializedField(objRestoredView, "_objectNameText", CreateTMPText("ObjectNameText", "Object Restored!", objRestoredPanel, new Vector2(0.1f, 0.55f), new Vector2(0.9f, 0.88f), 28));
-        WireSerializedField(objRestoredView, "_continueButton",  InstantiateButton(positiveBtnPrefab, "ContinueButton", "Continue", objRestoredPanel, new Vector2(0.25f, 0.10f), new Vector2(0.75f, 0.38f)));
-        WireSerializedField(popupContainer, "_objectRestoredPopup", objRestoredRoot);
-        objRestoredRoot.SetActive(false);
+        // Instantiate popup prefabs — each prefab already has view, animConfig, and all
+        // child refs wired inside the asset. Run "Create Popup Prefabs" if any are missing.
+        WireSerializedField(popupContainer, "_confirmDialogPopup",  InstantiatePopupPrefab("ConfirmDialogPopup",  popupCanvas.transform));
+        WireSerializedField(popupContainer, "_levelCompletePopup",  InstantiatePopupPrefab("LevelCompletePopup",  popupCanvas.transform));
+        WireSerializedField(popupContainer, "_levelFailedPopup",    InstantiatePopupPrefab("LevelFailedPopup",    popupCanvas.transform));
+        WireSerializedField(popupContainer, "_rewardedAdPopup",     InstantiatePopupPrefab("RewardedAdPopup",     popupCanvas.transform));
+        WireSerializedField(popupContainer, "_iapPurchasePopup",    InstantiatePopupPrefab("IAPPurchasePopup",    popupCanvas.transform));
+        WireSerializedField(popupContainer, "_objectRestoredPopup", InstantiatePopupPrefab("ObjectRestoredPopup", popupCanvas.transform));
 
         bool saved = EditorSceneManager.SaveScene(scene, BootPath);
         Debug.Log(saved ? "[SceneSetup] Boot scene saved." : "[SceneSetup] ERROR saving Boot scene.");
@@ -417,98 +345,23 @@ public static class SceneSetup
         => SceneSetupHelpers.CreateButton(name, label, parent, out result);
 
     /// <summary>
-    /// Instantiates a window prefab as a non-prefab-connected child of <paramref name="parent"/>.
-    /// Renames it to <paramref name="name"/>. Returns the root GameObject.
+    /// Instantiates a popup prefab from Assets/Prefabs/UI/Popups/ as a connected prefab
+    /// instance inside <paramref name="parent"/>. The prefab already has all view fields
+    /// wired. Starts inactive (hidden until PopupManager shows it).
     /// </summary>
-    private static GameObject InstantiateWindowPrefab(GameObject prefab, Transform parent, string name)
+    private static GameObject InstantiatePopupPrefab(string name, Transform parent)
     {
+        var path   = $"Assets/Prefabs/UI/Popups/{name}.prefab";
+        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
         if (prefab == null)
         {
-            // Fallback: plain GO if prefab missing
-            Debug.LogWarning($"[SceneSetup] Window prefab null — creating plain root for {name}");
-            var fallback = new GameObject(name);
-            fallback.transform.SetParent(parent, false);
-            var fbRect = fallback.AddComponent<RectTransform>();
-            SetStretchRect(fbRect);
-            fallback.AddComponent<CanvasGroup>();
-            var panel = new GameObject("Panel");
-            panel.transform.SetParent(fallback.transform, false);
-            panel.AddComponent<RectTransform>();
-            return fallback;
+            Debug.LogError($"[SceneSetup] Popup prefab not found: {path} — run Tools/Setup/Create Popup Prefabs first.");
+            return null;
         }
 
         var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
-        PrefabUtility.UnpackPrefabInstance(go, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
-        go.name = name;
+        go.SetActive(false);
         return go;
-    }
-
-    /// <summary>
-    /// Instantiates a button prefab as a non-prefab-connected child of <paramref name="parent"/>,
-    /// renames it, sets its label, and positions it via anchor rect.
-    /// Returns the Button component.
-    /// </summary>
-    private static Button InstantiateButton(GameObject prefab, string name, string label,
-        Transform parent, Vector2 anchorMin, Vector2 anchorMax)
-    {
-        GameObject go;
-        if (prefab != null)
-        {
-            go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
-            PrefabUtility.UnpackPrefabInstance(go, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
-        }
-        else
-        {
-            go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            go.AddComponent<RectTransform>();
-            go.AddComponent<Image>().color = new Color(0.2f, 0.4f, 0.8f, 1f);
-            go.AddComponent<Button>();
-            var labelGO = new GameObject("Label");
-            labelGO.transform.SetParent(go.transform, false);
-            var tmp = labelGO.AddComponent<TextMeshProUGUI>();
-            tmp.text = label;
-            tmp.fontSize = 20;
-            tmp.color = Color.white;
-            tmp.alignment = TextAlignmentOptions.Center;
-            var lRect = labelGO.GetComponent<RectTransform>();
-            SetStretchRect(lRect);
-        }
-
-        go.name = name;
-        var rect = go.GetComponent<RectTransform>();
-        rect.anchorMin = anchorMin;
-        rect.anchorMax = anchorMax;
-        rect.sizeDelta = Vector2.zero;
-        rect.anchoredPosition = Vector2.zero;
-
-        // Update label text
-        var tmpLabel = go.GetComponentInChildren<TextMeshProUGUI>();
-        if (tmpLabel != null) tmpLabel.text = label;
-
-        return go.GetComponent<Button>();
-    }
-
-    /// <summary>
-    /// Creates a TMP_Text child inside <paramref name="parent"/> and returns the component.
-    /// </summary>
-    private static TMP_Text CreateTMPText(string name, string defaultText, Transform parent,
-        Vector2 anchorMin, Vector2 anchorMax, int fontSize)
-    {
-        var go = new GameObject(name);
-        go.transform.SetParent(parent, false);
-        var tmp = go.AddComponent<TextMeshProUGUI>();
-        tmp.text = defaultText;
-        tmp.fontSize = fontSize;
-        tmp.color = Color.white;
-        tmp.alignment = TextAlignmentOptions.Center;
-        tmp.textWrappingMode = TMPro.TextWrappingModes.Normal;
-        var rect = go.GetComponent<RectTransform>();
-        rect.anchorMin = anchorMin;
-        rect.anchorMax = anchorMax;
-        rect.sizeDelta = Vector2.zero;
-        rect.anchoredPosition = Vector2.zero;
-        return tmp;
     }
 
     private static GameObject CreateText(string name, string defaultText, Transform parent,
