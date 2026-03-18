@@ -37,5 +37,12 @@ namespace SimpleGame.Core.PopupManagement
         /// Caller unblocks input BEFORE calling this — the fade plays in the background.
         /// </summary>
         UniTask FadeOutAsync(CancellationToken ct = default);
+
+        /// <summary>
+        /// Updates the Canvas sort order of the blocker overlay.
+        /// Called by UnityViewContainer when stack depth changes so the blocker
+        /// always sits between the bottom popup and any stacked popup above it.
+        /// </summary>
+        void SetSortOrder(int sortOrder);
     }
 }

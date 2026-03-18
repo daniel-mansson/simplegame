@@ -59,6 +59,7 @@ namespace SimpleGame.Tests.Core
 
         public UniTask FadeInAsync(System.Threading.CancellationToken ct = default) => UniTask.CompletedTask;
         public UniTask FadeOutAsync(System.Threading.CancellationToken ct = default) => UniTask.CompletedTask;
+        public void SetSortOrder(int sortOrder) { }
     }
 
     // ---------------------------------------------------------------------------

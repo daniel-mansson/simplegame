@@ -97,5 +97,13 @@ namespace SimpleGame.Core.Unity.PopupManagement
                 .Bind(x => _canvasGroup.alpha = x)
                 .ToUniTask(ct);
         }
+
+        /// <inheritdoc />
+        public void SetSortOrder(int sortOrder)
+        {
+            var canvas = GetComponent<Canvas>();
+            if (canvas != null)
+                canvas.sortingOrder = sortOrder;
+        }
     }
 }

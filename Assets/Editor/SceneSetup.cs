@@ -153,6 +153,7 @@ public static class SceneSetup
         CreateFullScreenCanvas("PopupCanvas", 300, out var popupCanvas);
         var popupContainer = popupCanvas.gameObject.AddComponent<UnityViewContainer>();
         WireSerializedField(bootstrapper, "_viewContainer", popupContainer);
+        WireSerializedField(popupContainer, "_inputBlocker", inputBlocker);  // for dynamic sort order on stacking
 
         // Instantiate popup prefabs — each prefab already has view, animConfig, and all
         // child refs wired inside the asset. Run "Create Popup Prefabs" if any are missing.

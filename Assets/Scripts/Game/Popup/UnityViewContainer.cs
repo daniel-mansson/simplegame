@@ -2,6 +2,7 @@ using System.Threading;
 using Cysharp.Threading.Tasks;
 using SimpleGame.Core.MVP;
 using SimpleGame.Core.PopupManagement;
+using SimpleGame.Core.Unity.PopupManagement;
 using UnityEngine;
 
 namespace SimpleGame.Game.Popup
@@ -14,12 +15,16 @@ namespace SimpleGame.Game.Popup
     /// Show sequence: SetActive(true) → assign sort order → AnimateInAsync (popup bounces in)
     /// Hide sequence: AnimateOutAsync (popup scales/fades out) → SetActive(false)
     ///
-    /// Sort Order for Stacking (D053):
+    /// Sort Order for Stacking (D053 — revised):
     ///   Each popup root has a Canvas added with overrideSorting=true.
-    ///   Sort order = 50 + (stackDepth * 100), where stackDepth is the number of
-    ///   already-visible popups at the time of show (0-indexed).
-    ///   Bottom popup = 50 (below blocker at 100), second popup = 150 (above blocker).
-    ///   This ensures the dim overlay visually separates stacked popups.
+    ///   Sort order = BasePopupSortOrder + (stackDepth * SortOrderStep).
+    ///     BasePopupSortOrder = 200, SortOrderStep = 100
+    ///     → depth 0 = 200, depth 1 = 300, etc.
+    ///   Blocker Canvas base sort order = 100 (set externally via SceneSetup).
+    ///   When a second popup is stacked (depth ≥ 1 already visible), the blocker
+    ///   sort order is raised to BlockerStackedSortOrder = 250 so it sits between
+    ///   the bottom popup (200) and the top popup (300), visually dimming the bottom.
+    ///   When the stack returns to ≤ 1 popup, the blocker is reset to 100.
     ///
     /// If a popup GameObject has no IPopupView component, it shows/hides instantly
     /// with a warning — safe fallback.
@@ -29,8 +34,10 @@ namespace SimpleGame.Game.Popup
     /// </summary>
     public class UnityViewContainer : MonoBehaviour, IPopupContainer<PopupId>, IViewResolver
     {
-        private const int BasePopupSortOrder = 50;
-        private const int SortOrderStep = 100;
+        private const int BasePopupSortOrder    = 200;
+        private const int SortOrderStep         = 100;
+        private const int BlockerBaseSortOrder  = 100;
+        private const int BlockerStackedSortOrder = 250;  // Between depth-0 (200) and depth-1 (300)
 
         [SerializeField] private GameObject _confirmDialogPopup;
         [SerializeField] private GameObject _levelCompletePopup;
@@ -39,6 +46,9 @@ namespace SimpleGame.Game.Popup
         [SerializeField] private GameObject _iapPurchasePopup;
         [SerializeField] private GameObject _objectRestoredPopup;
         [SerializeField] private GameObject _shopPopup;
+
+        [Tooltip("Reference to the input blocker so its sort order can be adjusted when popups stack.")]
+        [SerializeField] private UnityInputBlocker _inputBlocker;
 
         // Current number of visible (shown) popups — used for sort order assignment.
         private int _visiblePopupCount;
@@ -53,6 +63,9 @@ namespace SimpleGame.Game.Popup
             // Assign sort order based on current depth before incrementing
             AssignSortOrder(popup, _visiblePopupCount);
             _visiblePopupCount++;
+
+            // Raise blocker between the two popups when stacking
+            UpdateBlockerSortOrder();
 
             var view = popup.GetComponentInChildren<IPopupView>(true);
             if (view != null)
@@ -74,6 +87,9 @@ namespace SimpleGame.Game.Popup
 
             popup.SetActive(false);
             _visiblePopupCount = Mathf.Max(0, _visiblePopupCount - 1);
+
+            // Reset blocker sort order when no longer stacking
+            UpdateBlockerSortOrder();
         }
 
         public T Get<T>() where T : class
@@ -86,6 +102,14 @@ namespace SimpleGame.Game.Popup
         /// Useful for tests to verify the sort order scheme.
         /// </summary>
         public int GetNextPopupSortOrder() => BasePopupSortOrder + (_visiblePopupCount * SortOrderStep);
+
+        private void UpdateBlockerSortOrder()
+        {
+            if (_inputBlocker == null) return;
+            // When 2+ popups visible, raise blocker to sit between bottom (200) and top (300)
+            int blockerOrder = _visiblePopupCount >= 2 ? BlockerStackedSortOrder : BlockerBaseSortOrder;
+            _inputBlocker.SetSortOrder(blockerOrder);
+        }
 
         private static void AssignSortOrder(GameObject popup, int depthIndex)
         {

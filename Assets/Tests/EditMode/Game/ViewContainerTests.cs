@@ -126,35 +126,47 @@ namespace SimpleGame.Tests.Game
     internal class ViewContainerSortOrderTests
     {
         [Test]
-        public void FirstPopup_SortOrder_IsBelowBlocker()
+        public void FirstPopup_SortOrder_IsAboveBlocker()
         {
-            // Blocker sort order = 100 (from SceneSetup / InputBlocker canvas)
-            // First popup (depth 0) = 50 + 0*100 = 50 → below blocker → visually dimmed
-            const int blockerSortOrder = 100;
-            const int firstPopupSortOrder = 50 + (0 * 100);
-            Assert.Less(firstPopupSortOrder, blockerSortOrder,
-                "First popup sort order (50) must be below blocker (100) so it is dimmed when stacked");
+            // Revised scheme: first popup at 200, blocker base at 100.
+            // A single popup must be ABOVE the blocker so it is not dimmed when alone.
+            const int blockerBaseSortOrder = 100;
+            const int firstPopupSortOrder = 200 + (0 * 100); // = 200
+            Assert.Greater(firstPopupSortOrder, blockerBaseSortOrder,
+                "First popup sort order (200) must be above blocker base (100) — not dimmed when alone");
         }
 
         [Test]
-        public void SecondPopup_SortOrder_IsAboveBlocker()
+        public void SecondPopup_SortOrder_IsAboveBlockerStacked()
         {
-            // Second popup (depth 1) = 50 + 1*100 = 150 → above blocker → visible on top
-            const int blockerSortOrder = 100;
-            const int secondPopupSortOrder = 50 + (1 * 100);
-            Assert.Greater(secondPopupSortOrder, blockerSortOrder,
-                "Second popup sort order (150) must be above blocker (100) so it appears on top");
+            // When a second popup is open, the blocker jumps to 250 (between 200 and 300).
+            // Second popup at 300 must still be above the stacked blocker (250).
+            const int blockerStackedSortOrder = 250;
+            const int secondPopupSortOrder = 200 + (1 * 100); // = 300
+            Assert.Greater(secondPopupSortOrder, blockerStackedSortOrder,
+                "Second popup sort order (300) must be above stacked blocker (250) so it appears on top");
         }
 
         [Test]
-        public void GetNextPopupSortOrder_Returns50_OnFreshContainer()
+        public void FirstPopup_IsBelowBlockerStacked_WhenSecondPopupOpen()
+        {
+            // When stacked, the blocker at 250 must be above the bottom popup (200),
+            // visually dimming it.
+            const int blockerStackedSortOrder = 250;
+            const int firstPopupSortOrder = 200 + (0 * 100); // = 200
+            Assert.Less(firstPopupSortOrder, blockerStackedSortOrder,
+                "First popup sort order (200) must be below stacked blocker (250) — dimmed when second popup is open");
+        }
+
+        [Test]
+        public void GetNextPopupSortOrder_Returns200_OnFreshContainer()
         {
             var containerGO = new GameObject("TestContainer");
             try
             {
                 var container = containerGO.AddComponent<UnityViewContainer>();
-                Assert.AreEqual(50, container.GetNextPopupSortOrder(),
-                    "Fresh container: next sort order must be 50 (depth 0)");
+                Assert.AreEqual(200, container.GetNextPopupSortOrder(),
+                    "Fresh container: next sort order must be 200 (depth 0)");
             }
             finally
             {
