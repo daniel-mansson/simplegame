@@ -52,14 +52,17 @@ This milestone is complete only when all are true:
 - [x] **S01: In-Scene Screen Manager** `risk:medium` `depends:[]`
   > After this: `InSceneScreenManager<TScreenId>` in Core; MainMenu has Home and Shop screens; tapping Shop swaps to the shop panel; Back returns to Home.
 
+- [x] **S01: In-Scene Screen Manager** `risk:low` `depends:[]`
+  > After this: `InSceneScreenManager<TScreenId>` in Core; MainMenu has Home and Shop panels with all home content inside HomePanel; 10 unit tests.
+
 - [x] **S02: Popup Stack Visual Layering** `risk:medium` `depends:[]`
-  > After this: `UnityViewContainer` assigns Canvas sort orders per stack depth; bottom popup is below blocker (sort 50), top popup is above blocker (sort 150); test confirms ordering; `PopupId.Shop` added; ShopPopup prefab created.
+  > After this: Popup base sort 200, blocker 100/250 dynamic, GraphicRaycaster on popup root canvas; `PopupId.Shop`, `ShopView`, `ShopPopup.prefab`.
 
 - [x] **S03: Coins, Continue & Shop Flow** `risk:low` `depends:[S02]`
-  > After this: `CoinsService` persists coins; LevelFailed has Continue (100 coins); can't afford → shop popup stacks; buy coins → shop closes → LevelFailed resumes with updated balance; shop also accessible from MainMenu screen.
+  > After this: `CoinsService`; LevelFailed Continue (100 coins) wired in prefab; shop stacks on LevelFailed when broke; shop accessible from MainMenu via direct SerializeField; balance shown in shop.
 
 - [x] **S04: Overlay HUD** `risk:low` `depends:[S03]`
-  > After this: Overlay HUD canvas shows coin balance; animates in/out via LitMotion; appears when LevelFailed is shown (or any context that explicitly shows it); updates balance when coins change; disappears on dismiss.
+  > After this: `UnityCurrencyOverlay` Canvas sort 120; LitMotion fade; coin balance; shows/hides with LevelFailed popup.
 
 ## Boundary Map
 
