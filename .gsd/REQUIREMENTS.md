@@ -777,19 +777,19 @@ Use it to track what is actively in scope, what has been validated by completed 
 | R081 | core-capability | validated | M008/S01 | M008/S03 | validated |
 | R082 | differentiator | validated | M008/S02 | M008/S03 | validated |
 | R083 | core-capability | validated | M008/S03 | M008/S02 | validated |
-| R084 | core-capability | active | M009/S01 | none | mapped |
-| R085 | core-capability | active | M009/S02 | M009/S03 | mapped |
-| R086 | primary-user-loop | active | M009/S03 | none | mapped |
-| R087 | primary-user-loop | active | M009/S03 | M009/S02 | mapped |
-| R088 | primary-user-loop | active | M009/S03 | M009/S01, M009/S02 | mapped |
-| R089 | primary-user-loop | active | M009/S04 | M009/S03 | mapped |
+| R084 | core-capability | validated | M009/S01 | none | validated |
+| R085 | core-capability | validated | M009/S02 | M009/S03 | validated |
+| R086 | primary-user-loop | validated | M009/S03 | none | validated |
+| R087 | primary-user-loop | validated | M009/S03 | M009/S02 | validated |
+| R088 | primary-user-loop | validated | M009/S03 | M009/S01, M009/S02 | validated |
+| R089 | primary-user-loop | validated | M009/S04 | M009/S03 | validated |
 
 ## Coverage Summary
 
 - Total requirements: 90
-- Active: 24
-- Validated: 47
+- Active: 18
+- Validated: 53
 - Deferred: 14
 - Out of scope: 4
 - Unmapped active requirements: 0
-- Note: R079–R083 validated by M008. R084–R089 active for M009. Some validated/deferred requirements (R018, R019, R041, R042, R044) have traceability table entries only — no full body section.
+- Note: R079–R083 validated by M008. R084–R089 validated by M009. Some validated/deferred requirements (R018, R019, R041, R042, R044) have traceability table entries only — no full body section.
