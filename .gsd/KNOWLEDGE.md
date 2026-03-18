@@ -116,3 +116,13 @@ After `git mv` reorganizations, empty source directories are left behind as untr
 3. Include both in the same commit as the move
 
 **Example:** Moving `Assets/Prefabs/UI/Popups/` contents to `Assets/Prefabs/Game/Popups/` left `Assets/Prefabs/UI/Popups/` empty. The `.meta` file persisted in the repo until explicitly removed.
+
+---
+
+### K009 — simple-jigsaw package: scripts outside Assets/SimpleJigsaw/ are not exported
+**Date:** 2026-03-18
+
+The `simple-jigsaw` package.json is at `Assets/SimpleJigsaw/package.json` in the source repo. Unity sees the package as rooted at `Assets/SimpleJigsaw/`. Scripts in `Assets/Scenes/` (like `PuzzleSceneDriver.cs`) and `Assets/Textures/` etc. are part of the source project, NOT the package — they are NOT visible when the package is referenced via the local path. To use them, copy them into `Assets/JigsawDemo/` or similar project-local location.
+
+**Also:** The package's `Runtime/Configs/PieceRenderConfig.asset` has a stale shader GUID (`50f401a8...`) from the original source project. The PuzzlePiece shader in our submodule has GUID `c67764c5...`. Always use the project-local `DemoPieceRenderConfig.asset` or create a fresh `PieceRenderConfig` asset in `Assets/` with the correct GUID.
+
