@@ -207,8 +207,7 @@ namespace SimpleGame.Game.InGame
 
                     if (choice == LevelFailedChoice.Retry || choice == LevelFailedChoice.WatchAd || choice == LevelFailedChoice.Quit)
                     {
-                        if (choice == LevelFailedChoice.Retry || choice == LevelFailedChoice.WatchAd)
-                            await _popupManager.DismissPopupAsync(ct);
+                        await _popupManager.DismissPopupAsync(ct);
                         return choice;
                     }
 
