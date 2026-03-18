@@ -1,0 +1,3 @@
+[submodule "Packages/simple-jigsaw"]
+	path = Packages/simple-jigsaw
+	url = https://github.com/Simple-Magic-Studios/simple-jigsaw.git
