@@ -49,7 +49,7 @@ This milestone is complete only when all are true:
 
 ## Slices
 
-- [ ] **S01: Pure Puzzle Domain Model** `risk:high` `depends:[]`
+- [x] **S01: Pure Puzzle Domain Model** `risk:high` `depends:[]`
   > After this: EditMode tests prove seed placement, neighbor validation, deck draw, and win detection — all in plain C# with zero Unity references; asmdef compiles with `noEngineReferences: true`
 
 - [ ] **S02: Jigsaw Adapter** `risk:medium` `depends:[S01]`
