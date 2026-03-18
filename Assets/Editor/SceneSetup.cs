@@ -180,21 +180,33 @@ public static class SceneSetup
         canvas.worldCamera = cam;
         canvas.planeDistance = 1f;
 
+        // ── HomePanel — all home content lives here; toggled by InSceneScreenManager ──
+        var homePanelGO = new GameObject("HomePanel", typeof(RectTransform));
+        homePanelGO.transform.SetParent(canvas.transform, false);
+        var homePanelRect = homePanelGO.GetComponent<RectTransform>();
+        homePanelRect.anchorMin = Vector2.zero;
+        homePanelRect.anchorMax = Vector2.one;
+        homePanelRect.sizeDelta = Vector2.zero;
+        homePanelGO.SetActive(true);
+
+        // All home-screen UI is parented to HomePanel so it hides when switching to Shop
+        Transform homeParent = homePanelGO.transform;
+
         // Environment name
-        var envNameGO = CreateText("EnvironmentNameText", "Garden", canvas.transform,
+        var envNameGO = CreateText("EnvironmentNameText", "Garden", homeParent,
             new Vector2(0.1f, 0.85f), new Vector2(0.9f, 0.95f), 32);
 
         // Balance
-        var balanceGO = CreateText("BalanceText", "0 Golden Pieces", canvas.transform,
+        var balanceGO = CreateText("BalanceText", "0 Golden Pieces", homeParent,
             new Vector2(0.1f, 0.78f), new Vector2(0.9f, 0.85f), 24);
 
         // Level display
-        var levelGO = CreateText("LevelText", "Level 1", canvas.transform,
+        var levelGO = CreateText("LevelText", "Level 1", homeParent,
             new Vector2(0.3f, 0.7f), new Vector2(0.7f, 0.78f), 28);
 
         // Objects container — VerticalLayoutGroup for dynamically created buttons
         var objectsContainerGO = new GameObject("ObjectsContainer", typeof(RectTransform));
-        objectsContainerGO.transform.SetParent(canvas.transform, false);
+        objectsContainerGO.transform.SetParent(homeParent, false);
         var objectsRect = objectsContainerGO.GetComponent<RectTransform>();
         objectsRect.anchorMin = new Vector2(0.05f, 0.25f);
         objectsRect.anchorMax = new Vector2(0.95f, 0.68f);
@@ -209,57 +221,34 @@ public static class SceneSetup
         vlg.childControlHeight = false;
         vlg.padding = new RectOffset(10, 10, 10, 10);
 
-        // ContentSizeFitter so the container grows with its children
         var fitter = objectsContainerGO.AddComponent<ContentSizeFitter>();
         fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
         // Play button
-        CreateButton("PlayButton", "Play", canvas.transform, out var playButtonGO);
+        CreateButton("PlayButton", "Play", homeParent, out var playButtonGO);
         SetRect(playButtonGO, new Vector2(0.3f, 0.1f), new Vector2(0.7f, 0.22f));
 
-        // Next Environment button (hidden by default — shown when env is complete)
-        CreateButton("NextEnvironmentButton", "Next Environment →", canvas.transform, out var nextEnvButtonGO);
+        // Next Environment button (hidden by default)
+        CreateButton("NextEnvironmentButton", "Next Environment →", homeParent, out var nextEnvButtonGO);
         SetRect(nextEnvButtonGO, new Vector2(0.3f, 0.01f), new Vector2(0.7f, 0.09f));
         nextEnvButtonGO.GetComponent<Image>().color = new Color(0.2f, 0.6f, 0.2f, 1f);
         nextEnvButtonGO.SetActive(false);
 
         // Settings button
-        CreateButton("SettingsButton", "Settings", canvas.transform, out var settingsButtonGO);
+        CreateButton("SettingsButton", "Settings", homeParent, out var settingsButtonGO);
         SetRect(settingsButtonGO, new Vector2(0.7f, 0.88f), new Vector2(0.95f, 0.98f));
 
         // Shop button
-        CreateButton("ShopButton", "Shop", canvas.transform, out var shopButtonGO);
+        CreateButton("ShopButton", "Shop", homeParent, out var shopButtonGO);
         SetRect(shopButtonGO, new Vector2(0.36f, 0.88f), new Vector2(0.68f, 0.98f));
         shopButtonGO.GetComponent<Image>().color = new Color(0.2f, 0.4f, 0.8f, 1f);
 
         // Reset Progress button
-        CreateButton("ResetProgressButton", "Reset Progress", canvas.transform, out var resetButtonGO);
+        CreateButton("ResetProgressButton", "Reset Progress", homeParent, out var resetButtonGO);
         SetRect(resetButtonGO, new Vector2(0.05f, 0.88f), new Vector2(0.33f, 0.98f));
         resetButtonGO.GetComponent<Image>().color = new Color(0.7f, 0.2f, 0.2f, 1f);
 
-        // Wire MainMenuView
-        var mainMenuView = canvas.gameObject.AddComponent<MainMenuView>();
-        WireSerializedField(mainMenuView, "_settingsButton", settingsButtonGO.GetComponent<Button>());
-        WireSerializedField(mainMenuView, "_playButton", playButtonGO.GetComponent<Button>());
-        WireSerializedField(mainMenuView, "_resetProgressButton", resetButtonGO.GetComponent<Button>());
-        WireSerializedField(mainMenuView, "_nextEnvironmentButton", nextEnvButtonGO.GetComponent<Button>());
-        WireSerializedField(mainMenuView, "_shopButton", shopButtonGO.GetComponent<Button>());
-        WireSerializedField(mainMenuView, "_environmentNameText", envNameGO.GetComponent<Text>());
-        WireSerializedField(mainMenuView, "_balanceText", balanceGO.GetComponent<Text>());
-        WireSerializedField(mainMenuView, "_levelDisplayText", levelGO.GetComponent<Text>());
-        WireSerializedField(mainMenuView, "_objectsContainer", objectsContainerGO.GetComponent<RectTransform>());
-
-        // HomePanel — wraps the entire existing content; starts active
-        var homePanelGO = new GameObject("HomePanel", typeof(RectTransform));
-        homePanelGO.transform.SetParent(canvas.transform, false);
-        var homePanelRect = homePanelGO.GetComponent<RectTransform>();
-        homePanelRect.anchorMin = Vector2.zero;
-        homePanelRect.anchorMax = Vector2.one;
-        homePanelRect.sizeDelta = Vector2.zero;
-        homePanelGO.SetActive(true);
-
-        // ShopPanel — shop screen managed by InSceneScreenManager
-        // ShopView is added here so IViewResolver.Get<IShopView>() can resolve it
+        // ── ShopPanel — all shop content lives here; starts inactive ──────────
         var shopPanelGO = new GameObject("ShopPanel", typeof(RectTransform));
         shopPanelGO.transform.SetParent(canvas.transform, false);
         var shopPanelRect = shopPanelGO.GetComponent<RectTransform>();
@@ -268,12 +257,59 @@ public static class SceneSetup
         shopPanelRect.sizeDelta = Vector2.zero;
         shopPanelGO.SetActive(false);
 
-        // ShopBack button inside ShopPanel
-        CreateButton("ShopBackButton", "← Back", canvas.transform, out var shopBackButtonGO);
-        shopBackButtonGO.transform.SetParent(shopPanelGO.transform, false);
+        Transform shopParent = shopPanelGO.transform;
+
+        // Shop title
+        CreateText("ShopTitleText", "Shop", shopParent,
+            new Vector2(0.2f, 0.88f), new Vector2(0.8f, 0.98f), 36);
+
+        // ShopBack button
+        CreateButton("ShopBackButton", "← Back", shopParent, out var shopBackButtonGO);
         SetRect(shopBackButtonGO, new Vector2(0.05f, 0.88f), new Vector2(0.35f, 0.98f));
         shopBackButtonGO.GetComponent<Image>().color = new Color(0.4f, 0.4f, 0.4f, 1f);
+
+        // Coin pack buttons
+        CreateButton("Pack1Button", "500 Coins — €1.99", shopParent, out var pack1GO);
+        SetRect(pack1GO, new Vector2(0.1f, 0.65f), new Vector2(0.9f, 0.78f));
+        pack1GO.GetComponent<Image>().color = new Color(0.2f, 0.5f, 0.9f, 1f);
+
+        CreateButton("Pack2Button", "1200 Coins — €3.99", shopParent, out var pack2GO);
+        SetRect(pack2GO, new Vector2(0.1f, 0.48f), new Vector2(0.9f, 0.61f));
+        pack2GO.GetComponent<Image>().color = new Color(0.2f, 0.5f, 0.9f, 1f);
+
+        CreateButton("Pack3Button", "2500 Coins — €7.99", shopParent, out var pack3GO);
+        SetRect(pack3GO, new Vector2(0.1f, 0.31f), new Vector2(0.9f, 0.44f));
+        pack3GO.GetComponent<Image>().color = new Color(0.2f, 0.5f, 0.9f, 1f);
+
+        // ShopView component on the ShopPanel (resolved by IViewResolver.Get<IShopView>())
+        var shopView = shopPanelGO.AddComponent<ShopView>();
+        // Wire _packButtons array
+        {
+            var so = new UnityEditor.SerializedObject(shopView);
+            var arr = so.FindProperty("_packButtons");
+            if (arr != null)
+            {
+                arr.arraySize = 3;
+                arr.GetArrayElementAtIndex(0).objectReferenceValue = pack1GO.GetComponent<Button>();
+                arr.GetArrayElementAtIndex(1).objectReferenceValue = pack2GO.GetComponent<Button>();
+                arr.GetArrayElementAtIndex(2).objectReferenceValue = pack3GO.GetComponent<Button>();
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
+        }
+        WireSerializedField(shopView, "_cancelButton", shopBackButtonGO.GetComponent<Button>());
+
+        // ── MainMenuView on Canvas root (wires home-screen buttons only) ──────
+        var mainMenuView = canvas.gameObject.AddComponent<MainMenuView>();
+        WireSerializedField(mainMenuView, "_settingsButton", settingsButtonGO.GetComponent<Button>());
+        WireSerializedField(mainMenuView, "_playButton", playButtonGO.GetComponent<Button>());
+        WireSerializedField(mainMenuView, "_resetProgressButton", resetButtonGO.GetComponent<Button>());
+        WireSerializedField(mainMenuView, "_nextEnvironmentButton", nextEnvButtonGO.GetComponent<Button>());
+        WireSerializedField(mainMenuView, "_shopButton", shopButtonGO.GetComponent<Button>());
         WireSerializedField(mainMenuView, "_shopBackButton", shopBackButtonGO.GetComponent<Button>());
+        WireSerializedField(mainMenuView, "_environmentNameText", envNameGO.GetComponent<Text>());
+        WireSerializedField(mainMenuView, "_balanceText", balanceGO.GetComponent<Text>());
+        WireSerializedField(mainMenuView, "_levelDisplayText", levelGO.GetComponent<Text>());
+        WireSerializedField(mainMenuView, "_objectsContainer", objectsContainerGO.GetComponent<RectTransform>());
 
         // MainMenuSceneController
         var sceneControllerGO = new GameObject("MainMenuSceneController");

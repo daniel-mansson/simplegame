@@ -22,6 +22,7 @@ namespace SimpleGame.Game.MainMenu
         private readonly bool _hasNextEnvironment;
 
         private UniTaskCompletionSource<MainMenuAction> _actionTcs;
+        private UniTaskCompletionSource<bool> _closeShopTcs;
         private string _lastRestoredObjectName;
 
         public MainMenuPresenter(IMainMenuView view,
@@ -68,6 +69,8 @@ namespace SimpleGame.Game.MainMenu
             View.OnShopBackClicked -= HandleShopBackClicked;
             _actionTcs?.TrySetCanceled();
             _actionTcs = null;
+            _closeShopTcs?.TrySetCanceled();
+            _closeShopTcs = null;
         }
 
         /// <summary>
@@ -78,6 +81,18 @@ namespace SimpleGame.Game.MainMenu
             _actionTcs?.TrySetCanceled();
             _actionTcs = new UniTaskCompletionSource<MainMenuAction>();
             return _actionTcs.Task;
+        }
+
+        /// <summary>
+        /// Returns a task that resolves when the Back/CloseShop button is pressed
+        /// while the shop screen is open. Used by HandleShopScreenAsync to race
+        /// against ShopPresenter.WaitForResult().
+        /// </summary>
+        public async UniTask WaitForCloseShopAsync()
+        {
+            _closeShopTcs?.TrySetCanceled();
+            _closeShopTcs = new UniTaskCompletionSource<bool>();
+            await _closeShopTcs.Task;
         }
 
         /// <summary>Refresh view with current state. Call after returning from popups.</summary>
@@ -113,7 +128,12 @@ namespace SimpleGame.Game.MainMenu
 
         private void HandleSettingsClicked() => _actionTcs?.TrySetResult(MainMenuAction.Settings);
         private void HandleShopClicked()     => _actionTcs?.TrySetResult(MainMenuAction.OpenShop);
-        private void HandleShopBackClicked() => _actionTcs?.TrySetResult(MainMenuAction.CloseShop);
+        private void HandleShopBackClicked()
+        {
+            // Resolves the dedicated close-shop awaiter (used while shop screen is open)
+            // so HandleShopScreenAsync exits cleanly.
+            _closeShopTcs?.TrySetResult(true);
+        }
 
         private void HandlePlayClicked()
         {

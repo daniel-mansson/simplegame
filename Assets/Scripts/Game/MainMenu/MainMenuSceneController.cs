@@ -180,11 +180,7 @@ namespace SimpleGame.Game.MainMenu
                         {
                             if (_useInSceneScreenManager)
                                 _screenManager.ShowScreen(MainMenuScreenId.Shop);
-                            await HandleShopScreenAsync(ct);
-                        }
-
-                        if (action == MainMenuAction.CloseShop)
-                        {
+                            await HandleShopScreenAsync(presenter, ct);
                             if (_useInSceneScreenManager)
                                 _screenManager.GoBack();
                         }
@@ -197,29 +193,37 @@ namespace SimpleGame.Game.MainMenu
             }
         }
 
-        private async UniTask HandleShopScreenAsync(CancellationToken ct)
+        private async UniTask HandleShopScreenAsync(MainMenuPresenter homePresenter, CancellationToken ct)
         {
-            var view = _viewResolver?.Get<IShopView>();
-            if (view == null)
+            // Get the ShopView (lives in the ShopPanel, resolved via IViewResolver or GetComponentInChildren)
+            var shopView = _viewResolver?.Get<IShopView>();
+            if (shopView == null)
             {
-                Debug.LogWarning("[MainMenuSceneController] ShopView not found — shop screen will show without presenter.");
+                Debug.LogWarning("[MainMenuSceneController] ShopView not found in ShopPanel.");
+                // Wait for Back button (CloseShop) so the screen at least closes
+                await homePresenter.WaitForCloseShopAsync();
                 return;
             }
 
-            var presenter = _uiFactory.CreateShopPresenter(view);
-            presenter.Initialize();
+            var shopPresenter = _uiFactory.CreateShopPresenter(shopView);
+            shopPresenter.Initialize();
             try
             {
-                // Wait for the player to cancel (purchase resolves then loops back automatically
-                // since there's no "done" vs "cancelled" distinction needed in the screen flow)
-                await presenter.WaitForResult();
-                // After result, go back to Home screen
-                if (_useInSceneScreenManager)
-                    _screenManager.GoBack();
+                // WaitForResult resolves on cancel OR purchase.
+                // The Back button in the ShopPanel fires OnShopBackClicked → MainMenuPresenter
+                // sets action to CloseShop, BUT we're not looping on WaitForAction here.
+                // So wire: also resolve when CloseShop fires from homePresenter.
+                //
+                // Strategy: race WaitForResult (cancel button on ShopView) vs
+                // WaitForCloseShop (back button via homePresenter).
+                await UniTask.WhenAny(
+                    shopPresenter.WaitForResult(),
+                    homePresenter.WaitForCloseShopAsync()
+                );
             }
             finally
             {
-                presenter.Dispose();
+                shopPresenter.Dispose();
             }
         }
 
