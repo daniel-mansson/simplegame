@@ -1,6 +1,8 @@
+using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using SimpleGame.Core.PopupManagement;
+using SimpleGame.Core.ScreenManagement;
 using SimpleGame.Game.Boot;
 using SimpleGame.Game.Meta;
 using SimpleGame.Game.Popup;
@@ -15,6 +17,9 @@ namespace SimpleGame.Game.MainMenu
     /// balance, and play button. Handles object restoration inline with
     /// ObjectRestored celebration popup. Returns ScreenId for navigation.
     ///
+    /// Uses <see cref="InSceneScreenManager{MainMenuScreenId}"/> to switch between
+    /// the Home panel and the Shop panel within the same scene (no scene load).
+    ///
     /// ResetProgress: shows confirm dialog, then resets all services and recreates presenter.
     /// NextEnvironment: advances to the next environment and recreates presenter.
     /// </summary>
@@ -22,11 +27,16 @@ namespace SimpleGame.Game.MainMenu
     {
         [SerializeField] private MainMenuView _mainMenuView;
         [SerializeField] private ConfirmDialogView _confirmDialogView;
+        [SerializeField] private GameObject _homePanel;
+        [SerializeField] private GameObject _shopPanel;
 
         private IViewResolver _viewResolver;
         private IMainMenuView _mainMenuViewOverride;
         private IConfirmDialogView _confirmDialogViewOverride;
         private IObjectRestoredView _objectRestoredViewOverride;
+
+        private IInSceneScreenManager<MainMenuScreenId> _screenManager;
+        private bool _useInSceneScreenManager;
 
         private IMainMenuView ActiveMainMenuView => _mainMenuViewOverride != null ? _mainMenuViewOverride : _mainMenuView;
 
@@ -74,6 +84,24 @@ namespace SimpleGame.Game.MainMenu
             _progression = progression;
             _goldenPieces = goldenPieces;
             _viewResolver = viewResolver;
+
+            // Build InSceneScreenManager if panels are wired
+            if (_homePanel != null && _shopPanel != null)
+            {
+                var panels = new Dictionary<MainMenuScreenId, GameObject>
+                {
+                    { MainMenuScreenId.Home, _homePanel },
+                    { MainMenuScreenId.Shop, _shopPanel },
+                };
+                _screenManager = new InSceneScreenManager<MainMenuScreenId>(panels);
+                _useInSceneScreenManager = true;
+                _screenManager.ShowScreen(MainMenuScreenId.Home);
+            }
+            else
+            {
+                _useInSceneScreenManager = false;
+                Debug.LogWarning("[MainMenuSceneController] _homePanel or _shopPanel not wired — in-scene screen switching disabled.");
+            }
         }
 
         /// <summary>
@@ -86,6 +114,15 @@ namespace SimpleGame.Game.MainMenu
             _mainMenuViewOverride = mainMenuView;
             _confirmDialogViewOverride = confirmDialogView;
             _objectRestoredViewOverride = objectRestoredView;
+        }
+
+        /// <summary>
+        /// For editor / test use: inject a pre-built screen manager.
+        /// </summary>
+        public void SetScreenManagerForTesting(IInSceneScreenManager<MainMenuScreenId> screenManager)
+        {
+            _screenManager = screenManager;
+            _useInSceneScreenManager = true;
         }
 
         public async UniTask<ScreenId> RunAsync(CancellationToken ct = default)
@@ -129,13 +166,24 @@ namespace SimpleGame.Game.MainMenu
                                 Debug.Log("[MainMenuSceneController] All progress reset.");
                                 break; // break inner loop → recreate presenter with fresh state
                             }
-                            // Not confirmed — continue the inner loop
                             presenter.RefreshView();
                         }
 
                         if (action == MainMenuAction.NextEnvironment)
                         {
                             break; // break inner loop → recreate presenter with next env
+                        }
+
+                        if (action == MainMenuAction.OpenShop)
+                        {
+                            if (_useInSceneScreenManager)
+                                _screenManager.ShowScreen(MainMenuScreenId.Shop);
+                        }
+
+                        if (action == MainMenuAction.CloseShop)
+                        {
+                            if (_useInSceneScreenManager)
+                                _screenManager.GoBack();
                         }
                     }
                 }

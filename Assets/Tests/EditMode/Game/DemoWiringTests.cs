@@ -25,6 +25,8 @@ namespace SimpleGame.Tests.Game
         public event Action OnPlayClicked;
         public event Action OnResetProgressClicked;
         public event Action OnNextEnvironmentClicked;
+        public event Action OnShopClicked;
+        public event Action OnShopBackClicked;
         public event Action<int> OnObjectTapped;
 
         public string LastEnvironmentNameText { get; private set; }
@@ -50,6 +52,8 @@ namespace SimpleGame.Tests.Game
         public void SimulateObjectTapped(int index) => OnObjectTapped?.Invoke(index);
         public void SimulateResetProgressClicked() => OnResetProgressClicked?.Invoke();
         public void SimulateNextEnvironmentClicked() => OnNextEnvironmentClicked?.Invoke();
+        public void SimulateShopClicked() => OnShopClicked?.Invoke();
+        public void SimulateShopBackClicked() => OnShopBackClicked?.Invoke();
     }
 
     // ---------------------------------------------------------------------------

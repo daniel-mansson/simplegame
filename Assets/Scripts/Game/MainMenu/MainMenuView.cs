@@ -16,6 +16,8 @@ namespace SimpleGame.Game.MainMenu
         [SerializeField] private Button _playButton;
         [SerializeField] private Button _resetProgressButton;
         [SerializeField] private Button _nextEnvironmentButton;
+        [SerializeField] private Button _shopButton;
+        [SerializeField] private Button _shopBackButton;
         [SerializeField] private Text _environmentNameText;
         [SerializeField] private Text _balanceText;
         [SerializeField] private Text _levelDisplayText;
@@ -25,6 +27,8 @@ namespace SimpleGame.Game.MainMenu
         public event Action OnPlayClicked;
         public event Action OnResetProgressClicked;
         public event Action OnNextEnvironmentClicked;
+        public event Action OnShopClicked;
+        public event Action OnShopBackClicked;
         public event Action<int> OnObjectTapped;
 
         private readonly List<GameObject> _objectButtons = new List<GameObject>();
@@ -36,6 +40,10 @@ namespace SimpleGame.Game.MainMenu
             _resetProgressButton.onClick.AddListener(() => OnResetProgressClicked?.Invoke());
             if (_nextEnvironmentButton != null)
                 _nextEnvironmentButton.onClick.AddListener(() => OnNextEnvironmentClicked?.Invoke());
+            if (_shopButton != null)
+                _shopButton.onClick.AddListener(() => OnShopClicked?.Invoke());
+            if (_shopBackButton != null)
+                _shopBackButton.onClick.AddListener(() => OnShopBackClicked?.Invoke());
         }
 
         public void UpdateEnvironmentName(string text) => _environmentNameText.text = text;

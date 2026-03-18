@@ -9,6 +9,8 @@ namespace SimpleGame.Game.MainMenu
         event Action OnPlayClicked;
         event Action OnResetProgressClicked;
         event Action OnNextEnvironmentClicked;
+        event Action OnShopClicked;
+        event Action OnShopBackClicked;
 
         /// <summary>
         /// Fired when an object is tapped. The int is the object index

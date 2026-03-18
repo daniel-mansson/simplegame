@@ -199,9 +199,14 @@ public static class SceneSetup
         CreateButton("SettingsButton", "Settings", canvas.transform, out var settingsButtonGO);
         SetRect(settingsButtonGO, new Vector2(0.7f, 0.88f), new Vector2(0.95f, 0.98f));
 
+        // Shop button
+        CreateButton("ShopButton", "Shop", canvas.transform, out var shopButtonGO);
+        SetRect(shopButtonGO, new Vector2(0.36f, 0.88f), new Vector2(0.68f, 0.98f));
+        shopButtonGO.GetComponent<Image>().color = new Color(0.2f, 0.4f, 0.8f, 1f);
+
         // Reset Progress button
         CreateButton("ResetProgressButton", "Reset Progress", canvas.transform, out var resetButtonGO);
-        SetRect(resetButtonGO, new Vector2(0.05f, 0.88f), new Vector2(0.35f, 0.98f));
+        SetRect(resetButtonGO, new Vector2(0.05f, 0.88f), new Vector2(0.33f, 0.98f));
         resetButtonGO.GetComponent<Image>().color = new Color(0.7f, 0.2f, 0.2f, 1f);
 
         // Wire MainMenuView
@@ -210,15 +215,43 @@ public static class SceneSetup
         WireSerializedField(mainMenuView, "_playButton", playButtonGO.GetComponent<Button>());
         WireSerializedField(mainMenuView, "_resetProgressButton", resetButtonGO.GetComponent<Button>());
         WireSerializedField(mainMenuView, "_nextEnvironmentButton", nextEnvButtonGO.GetComponent<Button>());
+        WireSerializedField(mainMenuView, "_shopButton", shopButtonGO.GetComponent<Button>());
         WireSerializedField(mainMenuView, "_environmentNameText", envNameGO.GetComponent<Text>());
         WireSerializedField(mainMenuView, "_balanceText", balanceGO.GetComponent<Text>());
         WireSerializedField(mainMenuView, "_levelDisplayText", levelGO.GetComponent<Text>());
         WireSerializedField(mainMenuView, "_objectsContainer", objectsContainerGO.GetComponent<RectTransform>());
 
+        // HomePanel — wraps the entire existing content; starts active
+        var homePanelGO = new GameObject("HomePanel", typeof(RectTransform));
+        homePanelGO.transform.SetParent(canvas.transform, false);
+        var homePanelRect = homePanelGO.GetComponent<RectTransform>();
+        homePanelRect.anchorMin = Vector2.zero;
+        homePanelRect.anchorMax = Vector2.one;
+        homePanelRect.sizeDelta = Vector2.zero;
+        homePanelGO.SetActive(true);
+
+        // ShopPanel — placeholder for S03 ShopView; starts inactive
+        var shopPanelGO = new GameObject("ShopPanel", typeof(RectTransform));
+        shopPanelGO.transform.SetParent(canvas.transform, false);
+        var shopPanelRect = shopPanelGO.GetComponent<RectTransform>();
+        shopPanelRect.anchorMin = Vector2.zero;
+        shopPanelRect.anchorMax = Vector2.one;
+        shopPanelRect.sizeDelta = Vector2.zero;
+        shopPanelGO.SetActive(false);
+
+        // ShopBack button inside ShopPanel
+        CreateButton("ShopBackButton", "← Back", canvas.transform, out var shopBackButtonGO);
+        shopBackButtonGO.transform.SetParent(shopPanelGO.transform, false);
+        SetRect(shopBackButtonGO, new Vector2(0.05f, 0.88f), new Vector2(0.35f, 0.98f));
+        shopBackButtonGO.GetComponent<Image>().color = new Color(0.4f, 0.4f, 0.4f, 1f);
+        WireSerializedField(mainMenuView, "_shopBackButton", shopBackButtonGO.GetComponent<Button>());
+
         // MainMenuSceneController
         var sceneControllerGO = new GameObject("MainMenuSceneController");
         var mainMenuController = sceneControllerGO.AddComponent<MainMenuSceneController>();
         WireSerializedField(mainMenuController, "_mainMenuView", mainMenuView);
+        WireSerializedField(mainMenuController, "_homePanel", homePanelGO);
+        WireSerializedField(mainMenuController, "_shopPanel", shopPanelGO);
 
         bool saved = EditorSceneManager.SaveScene(scene, MainMenuPath);
         Debug.Log(saved ? "[SceneSetup] MainMenu scene saved." : "[SceneSetup] ERROR saving MainMenu scene.");

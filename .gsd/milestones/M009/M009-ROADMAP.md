@@ -49,7 +49,7 @@ This milestone is complete only when all are true:
 
 ## Slices
 
-- [ ] **S01: In-Scene Screen Manager** `risk:medium` `depends:[]`
+- [x] **S01: In-Scene Screen Manager** `risk:medium` `depends:[]`
   > After this: `InSceneScreenManager<TScreenId>` in Core; MainMenu has Home and Shop screens; tapping Shop swaps to the shop panel; Back returns to Home.
 
 - [ ] **S02: Popup Stack Visual Layering** `risk:medium` `depends:[]`

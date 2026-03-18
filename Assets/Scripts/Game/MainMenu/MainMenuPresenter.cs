@@ -51,6 +51,8 @@ namespace SimpleGame.Game.MainMenu
             View.OnObjectTapped += HandleObjectTapped;
             View.OnResetProgressClicked += HandleResetProgressClicked;
             View.OnNextEnvironmentClicked += HandleNextEnvironmentClicked;
+            View.OnShopClicked += HandleShopClicked;
+            View.OnShopBackClicked += HandleShopBackClicked;
 
             RefreshView();
         }
@@ -62,6 +64,8 @@ namespace SimpleGame.Game.MainMenu
             View.OnObjectTapped -= HandleObjectTapped;
             View.OnResetProgressClicked -= HandleResetProgressClicked;
             View.OnNextEnvironmentClicked -= HandleNextEnvironmentClicked;
+            View.OnShopClicked -= HandleShopClicked;
+            View.OnShopBackClicked -= HandleShopBackClicked;
             _actionTcs?.TrySetCanceled();
             _actionTcs = null;
         }
@@ -108,6 +112,8 @@ namespace SimpleGame.Game.MainMenu
         }
 
         private void HandleSettingsClicked() => _actionTcs?.TrySetResult(MainMenuAction.Settings);
+        private void HandleShopClicked()     => _actionTcs?.TrySetResult(MainMenuAction.OpenShop);
+        private void HandleShopBackClicked() => _actionTcs?.TrySetResult(MainMenuAction.CloseShop);
 
         private void HandlePlayClicked()
         {

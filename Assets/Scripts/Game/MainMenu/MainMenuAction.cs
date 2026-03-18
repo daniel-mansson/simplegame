@@ -9,6 +9,8 @@ namespace SimpleGame.Game.MainMenu
         Play,
         ObjectRestored,
         ResetProgress,
-        NextEnvironment
+        NextEnvironment,
+        OpenShop,
+        CloseShop
     }
 }
