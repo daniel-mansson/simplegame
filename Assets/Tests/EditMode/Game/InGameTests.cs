@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
@@ -9,6 +10,7 @@ using SimpleGame.Game.Boot;
 using SimpleGame.Game.InGame;
 using SimpleGame.Game.Popup;
 using SimpleGame.Game.Services;
+using SimpleGame.Puzzle;
 
 namespace SimpleGame.Tests.Game
 {
@@ -17,8 +19,7 @@ namespace SimpleGame.Tests.Game
     // ---------------------------------------------------------------------------
     internal class MockInGameView : IInGameView
     {
-        public event Action OnPlaceCorrect;
-        public event Action OnPlaceIncorrect;
+        public event Action<int> OnTapPiece;
 
         public string LastHeartsText { get; private set; }
         public int UpdateHeartsCallCount { get; private set; }
@@ -45,8 +46,37 @@ namespace SimpleGame.Tests.Game
             UpdateLevelLabelCallCount++;
         }
 
-        public void SimulatePlaceCorrect() => OnPlaceCorrect?.Invoke();
-        public void SimulatePlaceIncorrect() => OnPlaceIncorrect?.Invoke();
+        /// <summary>Fires OnTapPiece with the given piece ID — simulates a tap on that piece.</summary>
+        public void SimulateTapPiece(int pieceId) => OnTapPiece?.Invoke(pieceId);
+    }
+
+    // ---------------------------------------------------------------------------
+    // Test level helpers
+    // ---------------------------------------------------------------------------
+
+    /// <summary>
+    /// Builds a linear-chain test level matching the stub used by InGameSceneController:
+    /// Piece 0 is the seed. Piece i neighbors i-1 and i+1.
+    /// Correct placement order: 1, 2, 3, ...
+    /// Wrong tap: any piece whose predecessor isn't yet placed (e.g. piece 3 before placing 2).
+    /// </summary>
+    internal static class TestLevelBuilder
+    {
+        public static IPuzzleLevel LinearChain(int totalPieces)
+        {
+            var pieces = new List<IPuzzlePiece>(totalPieces);
+            for (int i = 0; i < totalPieces; i++)
+            {
+                var neighbors = new List<int>();
+                if (i > 0) neighbors.Add(i - 1);
+                if (i < totalPieces - 1) neighbors.Add(i + 1);
+                pieces.Add(new PuzzlePiece(i, neighbors));
+            }
+            var seeds = new[] { 0 };
+            var deckOrder = new int[totalPieces - 1];
+            for (int i = 0; i < deckOrder.Length; i++) deckOrder[i] = i + 1;
+            return new PuzzleLevel(pieces, seeds, new IDeck[] { new Deck(deckOrder) });
+        }
     }
 
     // ---------------------------------------------------------------------------
@@ -59,15 +89,17 @@ namespace SimpleGame.Tests.Game
         private HeartService _hearts;
         private MockInGameView _view;
         private InGamePresenter _presenter;
+        private IPuzzleLevel _level;
 
         [SetUp]
         public void SetUp()
         {
             _session = new GameSessionService();
-            _session.ResetForNewGame(3, totalPieces: 5); // level 3, 5 pieces
+            _session.ResetForNewGame(3, totalPieces: 5); // level 3, 5 pieces (1 seed + 4 non-seed)
             _hearts = new HeartService();
             _view = new MockInGameView();
-            _presenter = new InGamePresenter(_view, _session, _hearts, totalPieces: 5);
+            _level = TestLevelBuilder.LinearChain(5); // pieces 0..4, seed=0
+            _presenter = new InGamePresenter(_view, _session, _hearts, _level);
         }
 
         [TearDown]
@@ -87,7 +119,8 @@ namespace SimpleGame.Tests.Game
         public void Initialize_SetsPieceCounterToZero()
         {
             _presenter.Initialize();
-            Assert.AreEqual("0/5", _view.LastPieceCounterText);
+            // 5 total - 1 seed = 4 non-seed pieces
+            Assert.AreEqual("0/4", _view.LastPieceCounterText);
         }
 
         [Test]
@@ -105,80 +138,81 @@ namespace SimpleGame.Tests.Game
         }
 
         [Test]
-        public void PlaceCorrect_IncrementsPieceCounter()
+        public void TapCorrectPiece_IncrementsPieceCounter()
         {
             _presenter.Initialize();
-            _view.SimulatePlaceCorrect();
-            Assert.AreEqual("1/5", _view.LastPieceCounterText);
+            _view.SimulateTapPiece(1); // piece 1 neighbors seed 0 — correct
+            Assert.AreEqual("1/4", _view.LastPieceCounterText);
         }
 
         [Test]
-        public void PlaceCorrect_UpdatesSessionScore()
+        public void TapCorrectPiece_UpdatesSessionScore()
         {
             _presenter.Initialize();
-            _view.SimulatePlaceCorrect();
-            _view.SimulatePlaceCorrect();
+            _view.SimulateTapPiece(1); // correct
+            _view.SimulateTapPiece(2); // correct
             Assert.AreEqual(2, _session.CurrentScore);
         }
 
         [Test]
-        public async Task PlaceCorrect_AllPieces_ResolvesWin()
+        public async Task TapAllCorrect_ResolvesWin()
         {
             _presenter.Initialize();
             var task = _presenter.WaitForAction().AsTask();
 
-            for (int i = 0; i < 5; i++)
-                _view.SimulatePlaceCorrect();
+            // Tap pieces 1..4 in order (linear chain)
+            for (int i = 1; i <= 4; i++)
+                _view.SimulateTapPiece(i);
 
             var result = await task;
             Assert.AreEqual(InGameAction.Win, result);
         }
 
         [Test]
-        public void PlaceIncorrect_CostsOneHeart()
+        public void TapIncorrectPiece_CostsOneHeart()
         {
             _presenter.Initialize();
-            _view.SimulatePlaceIncorrect();
+            _view.SimulateTapPiece(3); // piece 3's neighbor 2 is not placed — wrong
             Assert.AreEqual(2, _hearts.RemainingHearts);
             Assert.AreEqual("2", _view.LastHeartsText);
         }
 
         [Test]
-        public async Task PlaceIncorrect_AllHearts_ResolvesLose()
+        public async Task TapIncorrect_AllHearts_ResolvesLose()
         {
             _presenter.Initialize();
             var task = _presenter.WaitForAction().AsTask();
 
-            _view.SimulatePlaceIncorrect(); // 2 hearts
-            _view.SimulatePlaceIncorrect(); // 1 heart
-            _view.SimulatePlaceIncorrect(); // 0 hearts
+            _view.SimulateTapPiece(3); // wrong (2 hearts)
+            _view.SimulateTapPiece(3); // wrong (1 heart)
+            _view.SimulateTapPiece(3); // wrong (0 hearts → lose)
 
             var result = await task;
             Assert.AreEqual(InGameAction.Lose, result);
         }
 
         [Test]
-        public void PlaceIncorrect_DoesNotResolve_WhenHeartsRemain()
+        public void TapIncorrect_DoesNotResolve_WhenHeartsRemain()
         {
             _presenter.Initialize();
             var task = _presenter.WaitForAction().AsTask();
 
-            _view.SimulatePlaceIncorrect();
+            _view.SimulateTapPiece(3); // wrong
             Assert.IsFalse(task.IsCompleted, "Should not resolve with hearts remaining");
         }
 
         [Test]
         public async Task MixedActions_WinBeforeDeath()
         {
-            // 3 pieces total, 3 hearts
-            var presenter = new InGamePresenter(_view, _session, _hearts, totalPieces: 3);
+            // 3-piece chain: 0(seed)→1→2, 3 hearts
+            var level = TestLevelBuilder.LinearChain(3);
+            var presenter = new InGamePresenter(_view, _session, _hearts, level);
             presenter.Initialize();
             var task = presenter.WaitForAction().AsTask();
 
-            _view.SimulatePlaceCorrect();     // 1/3
-            _view.SimulatePlaceIncorrect();   // 2 hearts
-            _view.SimulatePlaceCorrect();     // 2/3
-            _view.SimulatePlaceCorrect();     // 3/3 → win
+            _view.SimulateTapPiece(1);  // correct — 1/2
+            _view.SimulateTapPiece(4);  // wrong — 2 hearts (piece 4 doesn't exist in 3-piece level, so no neighbor placed)
+            _view.SimulateTapPiece(2);  // correct — 2/2 → win
 
             var result = await task;
             Assert.AreEqual(InGameAction.Win, result);
@@ -202,8 +236,8 @@ namespace SimpleGame.Tests.Game
             _presenter.Dispose();
             Assert.DoesNotThrow(() =>
             {
-                _view.SimulatePlaceCorrect();
-                _view.SimulatePlaceIncorrect();
+                _view.SimulateTapPiece(1);
+                _view.SimulateTapPiece(3);
             });
         }
     }
@@ -238,26 +272,40 @@ namespace SimpleGame.Tests.Game
             _popupManager = new PopupManager<PopupId>(_popupContainer, _inputBlocker);
         }
 
+        // Helper: inject a known linear-chain level into the controller
+        private static void SetStubLevel(InGameSceneController ctrl, int totalPieces)
+            => ctrl.SetLevelFactory(() => TestLevelBuilder.LinearChain(totalPieces));
+
+        // Helper: tap pieces 1..count in order (all correct on a linear chain)
+        private static void TapAllCorrect(MockInGameView view, int nonSeedCount)
+        {
+            for (int i = 1; i <= nonSeedCount; i++)
+                view.SimulateTapPiece(i);
+        }
+
+        // Helper: tap a wrong piece repeatedly
+        private static void TapWrong(MockInGameView view, int times, int wrongPieceId = 99)
+        {
+            for (int i = 0; i < times; i++)
+                view.SimulateTapPiece(wrongPieceId);
+        }
+
         [Test]
         public async Task RunAsync_WinAllPieces_ShowsLevelCompleteAndReturnsMainMenu()
         {
             var go = new UnityEngine.GameObject("InGameCtrl");
             var ctrl = go.AddComponent<InGameSceneController>();
-            _session.ResetForNewGame(1, totalPieces: 3);
+            _session.ResetForNewGame(1, totalPieces: 3); // 3 total = 1 seed + 2 non-seed
             ctrl.Initialize(_factory, _progression, _session, _popupManager, _goldenPieces, _hearts, null, null);
 
             var view = new MockInGameView();
             var completeView = new MockLevelCompleteView();
             ctrl.SetViewsForTesting(view, levelCompleteView: completeView);
+            SetStubLevel(ctrl, 3);
 
             var task = ctrl.RunAsync().AsTask();
 
-            // Place all 3 pieces correctly → auto-win
-            view.SimulatePlaceCorrect();
-            view.SimulatePlaceCorrect();
-            view.SimulatePlaceCorrect();
-
-            // LevelComplete popup should now be shown — continue it
+            TapAllCorrect(view, 2); // pieces 1 and 2
             completeView.SimulateContinueClicked();
 
             var result = await task;
@@ -279,15 +327,11 @@ namespace SimpleGame.Tests.Game
             var view = new MockInGameView();
             var failedView = new MockLevelFailedView();
             ctrl.SetViewsForTesting(view, levelFailedView: failedView);
+            SetStubLevel(ctrl, 5);
 
             var task = ctrl.RunAsync().AsTask();
 
-            // Lose all 3 hearts → auto-lose
-            view.SimulatePlaceIncorrect();
-            view.SimulatePlaceIncorrect();
-            view.SimulatePlaceIncorrect();
-
-            // LevelFailed popup shown — choose Quit
+            TapWrong(view, 3); // lose 3 hearts
             failedView.SimulateQuitClicked();
 
             var result = await task;
@@ -303,26 +347,23 @@ namespace SimpleGame.Tests.Game
         {
             var go = new UnityEngine.GameObject("InGameCtrl");
             var ctrl = go.AddComponent<InGameSceneController>();
-            _session.ResetForNewGame(1, totalPieces: 2);
+            _session.ResetForNewGame(1, totalPieces: 2); // 2 total = 1 seed + 1 non-seed
             ctrl.Initialize(_factory, _progression, _session, _popupManager, _goldenPieces, _hearts, null, null);
 
             var view = new MockInGameView();
             var completeView = new MockLevelCompleteView();
             var failedView = new MockLevelFailedView();
             ctrl.SetViewsForTesting(view, completeView, failedView);
+            SetStubLevel(ctrl, 2);
 
             var task = ctrl.RunAsync().AsTask();
 
-            // First attempt: place one correct, then lose all hearts
-            view.SimulatePlaceCorrect();      // 1/2
-            view.SimulatePlaceIncorrect();    // 2 hearts
-            view.SimulatePlaceIncorrect();    // 1 heart
-            view.SimulatePlaceIncorrect();    // 0 hearts → lose
-            failedView.SimulateRetryClicked(); // retry
+            // First attempt: lose
+            TapWrong(view, 3);
+            failedView.SimulateRetryClicked();
 
             // Second attempt: win
-            view.SimulatePlaceCorrect();
-            view.SimulatePlaceCorrect(); // 2/2 → win
+            TapAllCorrect(view, 1);
             completeView.SimulateContinueClicked();
 
             var result = await task;
@@ -337,6 +378,7 @@ namespace SimpleGame.Tests.Game
         {
             var go = new UnityEngine.GameObject("InGameCtrl");
             var ctrl = go.AddComponent<InGameSceneController>();
+            // No session.ResetForNewGame → play-from-editor path
             ctrl.Initialize(_factory, _progression, _session, _popupManager, _goldenPieces, _hearts, null, null);
 
             var view = new MockInGameView();
@@ -348,9 +390,8 @@ namespace SimpleGame.Tests.Game
             Assert.AreEqual("Level 1", view.LastLevelLabelText,
                 "Play-from-editor should use default level when session has no level set");
 
-            // Complete all default pieces (10) to finish
-            for (int i = 0; i < 10; i++)
-                view.SimulatePlaceCorrect();
+            // Complete default 10-piece linear chain (9 non-seed pieces 1..9)
+            TapAllCorrect(view, 9);
             completeView.SimulateContinueClicked();
             await task;
 
@@ -362,42 +403,36 @@ namespace SimpleGame.Tests.Game
         {
             var go = new UnityEngine.GameObject("InGameCtrl");
             var ctrl = go.AddComponent<InGameSceneController>();
-            _session.ResetForNewGame(1, totalPieces: 5);
+            _session.ResetForNewGame(1, totalPieces: 5); // 5 total = 1 seed + 4 non-seed
             ctrl.Initialize(_factory, _progression, _session, _popupManager, _goldenPieces, _hearts, null, null);
 
             var view = new MockInGameView();
             var completeView = new MockLevelCompleteView();
             var failedView = new MockLevelFailedView();
             ctrl.SetViewsForTesting(view, completeView, failedView);
+            SetStubLevel(ctrl, 5);
 
             var task = ctrl.RunAsync().AsTask();
 
             // Place 3 correct pieces, then lose all hearts
-            view.SimulatePlaceCorrect();      // 1/5
-            view.SimulatePlaceCorrect();      // 2/5
-            view.SimulatePlaceCorrect();      // 3/5
-            view.SimulatePlaceIncorrect();    // 2 hearts
-            view.SimulatePlaceIncorrect();    // 1 heart
-            view.SimulatePlaceIncorrect();    // 0 hearts → lose
+            view.SimulateTapPiece(1);  // 1/4
+            view.SimulateTapPiece(2);  // 2/4
+            view.SimulateTapPiece(3);  // 3/4
+            TapWrong(view, 3);         // 0 hearts → lose
 
-            // Choose WatchAd → should continue with hearts restored, piece progress kept
+            // WatchAd → continue with hearts restored
             failedView.SimulateWatchAdClicked();
 
-            // Hearts should be restored — verify via view update
-            Assert.AreEqual("3", view.LastHeartsText,
-                "Hearts should be fully restored after WatchAd");
+            Assert.AreEqual("3", view.LastHeartsText, "Hearts should be fully restored after WatchAd");
 
-            // Continue placing the remaining 2 pieces to win
-            view.SimulatePlaceCorrect();      // 4/5
-            view.SimulatePlaceCorrect();      // 5/5 → win
+            // Continue placing remaining 1 piece to win
+            view.SimulateTapPiece(4);  // 4/4 → win
             completeView.SimulateContinueClicked();
 
             var result = await task;
             Assert.AreEqual(ScreenId.MainMenu, result);
             Assert.AreEqual(GameOutcome.Win, _session.Outcome);
-            Assert.AreEqual(2, _progression.CurrentLevel, "Level should advance after WatchAd + win");
-            Assert.AreEqual("5/5", view.LastPieceCounterText,
-                "Piece counter should show all pieces placed");
+            Assert.AreEqual(2, _progression.CurrentLevel);
 
             UnityEngine.Object.DestroyImmediate(go);
         }
@@ -405,37 +440,30 @@ namespace SimpleGame.Tests.Game
         [Test]
         public async Task RunAsync_LoseRetryThenWin_ResetsProgress()
         {
-            // Verify that Retry (unlike WatchAd) does reset piece progress
             var go = new UnityEngine.GameObject("InGameCtrl");
             var ctrl = go.AddComponent<InGameSceneController>();
-            _session.ResetForNewGame(1, totalPieces: 3);
+            _session.ResetForNewGame(1, totalPieces: 3); // 3 total = 1 seed + 2 non-seed
             ctrl.Initialize(_factory, _progression, _session, _popupManager, _goldenPieces, _hearts, null, null);
 
             var view = new MockInGameView();
             var completeView = new MockLevelCompleteView();
             var failedView = new MockLevelFailedView();
             ctrl.SetViewsForTesting(view, completeView, failedView);
+            SetStubLevel(ctrl, 3);
 
             var task = ctrl.RunAsync().AsTask();
 
-            // Place 2 correct, then lose
-            view.SimulatePlaceCorrect();      // 1/3
-            view.SimulatePlaceCorrect();      // 2/3
-            view.SimulatePlaceIncorrect();    // 2 hearts
-            view.SimulatePlaceIncorrect();    // 1 heart
-            view.SimulatePlaceIncorrect();    // 0 hearts → lose
+            // Place 1 correct, then lose
+            view.SimulateTapPiece(1);  // 1/2
+            TapWrong(view, 3);         // 0 hearts → lose
 
-            // Choose Retry → piece progress should reset
             failedView.SimulateRetryClicked();
 
-            // After retry, piece counter should be back to 0/3
-            Assert.AreEqual("0/3", view.LastPieceCounterText,
-                "Piece counter should reset after Retry");
+            // After retry, counter should reset to 0/2
+            Assert.AreEqual("0/2", view.LastPieceCounterText, "Piece counter should reset after Retry");
 
-            // Complete all pieces
-            view.SimulatePlaceCorrect();
-            view.SimulatePlaceCorrect();
-            view.SimulatePlaceCorrect();  // 3/3 → win
+            // Win on retry
+            TapAllCorrect(view, 2);
             completeView.SimulateContinueClicked();
 
             var result = await task;

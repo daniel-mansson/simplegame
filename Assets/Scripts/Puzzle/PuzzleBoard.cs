@@ -25,6 +25,9 @@ namespace SimpleGame.Puzzle
         /// <inheritdoc/>
         public IReadOnlyCollection<int> PlacedIds => _placedIds;
 
+        /// <summary>Returns true if the given piece is already on the board.</summary>
+        public bool IsPlaced(int pieceId) => _placedIds.Contains(pieceId);
+
         /// <inheritdoc/>
         /// <remarks>
         /// A piece is placeable when at least one of its declared neighbors is already on the board.

@@ -4,6 +4,7 @@ using SimpleGame.Game.Meta;
 using SimpleGame.Game.Popup;
 using SimpleGame.Game.Services;
 using SimpleGame.Game.Settings;
+using SimpleGame.Puzzle;
 
 namespace SimpleGame.Game.Boot
 {
@@ -49,9 +50,9 @@ namespace SimpleGame.Game.Boot
             return new ConfirmDialogPresenter(view);
         }
 
-        public InGamePresenter CreateInGamePresenter(IInGameView view, int totalPieces)
+        public InGamePresenter CreateInGamePresenter(IInGameView view, IPuzzleLevel level)
         {
-            return new InGamePresenter(view, _session, _hearts, totalPieces);
+            return new InGamePresenter(view, _session, _hearts, level);
         }
 
         public LevelCompletePresenter CreateLevelCompletePresenter(ILevelCompleteView view)

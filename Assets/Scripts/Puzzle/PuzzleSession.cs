@@ -49,7 +49,7 @@ namespace SimpleGame.Puzzle
         {
             PlacementResult result;
 
-            if (_board.PlacedIds.Contains(pieceId))
+            if (_board.IsPlaced(pieceId))
             {
                 result = PlacementResult.AlreadyPlaced;
             }

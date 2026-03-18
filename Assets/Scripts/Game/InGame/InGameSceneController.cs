@@ -5,6 +5,7 @@ using SimpleGame.Core.PopupManagement;
 using SimpleGame.Game.Boot;
 using SimpleGame.Game.Popup;
 using SimpleGame.Game.Services;
+using SimpleGame.Puzzle;
 using UnityEngine;
 namespace SimpleGame.Game.InGame
 {
@@ -25,6 +26,15 @@ namespace SimpleGame.Game.InGame
         [SerializeField] private int _defaultLevelId = 1;
         [SerializeField] private int _defaultTotalPieces = 10;
         [SerializeField] private int _goldenPiecesPerWin = 5;
+
+        /// <summary>The active puzzle level for the current run. Set in RunAsync.</summary>
+        private IPuzzleLevel _currentLevel;
+
+        /// <summary>
+        /// Optional level factory — overrides stub generation.
+        /// Called at the start of each retry to produce a fresh level with reset deck state.
+        /// </summary>
+        private System.Func<IPuzzleLevel> _levelFactory;
 
         private IViewResolver _viewResolver;
         private IInGameView _viewOverride;
@@ -104,9 +114,15 @@ namespace SimpleGame.Game.InGame
                 _session.ResetForNewGame(_defaultLevelId, _defaultTotalPieces);
             }
 
+            // Determine the level factory: use injected factory, or fall back to stub.
+            // S04 replaces the stub factory with JigsawLevelFactory.Build.
+            var factory = _levelFactory ?? (() => BuildStubLevel(_session.TotalPieces));
+
             while (true)
             {
-                var presenter = _uiFactory.CreateInGamePresenter(ActiveView, _session.TotalPieces);
+                // Rebuild level each retry — ensures deck state is fresh
+                _currentLevel = factory();
+                var presenter = _uiFactory.CreateInGamePresenter(ActiveView, _currentLevel);
                 presenter.Initialize();
                 try
                 {
@@ -272,6 +288,38 @@ namespace SimpleGame.Game.InGame
             // The S06 integration will wire the real presenter.
             Debug.Log("[InGameSceneController] Rewarded ad stub — granting retry with extra hearts.");
             await _popupManager.DismissPopupAsync(ct);
+        }
+
+        /// <summary>
+        /// Injects a level factory function, bypassing stub generation.
+        /// Used by S04 (and tests) to supply real JigsawLevelFactory-built levels.
+        /// The factory is called at the start of each retry to ensure fresh deck state.
+        /// </summary>
+        public void SetLevelFactory(System.Func<IPuzzleLevel> factory) => _levelFactory = factory;
+
+        /// <summary>
+        /// Builds a stub linear-chain level: piece 0 is the seed, each subsequent
+        /// piece neighbors the previous one. Replaced by JigsawLevelFactory in S04.
+        /// </summary>
+        private static IPuzzleLevel BuildStubLevel(int totalPieces)
+        {
+            if (totalPieces <= 0) totalPieces = 1;
+
+            var pieces = new System.Collections.Generic.List<IPuzzlePiece>(totalPieces);
+            for (int i = 0; i < totalPieces; i++)
+            {
+                var neighbors = new System.Collections.Generic.List<int>();
+                if (i > 0) neighbors.Add(i - 1);
+                if (i < totalPieces - 1) neighbors.Add(i + 1);
+                pieces.Add(new PuzzlePiece(i, neighbors));
+            }
+
+            var seeds = new[] { 0 };
+            var deckOrder = new int[totalPieces - 1];
+            for (int i = 0; i < deckOrder.Length; i++) deckOrder[i] = i + 1;
+            var deck = new Deck(deckOrder);
+
+            return new PuzzleLevel(pieces, seeds, new IDeck[] { deck });
         }
     }
 }

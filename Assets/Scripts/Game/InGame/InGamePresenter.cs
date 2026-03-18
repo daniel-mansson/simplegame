@@ -1,63 +1,60 @@
 using Cysharp.Threading.Tasks;
 using SimpleGame.Core.MVP;
 using SimpleGame.Game.Services;
+using SimpleGame.Puzzle;
 using UnityEngine;
 
 namespace SimpleGame.Game.InGame
 {
     /// <summary>
-    /// Presenter for the InGame scene. Manages piece placement, hearts,
-    /// and automatic win/lose resolution.
+    /// Presenter for the InGame scene. Delegates all placement decisions to
+    /// <see cref="PuzzleSession"/> — the view fires <see cref="IInGameView.OnTapPiece"/>
+    /// with a piece ID and the session determines correct/incorrect.
     ///
-    /// Place-correct: increments piece counter. Win when all pieces placed.
-    /// Place-incorrect: costs a heart. Lose when hearts reach 0.
-    ///
-    /// Debug logs fire at win/lose for interstitial ad stub.
+    /// Correct placement: piece counter advances. Win when session IsComplete.
+    /// Incorrect placement: costs a heart. Lose when hearts reach 0.
     /// </summary>
     public class InGamePresenter : Presenter<IInGameView>
     {
         private readonly GameSessionService _session;
         private readonly IHeartService _hearts;
-        private readonly int _totalPieces;
+        private readonly IPuzzleLevel _level;
         private readonly int _initialHearts;
 
-        private int _piecesPlaced;
+        private PuzzleSession _puzzleSession;
         private UniTaskCompletionSource<InGameAction> _actionTcs;
 
         public InGamePresenter(IInGameView view, GameSessionService session,
-                               IHeartService hearts, int totalPieces, int initialHearts = 3)
+                               IHeartService hearts, IPuzzleLevel level, int initialHearts = 3)
             : base(view)
         {
             _session = session;
             _hearts = hearts;
-            _totalPieces = totalPieces;
+            _level = level;
             _initialHearts = initialHearts;
         }
 
         public override void Initialize()
         {
-            _piecesPlaced = 0;
+            _puzzleSession = new PuzzleSession(_level);
             _hearts.Reset(_initialHearts);
 
-            View.OnPlaceCorrect += HandlePlaceCorrect;
-            View.OnPlaceIncorrect += HandlePlaceIncorrect;
+            View.OnTapPiece += HandleTapPiece;
 
             View.UpdateLevelLabel($"Level {_session.CurrentLevelId}");
-            View.UpdatePieceCounter($"0/{_totalPieces}");
+            View.UpdatePieceCounter($"0/{_level.TotalPieceCount - _level.SeedIds.Count}");
             View.UpdateHearts(_hearts.RemainingHearts.ToString());
         }
 
         public override void Dispose()
         {
-            View.OnPlaceCorrect -= HandlePlaceCorrect;
-            View.OnPlaceIncorrect -= HandlePlaceIncorrect;
+            View.OnTapPiece -= HandleTapPiece;
             _actionTcs?.TrySetCanceled();
             _actionTcs = null;
         }
 
         /// <summary>
         /// Returns a task that resolves when the game ends (Win or Lose).
-        /// The presenter auto-resolves based on pieces placed and hearts remaining.
         /// </summary>
         public UniTask<InGameAction> WaitForAction()
         {
@@ -76,30 +73,36 @@ namespace SimpleGame.Game.InGame
             View.UpdateHearts(_hearts.RemainingHearts.ToString());
         }
 
-        private void HandlePlaceCorrect()
+        private void HandleTapPiece(int pieceId)
         {
-            _piecesPlaced++;
-            _session.CurrentScore = _piecesPlaced;
-            View.UpdatePieceCounter($"{_piecesPlaced}/{_totalPieces}");
+            var result = _puzzleSession.TryPlace(pieceId);
 
-            if (_piecesPlaced >= _totalPieces)
+            if (result == PlacementResult.Placed)
             {
-                Debug.Log("[Ads] Interstitial ad opportunity — level complete");
-                _actionTcs?.TrySetResult(InGameAction.Win);
+                int placed = _puzzleSession.PlacedIds.Count - _level.SeedIds.Count;
+                int total = _level.TotalPieceCount - _level.SeedIds.Count;
+                _session.CurrentScore = placed;
+                View.UpdatePieceCounter($"{placed}/{total}");
+
+                if (_puzzleSession.IsComplete)
+                {
+                    Debug.Log("[Ads] Interstitial ad opportunity — level complete");
+                    _actionTcs?.TrySetResult(InGameAction.Win);
+                }
             }
-        }
-
-        private void HandlePlaceIncorrect()
-        {
-            _hearts.UseHeart();
-            View.UpdateHearts(_hearts.RemainingHearts.ToString());
-
-            if (!_hearts.IsAlive)
+            else if (result == PlacementResult.Rejected)
             {
-                _session.CurrentScore = _piecesPlaced;
-                Debug.Log("[Ads] Interstitial ad opportunity — level failed");
-                _actionTcs?.TrySetResult(InGameAction.Lose);
+                _hearts.UseHeart();
+                View.UpdateHearts(_hearts.RemainingHearts.ToString());
+
+                if (!_hearts.IsAlive)
+                {
+                    _session.CurrentScore = _puzzleSession.PlacedIds.Count - _level.SeedIds.Count;
+                    Debug.Log("[Ads] Interstitial ad opportunity — level failed");
+                    _actionTcs?.TrySetResult(InGameAction.Lose);
+                }
             }
+            // AlreadyPlaced: silently ignore — no state change, no heart cost
         }
     }
 }
