@@ -101,12 +101,12 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 9f3dc44319986be4983284f7ba522122, type: 3}
---- !u!224 &3343473647494030551 stripped
+--- !u!224 &2698100406328006806 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 232785663059506964, guid: 9f3dc44319986be4983284f7ba522122, type: 3}
   m_PrefabInstance: {fileID: 2759177520219926402}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &4657845994949234870 stripped
+--- !u!114 &5455000262872313079 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 7925944483539649397, guid: 9f3dc44319986be4983284f7ba522122, type: 3}
   m_PrefabInstance: {fileID: 2759177520219926402}
@@ -454,7 +454,7 @@ PrefabInstance:
       addedObject: {fileID: 1300525007260267146}
     - targetCorrespondingSourceObject: {fileID: 8171874166431070616, guid: c05cc5b43abca5240b4ac2efa4c5cd40, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 3343473647494030551}
+      addedObject: {fileID: 2698100406328006806}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 286291895656096402, guid: c05cc5b43abca5240b4ac2efa4c5cd40, type: 3}
       insertIndex: -1
@@ -491,5 +491,5 @@ MonoBehaviour:
   _panel: {fileID: 821939689911044280}
   _animConfig: {fileID: 11400000, guid: a34582faabbe1804d8950e7be08a87a4, type: 2}
   _watchButton: {fileID: 790004623346155960}
-  _skipButton: {fileID: 4657845994949234870}
+  _skipButton: {fileID: 5455000262872313079}
   _statusText: {fileID: 7700567666702657593}

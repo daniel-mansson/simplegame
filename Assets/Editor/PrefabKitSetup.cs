@@ -138,9 +138,12 @@ public static class PrefabKitSetup
         WireField(view, "_panel",         panel.GetComponent<RectTransform>());
         WireField(view, "_levelText",     AddTextPrefab(panel, "TitleText", "LevelText",  "Level Failed!", new Vector2(0.1f,  0.72f), new Vector2(0.9f,  0.92f)));
         WireField(view, "_scoreText",     AddTextPrefab(panel, "BodyText",  "ScoreText",  "Score: 0",      new Vector2(0.15f, 0.52f), new Vector2(0.85f, 0.70f)));
-        WireField(view, "_retryButton",   AddButtonPrefab(panel, "PositiveButton",   "RetryButton",   "Retry",    new Vector2(0.04f, 0.08f), new Vector2(0.34f, 0.30f)));
-        WireField(view, "_watchAdButton", AddButtonPrefab(panel, "NeutralButton",    "WatchAdButton", "Watch Ad", new Vector2(0.37f, 0.08f), new Vector2(0.63f, 0.30f)));
-        WireField(view, "_quitButton",    AddButtonPrefab(panel, "DestructiveButton","QuitButton",    "Quit",     new Vector2(0.66f, 0.08f), new Vector2(0.96f, 0.30f)));
+        // Cost label above continue button
+        WireField(view, "_continueCostText", AddTextPrefab(panel, "BodyText", "ContinueCostText", "Continue (100 coins)", new Vector2(0.37f, 0.31f), new Vector2(0.97f, 0.47f)));
+        WireField(view, "_retryButton",   AddButtonPrefab(panel, "PositiveButton",   "RetryButton",   "Retry",      new Vector2(0.04f, 0.08f), new Vector2(0.34f, 0.30f)));
+        WireField(view, "_watchAdButton", AddButtonPrefab(panel, "NeutralButton",    "WatchAdButton", "Watch Ad",   new Vector2(0.04f, 0.31f), new Vector2(0.34f, 0.50f)));
+        WireField(view, "_continueButton",AddButtonPrefab(panel, "PositiveButton",   "ContinueButton","Continue",   new Vector2(0.37f, 0.08f), new Vector2(0.97f, 0.30f)));
+        WireField(view, "_quitButton",    AddButtonPrefab(panel, "DestructiveButton","QuitButton",    "Quit",       new Vector2(0.04f, 0.52f), new Vector2(0.96f, 0.70f)));
 
         SavePopupPrefab(root, "LevelFailedPopup");
     }
