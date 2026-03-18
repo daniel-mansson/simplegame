@@ -1,49 +1,33 @@
-# Project
+# SimpleGame
 
 ## What This Is
 
-A Unity 6 (6000.3.10f1) mobile puzzle game called **Puzzle Tap** — a cozy, feel-good jigsaw puzzle game where players tap to place pieces, earn golden puzzle pieces, and restore a charming illustrated world. Built on a clean MVP-based UI architecture with screen management, popups, transitions, and domain services.
+A mobile-style puzzle game built in Unity. Players restore a meta-world by completing jigsaw-style puzzle levels. The game loop is: tap a piece from a deck, the model validates placement by neighbor-presence, a heart is lost on wrong attempts, all pieces placed wins the level.
 
 ## Core Value
 
-A complete game flow skeleton — main screen with meta world, stub gameplay with hearts, level progression, golden piece economy, object restoration, environment unlocking, and ad/IAP stub popups — all wired end-to-end so future milestones can focus on real gameplay, art, and monetization one at a time.
+The puzzle placement model — pure domain logic that is board-shape agnostic, testable in plain C#, and completely decoupled from any rendering concern.
 
 ## Current State
 
-**M007 complete (pending R077 UAT).** All `FindFirstObjectByType` calls eliminated from production code. `IViewResolver` interface in Core with `Get<T>()`, implemented by `UnityViewContainer` (renamed from `UnityPopupContainer`). Scene controllers receive `IViewResolver` via `Initialize()` and resolve popup views through it. `GameBootstrapper` has `[SerializeField]` refs for all boot infrastructure. Scene controllers found via `FindSceneController<T>()` scene root convention. 169/169 EditMode tests pass. Boot scene regenerated 2026-03-18 to wire SerializeField refs (fixes LevelFailed popup null-resolver bug). Human UAT play-through (MainMenu→InGame→Win/Lose→MainMenu) is the only remaining gate.
-
-**M001–M006 complete.** MVP pattern, screen management, popup system, transitions, input blocking, assembly separation, SceneController architecture, boot-from-any-scene, full game loop, LitMotion prefab transitions, meta world with restoration + economy — all proven and tested.
-
-**Test count:** 169 edit-mode tests passing across Core and Game assemblies.
+- Full MVP architecture foundation in place (M001–M003)
+- Core/Game assembly split, ScreenManager, PopupManager, transitions (M002–M005)
+- Meta world: environments, restorable objects, golden pieces, progression (M006)
+- Prefab-based view management, popup stack, animated popups (M007–M008)
+- In-scene screen switching, coins, currency overlay HUD (M009)
+- `simple-jigsaw` added as git submodule; JigsawDemo scene proves pipeline renders (M010)
+- InGame scene exists with stub gameplay (hearts + correct/incorrect counter); no real puzzle model yet
 
 ## Architecture / Key Patterns
 
-- **MVP pattern**: Views (MonoBehaviour/uGUI) expose interfaces → Presenters (plain C#) consume view interfaces and domain services → Models/Services encapsulate domain logic
-- **Assembly separation**: `SimpleGame.Core` (game-agnostic framework) and `SimpleGame.Game` (game-specific code) are separate asmdefs; Core has no game-specific references
-- **Generic managers**: `ScreenManager<TScreenId>` and `PopupManager<TPopupId>` where `T : struct, System.Enum`
-- **Feature cohesion**: Game code grouped by feature (`Game/MainMenu/`, `Game/Settings/`, `Game/Popup/`, `Game/InGame/`, `Game/Boot/`, `Game/Services/`, `Game/Meta/`)
-- **View independence**: Views have no references to presenters, models, or services
-- **Explicit DI**: Constructor or Init method injection only. No DI framework, no static state, no singletons.
-- **Central UI Factory**: `UIFactory` in `Game/Boot/` constructs all game presenters
-- **SceneController pattern**: Per-scene MonoBehaviour with `RunAsync()` — loops internally, returns `ScreenId` for navigation. GameBootstrapper drives the navigation loop.
-- **Hybrid scene management**: Persistent Boot scene with additive scene loading for screen scenes (MainMenu, Settings, InGame)
-- **UniTask**: All async operations use UniTask
-- **IViewResolver**: `IViewResolver` interface in Core (`T Get<T>() where T : class`) implemented by `UnityViewContainer` via `GetComponentInChildren<T>(true)` — zero-registration view resolution for popup views
-- **Popup pre-instantiation**: `UnityViewContainer` shows/hides pre-instantiated popup GameObjects in Boot scene via `SetActive`; exposes `IViewResolver.Get<T>()` for view resolution without scene scanning
-- **Scene root convention**: `FindSceneController<T>(sceneName)` in GameBootstrapper — queries loaded scene's root GameObjects via `SceneManager.GetSceneByName()` + `GetRootGameObjects()` + `GetComponent<T>()`
-- **Boot infrastructure wiring**: `GameBootstrapper` uses `[SerializeField]` refs for `UnityInputBlocker`, `UnityTransitionPlayer`, `UnityViewContainer` — no scene scanning at boot
-- **View getter resolution order**: override field (test seam) → SerializeField ref → `_viewResolver?.Get<T>()` → `Debug.LogError` + return null
-- **Presenter results**: Presenters expose awaitable result methods (`WaitForAction`, `WaitForBack`, `WaitForConfirmation`, `WaitForContinue`, `WaitForChoice`) — no outbound callbacks
-- **Boot injection**: `BootInjector` `[RuntimeInitializeOnLoadMethod]` loads Boot additively if not present (play-from-any-scene)
-- **Service-mediated context**: `GameSessionService` passes context between scenes; controllers read what they need
-- **Prefab transitions**: `UnityTransitionPlayer` uses LitMotion `BindToAlpha`/`ToUniTask()` on a self-contained prefab
-- **ScriptableObject data**: WorldData/EnvironmentData/RestorableObjectData define meta-world structure
-- **Interface-backed persistence**: IMetaSaveService with PlayerPrefs JSON implementation; reload-then-merge pattern for multi-service shared persistence
-- **Golden piece economy**: GoldenPieceService (earn/spend/persist) + HeartService (per-level, 3 hearts)
-- **6 popup types**: ConfirmDialog, LevelComplete, LevelFailed, RewardedAd, IAPPurchase, ObjectRestored — all in UnityViewContainer
-- **Auto-resolving presenters**: InGamePresenter auto-resolves Win/Lose based on game state
-- **Presenter→view data transfer**: ObjectDisplayData struct decouples presenter from view
-- **Testing**: `SimpleGame.Tests.Core` + `SimpleGame.Tests.Game`; 169 tests passing
+- MVP strict separation: Views are MonoBehaviours exposing interfaces; Presenters are plain C#; Models are domain services
+- Presenters expose awaitable result methods (`WaitForAction()` etc.); SceneControllers compose control flow via async/await
+- Views signal intent via `event Action`; no backward references to presenters or services
+- `UIFactory` is the single wiring point for presenter construction
+- `ScreenManager<TScreenId>` for scene-based navigation; `PopupManager<TPopupId>` for layered popups
+- `IViewResolver` for resolving popup views across scenes
+- `simple-jigsaw` package at `Packages/simple-jigsaw/` (git submodule)
+- Assembly structure: `SimpleGame.Core` (no game deps), `SimpleGame.Game` (references Core), `SimpleGame.Puzzle` (pure C#, no Unity — planned M011)
 
 ## Capability Contract
 
@@ -51,13 +35,14 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 
 ## Milestone Sequence
 
-- [x] M001: MVP UI Architecture Foundation — screen management, popups, transitions, MVP pattern, demo screens
-- [x] M002: Assembly Restructure — Core/Game separation, generic managers, feature-cohesive folders
-- [x] M003: SceneController Architecture — async control flow, linear scene controllers, boot-from-any-scene
-- [x] M004: Game Loop — meta-progression, context passing, InGame scene, win/lose flow, full menu→play→outcome→menu loop
-- [x] M005: Prefab-Based Transitions — LitMotion tweening, prefab-driven transition visuals, extensible for future complex transitions
-- [x] M006: Puzzle Tap Game Skeleton — all screens, popups, domain services, meta world data model, persistence, ad/IAP stubs, full game flow
-- [x] M007: Prefab-Based View Management — IViewResolver in Core, UnityViewContainer, scene root convention, zero FindObject* in production code, 169 tests passing
-- [x] M008: Popup Animation & UI Component Kit — animated blocker overlay, bounce-up/scale-out popup tweens, TMP prefab kit (BigPopup, SmallPopup, button variants, text styles), all existing popups wired to prefab components
-- [x] M009: In-Scene Screens, Popup Stack, Coins & Overlay HUD — in-scene screen switcher, stackable popups with visual layering, coins currency, Continue button on LevelFailed, shop with fake IAP coin packs, contextual overlay HUD
-- [ ] M010: Simple Jigsaw Package Integration — simple-jigsaw as editable submodule, local UPM package, standalone demo scene proves puzzle generation pipeline end-to-end
+- [x] M001: MVP UI Architecture Foundation — Screen management, presenter pattern, boot flow
+- [x] M002: Assembly Restructure — Core/Game separation, asmdef isolation
+- [x] M003: SceneController Architecture — Async control flow, awaitable presenters
+- [x] M004: Game Loop — Meta-progression, context passing, win/lose flow
+- [x] M005: Prefab-Based Transitions — LitMotion fade transitions, swappable prefab
+- [x] M006: Puzzle Tap Game Skeleton — Stub InGame with hearts and piece counter
+- [x] M007: Prefab-Based View Management — IViewResolver, popup prefabs, container rename
+- [x] M008: Popup Animation & UI Component Kit — PopupViewBase, blocker fade, TMP kit
+- [x] M009: In-Scene Screens, Popup Stack, Coins & Overlay HUD — InSceneScreenManager, coin balance, stacked popups
+- [x] M010: Simple Jigsaw Package Integration — git submodule, local UPM package, JigsawDemo scene
+- [ ] M011: Puzzle Domain Model & API — Pure puzzle model, jigsaw adapter, InGame wired with real placement logic and rendered tappable pieces

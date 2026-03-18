@@ -291,7 +291,106 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Validation: unmapped
 - Notes: `ICurrencyOverlay` interface. `UnityCurrencyOverlay` MonoBehaviour. Canvas sort order 120 (between blocker 100 and popups 150+).
 
+### R091 — Pure puzzle domain model with no Unity dependencies
+- Class: core-capability
+- Status: active
+- Description: `SimpleGame.Puzzle` assembly contains all puzzle domain types — `IPuzzlePiece`, `IPuzzleBoard`, `IDeck`, `IPuzzleLevel`, `PuzzleSession` — as plain C# with zero Unity references. `noEngineReferences: true` enforced via asmdef.
+- Why it matters: Enables EditMode testing without Play mode, keeps domain logic portable, and enforces that game rules are not entangled with rendering.
+- Source: user
+- Primary owning slice: M011/S01
+- Supporting slices: M011/S02, M011/S03
+- Validation: unmapped
+- Notes: Any type in `SimpleGame.Puzzle` that imports `UnityEngine` or `UnityEditor` is a build error.
+
+### R092 — Placement rule: neighbor-presence validation
+- Class: primary-user-loop
+- Status: active
+- Description: A piece can be placed on the board if and only if at least one of its declared neighbors is already placed on the board (seed pieces are pre-placed and satisfy this for adjacent pieces). Attempting to place an invalid piece returns false and does not mutate board state.
+- Why it matters: This is the core game rule — it defines what "correct" and "incorrect" mean.
+- Source: user
+- Primary owning slice: M011/S01
+- Supporting slices: M011/S03
+- Validation: unmapped
+- Notes: Board shape agnostic — neighbor relationships are declared in piece data, not derived from grid geometry.
+
+### R093 — Deck abstraction: ordered piece sequence
+- Class: primary-user-loop
+- Status: active
+- Description: A `Deck` is an ordered sequence of piece IDs. The player always sees the piece at the front of the deck. On correct placement, the deck advances. Deck ordering is the primary level design lever.
+- Why it matters: The order of the deck determines how the puzzle unfolds — it is the craft of level design.
+- Source: user
+- Primary owning slice: M011/S01
+- Supporting slices: M011/S02, M011/S03
+- Validation: unmapped
+- Notes: Deck is an ordered set — no duplicate piece IDs.
+
+### R094 — Configurable deck layout: one-per-slot or shared
+- Class: primary-user-loop
+- Status: active
+- Description: Level definition supports either a single shared deck (one ordered sequence drawn from by all slots) or one deck per slot. The game model is agnostic to which mode is active.
+- Why it matters: Different deck layouts create fundamentally different puzzle-solving experiences.
+- Source: user
+- Primary owning slice: M011/S01
+- Supporting slices: M011/S02
+- Validation: unmapped
+- Notes: Slot count and deck assignment are part of the level definition.
+
+### R095 — Jigsaw adapter hides SimpleJigsaw types from game code
+- Class: core-capability
+- Status: active
+- Description: A `JigsawLevelFactory` (in `SimpleGame.Game`) converts `SimpleJigsaw.PuzzleBoard` into an `IPuzzleLevel`. No `SimpleJigsaw.*` type is visible to `InGamePresenter`, `InGameSceneController`, or any `SimpleGame.Puzzle` type.
+- Why it matters: The jigsaw package is explicitly expected to change. The adapter is the only place that must change when it does.
+- Source: user
+- Primary owning slice: M011/S02
+- Supporting slices: M011/S03, M011/S04
+- Validation: unmapped
+- Notes: `SimpleGame.Puzzle` asmdef must NOT reference `SimpleJigsaw`. Only `SimpleGame.Game` (or a dedicated adapter assembly) may reference it.
+
+### R096 — InGame wired to PuzzleSession (tap → model → correct/incorrect)
+- Class: primary-user-loop
+- Status: active
+- Description: `InGamePresenter` delegates placement decisions to `PuzzleSession.TryPlace(pieceId)`. Raw `OnPlaceCorrect`/`OnPlaceIncorrect` view events are removed; the view exposes `OnTapPiece(int pieceId)` instead. Model owns the correct/incorrect determination.
+- Why it matters: The current stub treats every tap as pre-judged by the view. Real gameplay requires the model to be the source of truth.
+- Source: user
+- Primary owning slice: M011/S03
+- Supporting slices: M011/S04
+- Validation: unmapped
+- Notes: PuzzleSession fires an event or returns a result; InGamePresenter reacts and updates view (hearts, counter). Win when all non-seed pieces placed; lose when hearts reach 0.
+
+### R097 — Jigsaw pieces rendered as tappable GameObjects in InGame scene
+- Class: primary-user-loop
+- Status: active
+- Description: InGame scene renders jigsaw piece meshes using `PieceObjectFactory`. Each piece GameObject has a thin tap-handler component that calls `IInGameView.OnTapPiece(pieceId)`. No game logic lives on piece GameObjects.
+- Why it matters: The player needs to see and interact with real puzzle pieces, not placeholder buttons.
+- Source: user
+- Primary owning slice: M011/S04
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Tap handler is a MonoBehaviour with a single responsibility: forward the tap with piece ID to the view. `PieceDragger` from simple-jigsaw is not used.
+
 ## Deferred
+
+### R098 — Drag-and-drop piece placement UX
+- Class: primary-user-loop
+- Status: deferred
+- Description: Player can drag a piece from the deck and drop it onto the board to attempt placement. The model rules are identical to tap placement.
+- Why it matters: UX improvement — drag is more intuitive for some players.
+- Source: user
+- Primary owning slice: none
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Explicitly deferred by user. Tap-only is the target for M011. Drag-and-drop does not change the model.
+
+### R099 — Camera auto-adjust to puzzle size
+- Class: quality-attribute
+- Status: deferred
+- Description: Camera automatically frames the puzzle board based on its bounding box when InGame loads.
+- Why it matters: Puzzles of different sizes/shapes need the camera to fit them without manual Inspector tuning.
+- Source: inferred
+- Primary owning slice: none
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Deferred — fixed camera position is acceptable for M011 since all demo puzzles will be similar size.
 
 ### R078 — Popup instantiation from prefabs
 - Class: core-capability
@@ -305,13 +404,14 @@ Use it to track what is actively in scope, what has been validated by completed 
 
 ### R060 — Real puzzle board with piece placement
 - Class: core-capability
-- Status: deferred
-- Description: Real puzzle board with piece placement, tray, neighbor validation, camera auto-adjust.
+- Status: active
+- Description: Real puzzle board with piece placement, neighbor validation, and tap-driven gameplay wired in InGame.
 - Why it matters: The actual core gameplay mechanic.
 - Source: user
-- Primary owning slice: none
+- Primary owning slice: M011/S03
+- Supporting slices: M011/S01, M011/S02, M011/S04
 - Validation: unmapped
-- Notes: M006 provides stub gameplay only. Real mechanics are a future milestone.
+- Notes: Promoted from deferred by M011. Camera auto-adjust deferred to R099. "Tray" concept replaced by Deck (R093).
 
 ### R061 — Real art/illustrations
 - Class: quality-attribute
@@ -783,13 +883,23 @@ Use it to track what is actively in scope, what has been validated by completed 
 | R087 | primary-user-loop | validated | M009/S03 | M009/S02 | validated |
 | R088 | primary-user-loop | validated | M009/S03 | M009/S01, M009/S02 | validated |
 | R089 | primary-user-loop | validated | M009/S04 | M009/S03 | validated |
+| R091 | core-capability | active | M011/S01 | M011/S02, M011/S03 | unmapped |
+| R092 | primary-user-loop | active | M011/S01 | M011/S03 | unmapped |
+| R093 | primary-user-loop | active | M011/S01 | M011/S02, M011/S03 | unmapped |
+| R094 | primary-user-loop | active | M011/S01 | M011/S02 | unmapped |
+| R095 | core-capability | active | M011/S02 | M011/S03, M011/S04 | unmapped |
+| R096 | primary-user-loop | active | M011/S03 | M011/S04 | unmapped |
+| R097 | primary-user-loop | active | M011/S04 | none | unmapped |
+| R098 | primary-user-loop | deferred | none | none | unmapped |
+| R099 | quality-attribute | deferred | none | none | unmapped |
+| R060 | core-capability | active | M011/S03 | M011/S01, M011/S02, M011/S04 | unmapped |
 
 ## Coverage Summary
 
-- Total requirements: 90
-- Active: 18
+- Total requirements: 101
+- Active: 25
 - Validated: 53
-- Deferred: 14
+- Deferred: 18
 - Out of scope: 4
-- Unmapped active requirements: 0
-- Note: R079–R083 validated by M008. R084–R089 validated by M009. Some validated/deferred requirements (R018, R019, R041, R042, R044) have traceability table entries only — no full body section.
+- Unmapped active requirements: 8 (R060, R091–R097 — all owned by M011)
+- Note: R079–R083 validated by M008. R084–R089 validated by M009. R091–R097 added for M011 puzzle domain model. R060 promoted from deferred to active (owned by M011). Some validated/deferred requirements (R018, R019, R041, R042, R044) have traceability table entries only — no full body section.
