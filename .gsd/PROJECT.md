@@ -58,3 +58,4 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 - [x] M005: Prefab-Based Transitions — LitMotion tweening, prefab-driven transition visuals, extensible for future complex transitions
 - [x] M006: Puzzle Tap Game Skeleton — all screens, popups, domain services, meta world data model, persistence, ad/IAP stubs, full game flow
 - [x] M007: Prefab-Based View Management — IViewResolver in Core, UnityViewContainer, scene root convention, zero FindObject* in production code, 169 tests passing
+- [ ] M008: Popup Animation & UI Component Kit — animated blocker overlay, bounce-up/scale-out popup tweens, TMP prefab kit (BigPopup, SmallPopup, button variants, text styles), all existing popups wired to prefab components
