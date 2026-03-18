@@ -4,6 +4,8 @@
   "references": [
     "SimpleGame.Core",
     "SimpleGame.Game",
+    "SimpleGame.Puzzle",
+    "SimpleJigsaw.Runtime",
     "UniTask",
     "UnityEngine.TestRunner",
     "UnityEditor.TestRunner"
