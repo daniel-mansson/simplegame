@@ -85,10 +85,12 @@ namespace SimpleGame.Core.PopupManagement
             {
                 var popupId = _stack.Pop();
 
+                // Every Show called Block() — every Dismiss must call Unblock()
+                _inputBlocker.Unblock();
+
                 if (_stack.Count == 0)
                 {
-                    // Last popup — unblock immediately and fire fade-out in background
-                    _inputBlocker.Unblock();
+                    // Last popup dismissed — fire overlay fade-out in background
                     _inputBlocker.FadeOutAsync(ct).Forget();
                 }
 
