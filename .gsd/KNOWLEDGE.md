@@ -102,3 +102,17 @@ After adding or changing `[SerializeField]` fields on `GameBootstrapper` (or any
 
 **Rule:** Any task that adds a `[SerializeField]` to a Boot scene component AND updates `SceneSetup.cs` is not complete until SceneSetup has been run and the scene file diff has been committed.
 
+
+---
+
+### K008 — Always clean up empty folders after moves
+**Date:** 2026-03-18
+
+After `git mv` reorganizations, empty source directories are left behind as untracked filesystem entries. Git doesn't track empty directories — only their `.meta` files (in Unity projects). The `.meta` file for the now-empty folder remains staged/committed as a dangling reference.
+
+**Rule:** After any `git mv` that empties a folder, immediately:
+1. `rmdir <empty-folder>` — removes the directory
+2. `git rm <empty-folder>.meta` — removes the orphaned meta from tracking
+3. Include both in the same commit as the move
+
+**Example:** Moving `Assets/Prefabs/UI/Popups/` contents to `Assets/Prefabs/Game/Popups/` left `Assets/Prefabs/UI/Popups/` empty. The `.meta` file persisted in the repo until explicitly removed.
