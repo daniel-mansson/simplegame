@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using LitMotion;
+using SimpleGame.Core.MVP;
 using SimpleGame.Core.PopupManagement;
 using UnityEngine;
 
@@ -15,16 +16,31 @@ namespace SimpleGame.Core.Unity.PopupManagement
     /// FadeInAsync / FadeOutAsync animate the visual overlay independently —
     /// the caller is responsible for timing (Block before FadeIn; Unblock before FadeOut).
     ///
-    /// The CanvasGroup alpha starts at 0 (transparent). FadeIn animates to 0.5 (dim);
-    /// FadeOut animates back to 0. blocksRaycasts is managed by Block()/Unblock().
+    /// The CanvasGroup alpha starts at 0 (transparent). FadeIn animates to
+    /// <see cref="PopupAnimationConfig.blockerFadedAlpha"/> (default 0.5); FadeOut returns
+    /// to 0. blocksRaycasts is managed by Block()/Unblock().
+    ///
+    /// Wire <see cref="_animConfig"/> for project-wide tuning; if null, built-in defaults
+    /// matching <see cref="PopupAnimationConfig"/> field defaults are used.
     /// </summary>
     public class UnityInputBlocker : MonoBehaviour, IInputBlocker
     {
-        private const float FadedAlpha    = 0.5f;
-        private const float FadeInDuration  = 0.2f;
-        private const float FadeOutDuration = 0.2f;
+        // ── Fallback constants (match PopupAnimationConfig field defaults) ────
 
-        [SerializeField] private CanvasGroup _canvasGroup;
+        private const float FallbackFadedAlpha    = 0.5f;
+        private const float FallbackFadeDuration  = 0.2f;
+
+        // ── Inspector fields ─────────────────────────────────────────────────
+
+        [SerializeField] private CanvasGroup         _canvasGroup;
+
+        [Tooltip("Animation config asset. Leave null to use built-in defaults.")]
+        [SerializeField] private PopupAnimationConfig _animConfig;
+
+        // ── Convenience accessors ─────────────────────────────────────────────
+
+        private float FadedAlpha    => _animConfig != null ? _animConfig.blockerFadedAlpha   : FallbackFadedAlpha;
+        private float FadeDuration  => _animConfig != null ? _animConfig.blockerFadeDuration : FallbackFadeDuration;
 
         private int _blockCount;
 
@@ -65,7 +81,7 @@ namespace SimpleGame.Core.Unity.PopupManagement
         {
             if (_canvasGroup == null) return UniTask.CompletedTask;
 
-            return LMotion.Create(_canvasGroup.alpha, FadedAlpha, FadeInDuration)
+            return LMotion.Create(_canvasGroup.alpha, FadedAlpha, FadeDuration)
                 .WithEase(Ease.Linear)
                 .Bind(x => _canvasGroup.alpha = x)
                 .ToUniTask(ct);
@@ -76,7 +92,7 @@ namespace SimpleGame.Core.Unity.PopupManagement
         {
             if (_canvasGroup == null) return UniTask.CompletedTask;
 
-            return LMotion.Create(_canvasGroup.alpha, 0f, FadeOutDuration)
+            return LMotion.Create(_canvasGroup.alpha, 0f, FadeDuration)
                 .WithEase(Ease.Linear)
                 .Bind(x => _canvasGroup.alpha = x)
                 .ToUniTask(ct);

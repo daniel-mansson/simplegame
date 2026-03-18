@@ -1,3 +1,4 @@
+using SimpleGame.Core.MVP;
 using SimpleGame.Core.Unity.PopupManagement;
 using SimpleGame.Core.Unity.TransitionManagement;
 using SimpleGame.Game.Boot;
@@ -75,6 +76,18 @@ public static class SceneSetup
         eventSystemGO.AddComponent<EventSystem>();
         eventSystemGO.AddComponent<StandaloneInputModule>();
 
+        // Popup animation config — create if missing, then load
+        const string animConfigPath = "Assets/Data/PopupAnimationConfig.asset";
+        var animConfig = AssetDatabase.LoadAssetAtPath<PopupAnimationConfig>(animConfigPath);
+        if (animConfig == null)
+        {
+            animConfig = ScriptableObject.CreateInstance<PopupAnimationConfig>();
+            System.IO.Directory.CreateDirectory("Assets/Data");
+            AssetDatabase.CreateAsset(animConfig, animConfigPath);
+            AssetDatabase.SaveAssets();
+            Debug.Log("[SceneSetup] Created PopupAnimationConfig.asset at Assets/Data/");
+        }
+
         // InputBlocker Canvas (sort order 100)
         CreateFullScreenCanvas("InputBlocker", 100, out var inputBlockerCanvas);
         var inputBlockerCanvasGroup = inputBlockerCanvas.gameObject.AddComponent<CanvasGroup>();
@@ -83,6 +96,7 @@ public static class SceneSetup
         inputBlockerCanvasGroup.alpha = 0f;
         var inputBlocker = inputBlockerCanvas.gameObject.AddComponent<UnityInputBlocker>();
         WireSerializedField(inputBlocker, "_canvasGroup", inputBlockerCanvasGroup);
+        WireSerializedField(inputBlocker, "_animConfig",  animConfig);
         WireSerializedField(bootstrapper, "_inputBlocker", inputBlocker);
 
         // Transition overlay from prefab
@@ -117,6 +131,7 @@ public static class SceneSetup
         var confirmRoot  = InstantiateWindowPrefab(bigWindowPrefab, popupCanvas.transform, "ConfirmDialogPopup");
         var confirmPanel = confirmRoot.transform.Find("Panel");
         var confirmView  = confirmRoot.AddComponent<ConfirmDialogView>();
+        WireSerializedField(confirmView, "_animConfig",   animConfig);
         WireSerializedField(confirmView, "_canvasGroup", confirmRoot.GetComponent<CanvasGroup>());
         WireSerializedField(confirmView, "_panel",       confirmPanel.GetComponent<RectTransform>());
         WireSerializedField(confirmView, "_messageText", CreateTMPText("TitleText", "Are you sure?", confirmPanel, new Vector2(0.1f, 0.65f), new Vector2(0.9f, 0.88f), 28));
@@ -129,6 +144,7 @@ public static class SceneSetup
         var lvlCompleteRoot  = InstantiateWindowPrefab(bigWindowPrefab, popupCanvas.transform, "LevelCompletePopup");
         var lvlCompletePanel = lvlCompleteRoot.transform.Find("Panel");
         var lvlCompleteView  = lvlCompleteRoot.AddComponent<LevelCompleteView>();
+        WireSerializedField(lvlCompleteView, "_animConfig",   animConfig);
         WireSerializedField(lvlCompleteView, "_canvasGroup", lvlCompleteRoot.GetComponent<CanvasGroup>());
         WireSerializedField(lvlCompleteView, "_panel",       lvlCompletePanel.GetComponent<RectTransform>());
         WireSerializedField(lvlCompleteView, "_levelText",       CreateTMPText("TitleText",       "Level Complete!", lvlCompletePanel, new Vector2(0.1f, 0.72f), new Vector2(0.9f, 0.92f), 30));
@@ -142,6 +158,7 @@ public static class SceneSetup
         var lvlFailedRoot  = InstantiateWindowPrefab(bigWindowPrefab, popupCanvas.transform, "LevelFailedPopup");
         var lvlFailedPanel = lvlFailedRoot.transform.Find("Panel");
         var lvlFailedView  = lvlFailedRoot.AddComponent<LevelFailedView>();
+        WireSerializedField(lvlFailedView, "_animConfig",   animConfig);
         WireSerializedField(lvlFailedView, "_canvasGroup", lvlFailedRoot.GetComponent<CanvasGroup>());
         WireSerializedField(lvlFailedView, "_panel",       lvlFailedPanel.GetComponent<RectTransform>());
         WireSerializedField(lvlFailedView, "_levelText",  CreateTMPText("TitleText",  "Level Failed!", lvlFailedPanel, new Vector2(0.1f, 0.72f), new Vector2(0.9f, 0.92f), 30));
@@ -156,6 +173,7 @@ public static class SceneSetup
         var rewardedRoot  = InstantiateWindowPrefab(smallWindowPrefab, popupCanvas.transform, "RewardedAdPopup");
         var rewardedPanel = rewardedRoot.transform.Find("Panel");
         var rewardedView  = rewardedRoot.AddComponent<RewardedAdView>();
+        WireSerializedField(rewardedView, "_animConfig",   animConfig);
         WireSerializedField(rewardedView, "_canvasGroup", rewardedRoot.GetComponent<CanvasGroup>());
         WireSerializedField(rewardedView, "_panel",       rewardedPanel.GetComponent<RectTransform>());
         WireSerializedField(rewardedView, "_statusText", CreateTMPText("StatusText", "Watch a short ad for a reward?", rewardedPanel, new Vector2(0.1f, 0.45f), new Vector2(0.9f, 0.88f), 22));
@@ -168,6 +186,7 @@ public static class SceneSetup
         var iapRoot  = InstantiateWindowPrefab(smallWindowPrefab, popupCanvas.transform, "IAPPurchasePopup");
         var iapPanel = iapRoot.transform.Find("Panel");
         var iapView  = iapRoot.AddComponent<IAPPurchaseView>();
+        WireSerializedField(iapView, "_animConfig",   animConfig);
         WireSerializedField(iapView, "_canvasGroup", iapRoot.GetComponent<CanvasGroup>());
         WireSerializedField(iapView, "_panel",       iapPanel.GetComponent<RectTransform>());
         WireSerializedField(iapView, "_itemNameText", CreateTMPText("ItemNameText", "50 Golden Pieces", iapPanel, new Vector2(0.1f, 0.65f), new Vector2(0.9f, 0.88f), 26));
@@ -182,6 +201,7 @@ public static class SceneSetup
         var objRestoredRoot  = InstantiateWindowPrefab(smallWindowPrefab, popupCanvas.transform, "ObjectRestoredPopup");
         var objRestoredPanel = objRestoredRoot.transform.Find("Panel");
         var objRestoredView  = objRestoredRoot.AddComponent<ObjectRestoredView>();
+        WireSerializedField(objRestoredView, "_animConfig",   animConfig);
         WireSerializedField(objRestoredView, "_canvasGroup", objRestoredRoot.GetComponent<CanvasGroup>());
         WireSerializedField(objRestoredView, "_panel",       objRestoredPanel.GetComponent<RectTransform>());
         WireSerializedField(objRestoredView, "_objectNameText", CreateTMPText("ObjectNameText", "Object Restored!", objRestoredPanel, new Vector2(0.1f, 0.55f), new Vector2(0.9f, 0.88f), 28));
@@ -482,7 +502,7 @@ public static class SceneSetup
         tmp.fontSize = fontSize;
         tmp.color = Color.white;
         tmp.alignment = TextAlignmentOptions.Center;
-        tmp.enableWordWrapping = true;
+        tmp.textWrappingMode = TMPro.TextWrappingModes.Normal;
         var rect = go.GetComponent<RectTransform>();
         rect.anchorMin = anchorMin;
         rect.anchorMax = anchorMax;

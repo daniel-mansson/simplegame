@@ -142,7 +142,7 @@ public static class PrefabKitSetup
         tmp.color = Color.white;
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.fontStyle = style;
-        tmp.enableWordWrapping = true;
+        tmp.textWrappingMode = TMPro.TextWrappingModes.Normal;
 
         SavePrefab(go, TextPrefabDir, name);
         Object.DestroyImmediate(go);
