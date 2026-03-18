@@ -1,9 +1,9 @@
 # GSD State
 
-**Active Milestone:** M007: Prefab-Based View Management
-**Active Slice:** S03: Scene Root Convention + Final Cleanup
-**Phase:** executing
-**Requirements Status:** 18 active · 41 validated · 10 deferred · 4 out of scope
+**Active Milestone:** None
+**Active Slice:** None
+**Phase:** idle
+**Requirements Status:** 10 active · 49 validated · 10 deferred · 4 out of scope
 
 ## Milestone Registry
 - ✅ **M001:** MVP UI Architecture Foundation
@@ -12,13 +12,13 @@
 - ✅ **M004:** Game Loop — Meta-Progression, Context Passing, Win/Lose Flow
 - ✅ **M005:** Prefab-Based Transitions
 - ✅ **M006:** Puzzle Tap Game Skeleton
-- 🔄 **M007:** Prefab-Based View Management
+- ✅ **M007:** Prefab-Based View Management
 
 ## Recent Decisions
-- None recorded
+- D041–D048: IViewResolver architecture, container rename, scene root convention, SerializeField refs, view getter resolution order
 
 ## Blockers
 - None
 
 ## Next Action
-Execute T01 of S03 (Replace FindFirstObjectByType with scene root convention).
+M007 mechanically complete. R077 (human UAT: MainMenu→InGame→Win→MainMenu and InGame→Lose→Retry→Win) is the only remaining gate. Boot scene regenerated and SerializeField wiring confirmed. Ready for next milestone planning once UAT passes.

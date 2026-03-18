@@ -167,7 +167,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: user
 - Primary owning slice: M007/S03
 - Supporting slices: M007/S01, M007/S02
-- Validation: unmapped — Human UAT required: MainMenu → InGame → Win → MainMenu and InGame → Lose → Retry → Win play-through. Not yet performed.
+- Validation: Pending human UAT play-through: MainMenu → InGame → Win → MainMenu and InGame → Lose → Retry → Win. Boot scene regenerated 2026-03-18 to wire SerializeField refs — LevelFailed popup null resolver bug fixed. Mechanical criteria all met.
 - Notes: Verified by human UAT play-through. Milestone not fully closed until UAT passes.
 
 ## Deferred

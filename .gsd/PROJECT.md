@@ -10,7 +10,7 @@ A complete game flow skeleton — main screen with meta world, stub gameplay wit
 
 ## Current State
 
-**M007 complete.** All `FindFirstObjectByType` calls eliminated from production code. `IViewResolver` interface in Core with `Get<T>()`, implemented by `UnityViewContainer` (renamed from `UnityPopupContainer`). Scene controllers receive `IViewResolver` via `Initialize()` and resolve popup views through it. `GameBootstrapper` has `[SerializeField]` refs for all boot infrastructure. Scene controllers found via `FindSceneController<T>()` scene root convention. 169/169 EditMode tests pass. R077 (human UAT play-through) remains an open item — all mechanical criteria met.
+**M007 complete (pending R077 UAT).** All `FindFirstObjectByType` calls eliminated from production code. `IViewResolver` interface in Core with `Get<T>()`, implemented by `UnityViewContainer` (renamed from `UnityPopupContainer`). Scene controllers receive `IViewResolver` via `Initialize()` and resolve popup views through it. `GameBootstrapper` has `[SerializeField]` refs for all boot infrastructure. Scene controllers found via `FindSceneController<T>()` scene root convention. 169/169 EditMode tests pass. Boot scene regenerated 2026-03-18 to wire SerializeField refs (fixes LevelFailed popup null-resolver bug). Human UAT play-through (MainMenu→InGame→Win/Lose→MainMenu) is the only remaining gate.
 
 **M001–M006 complete.** MVP pattern, screen management, popup system, transitions, input blocking, assembly separation, SceneController architecture, boot-from-any-scene, full game loop, LitMotion prefab transitions, meta world with restoration + economy — all proven and tested.
 

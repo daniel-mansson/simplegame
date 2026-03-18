@@ -83,3 +83,17 @@ mcporter call unityMCP.get_test_job job_id=<job_id>
 When `status == "succeeded"`, check `result.summary.total`, `.passed`, `.failed`.
 
 Note: `mcp_call(server: "unityMCP", tool: "run_tests", args: {...})` via the pi tool also triggers the same crash. The stdin pipe workaround is the only reliable method.
+
+---
+
+### K007 — SceneSetup must be re-run after any SerializeField change on GameBootstrapper
+**Date:** 2026-03-18
+
+After adding or changing `[SerializeField]` fields on `GameBootstrapper` (or any Boot scene MonoBehaviour), the Boot scene file is NOT automatically updated. `SceneSetup.cs` holds the programmatic wiring logic, but it only runs when `Tools/Setup/Create And Register Scenes` is executed from the Unity Editor menu.
+
+**Symptom:** Fields appear correctly in `.cs` source but are null at runtime — Unity serializes the old field layout from the `.unity` file.
+
+**Fix:** Run `Tools/Setup/Create And Register Scenes` from the Unity Editor menu (or via `mcporter call unityMCP.execute_menu_item --output raw "menu_path:Tools/Setup/Create And Register Scenes"`). Commit the resulting changes to all four `.unity` scene files.
+
+**Rule:** Any task that adds a `[SerializeField]` to a Boot scene component AND updates `SceneSetup.cs` is not complete until SceneSetup has been run and the scene file diff has been committed.
+

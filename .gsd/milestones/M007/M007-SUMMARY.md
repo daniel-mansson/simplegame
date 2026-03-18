@@ -68,10 +68,10 @@ requirement_outcomes:
   - id: R077
     from_status: active
     to_status: active
-    proof: Human UAT not yet performed. All mechanical criteria met. Remains open until play-through confirms identical behavior.
-duration: ~80m across 3 slices (S01 ~30m, S02 ~25m, S03 ~25m)
+    proof: Human UAT not yet performed. Boot scene was regenerated post-completion to wire SerializeField refs (see post-completion fix note). All mechanical criteria met. Remains open until play-through confirms identical behavior.
+duration: ~80m across 3 slices (S01 ~30m, S02 ~25m, S03 ~25m) + post-completion scene fix
 verification_result: passed
-completed_at: 2026-03-17
+completed_at: 2026-03-18
 ---
 
 # M007: Prefab-Based View Management
@@ -151,6 +151,7 @@ The total production `FindFirstObjectByType` count went from 10 → 7 (S01 renam
 - **Boot.unity m_EditorClassIdentifier**: Originally assumed the scene file wouldn't need updating after class rename. Actual: `m_EditorClassIdentifier` stores class name as plain string, required sed patch (K005).
 - **Batchmode test XML was stale**: The TestResults.xml from batchmode showed 49 tests from pre-M007 compiled assemblies (K003). Live editor run is authoritative — always use Unity MCP test jobs, not XML files.
 - **asmdef changes were not needed**: `SimpleGame.Tests.Game.asmdef` already referenced both Core and Game assemblies.
+- **Boot scene not regenerated post-refactor**: SceneSetup was updated with `WireSerializedField` calls for the 3 new `[SerializeField]` fields, but `Tools/Setup/Create And Register Scenes` was never run during M007. The Boot scene had the old serialization — `_viewContainer` was null at runtime, causing `IViewResolver` to be null and all popup view lookups to fail. Fixed post-completion by running SceneSetup and committing the regenerated scene.
 
 ## Files Created/Modified
 
@@ -160,7 +161,7 @@ The total production `FindFirstObjectByType` count went from 10 → 7 (S01 renam
 - `Assets/Scripts/Game/InGame/InGameSceneController.cs` — `IViewResolver` field + optional parameter on `Initialize()`; 2 `FindFirstObjectByType` replaced with `_viewResolver?.Get<T>()`
 - `Assets/Scripts/Game/MainMenu/MainMenuSceneController.cs` — `IViewResolver` field + optional parameter on `Initialize()`; 2 `FindFirstObjectByType` replaced with `_viewResolver?.Get<T>()`
 - `Assets/Editor/SceneSetup.cs` — Type reference updated to `UnityViewContainer`; 3 `WireSerializedField` calls added for boot infrastructure
-- `Assets/Scenes/Boot.unity` — `m_EditorClassIdentifier` updated from `UnityPopupContainer` to `UnityViewContainer`
+- `Assets/Scenes/Boot.unity` — `m_EditorClassIdentifier` updated from `UnityPopupContainer` to `UnityViewContainer`; regenerated post-completion to wire `_inputBlocker`, `_transitionPlayer`, `_viewContainer` on GameBootstrapper
 - `Assets/Tests/EditMode/Game/ViewContainerTests.cs` — New: `MockViewResolver` + 5 NUnit tests proving `IViewResolver` contract
 - `Assets/Tests/EditMode/Game/InGameTests.cs` — 6 `Initialize()` call sites updated with null `IViewResolver` parameter
 - `Assets/Tests/EditMode/Game/SceneControllerTests.cs` — 2 `Initialize()` call sites updated with null `IViewResolver` parameter
