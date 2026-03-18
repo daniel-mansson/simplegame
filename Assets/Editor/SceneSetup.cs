@@ -345,13 +345,13 @@ public static class SceneSetup
         => SceneSetupHelpers.CreateButton(name, label, parent, out result);
 
     /// <summary>
-    /// Instantiates a popup prefab from Assets/Prefabs/UI/Popups/ as a connected prefab
+    /// Instantiates a popup prefab from Assets/Prefabs/Game/Popups/ as a connected prefab
     /// instance inside <paramref name="parent"/>. The prefab already has all view fields
     /// wired. Starts inactive (hidden until PopupManager shows it).
     /// </summary>
     private static GameObject InstantiatePopupPrefab(string name, Transform parent)
     {
-        var path   = $"Assets/Prefabs/UI/Popups/{name}.prefab";
+        var path   = $"Assets/Prefabs/Game/Popups/{name}.prefab";
         var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
         if (prefab == null)
         {

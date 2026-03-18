@@ -6,17 +6,18 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Editor utility that creates the UI prefab kit under Assets/Prefabs/UI/.
-/// Run via: Tools/Setup/Create UI Prefab Kit
+/// Editor utility that creates the UI prefab kit.
+/// Run via: Tools/Setup/Create UI Prefab Kit (layer 1)
+///          Tools/Setup/Create Popup Prefabs    (layer 2)
 ///
-/// Layer 1 — primitive component prefabs:
-///   BigPopupWindow, SmallPopupWindow
+/// Layer 1 — generic, reusable UI component prefabs (Assets/Prefabs/UI/):
+///   Windows/BigPopupWindow, Windows/SmallPopupWindow
 ///   Buttons/PositiveButton, DestructiveButton, NeutralButton
 ///   Text/TitleText, BodyText, ButtonLabel
 ///
-/// Layer 2 — popup prefabs (nested, built on top of layer 1):
-///   Popups/ConfirmDialogPopup, LevelCompletePopup, LevelFailedPopup,
-///   Popups/RewardedAdPopup, IAPPurchasePopup, ObjectRestoredPopup
+/// Layer 2 — game-specific popup prefabs (Assets/Prefabs/Game/Popups/):
+///   ConfirmDialogPopup, LevelCompletePopup, LevelFailedPopup,
+///   RewardedAdPopup, IAPPurchasePopup, ObjectRestoredPopup
 ///
 /// Each popup prefab nests the window shell and button/text component prefabs
 /// with live prefab connections. The view MonoBehaviour, _animConfig, and all
@@ -28,9 +29,10 @@ using UnityEngine.UI;
 public static class PrefabKitSetup
 {
     private const string UIPrefabDir     = "Assets/Prefabs/UI";
+    private const string WindowPrefabDir = "Assets/Prefabs/UI/Windows";
     private const string ButtonPrefabDir = "Assets/Prefabs/UI/Buttons";
     private const string TextPrefabDir   = "Assets/Prefabs/UI/Text";
-    private const string PopupPrefabDir  = "Assets/Prefabs/UI/Popups";
+    private const string PopupPrefabDir  = "Assets/Prefabs/Game/Popups";
     private const string AnimConfigPath  = "Assets/Data/PopupAnimationConfig.asset";
 
     // Panel rect: (xMin, yMin, xMax, yMax) as anchor fractions
@@ -68,7 +70,7 @@ public static class PrefabKitSetup
         CreateObjectRestoredPrefab(animConfig);
 
         AssetDatabase.Refresh();
-        Debug.Log("[PrefabKitSetup] Popup prefabs created in Assets/Prefabs/UI/Popups/.");
+        Debug.Log("[PrefabKitSetup] Popup prefabs created in Assets/Prefabs/Game/Popups/.");
     }
 
     // ── Component prefab creation ─────────────────────────────────────────────
@@ -77,7 +79,6 @@ public static class PrefabKitSetup
     {
         CreateWindowPrefab("BigPopupWindow",   BigPanelRect);
         CreateWindowPrefab("SmallPopupWindow", SmallPanelRect);
-
         CreateButtonPrefab("PositiveButton",    PositiveColor);
         CreateButtonPrefab("DestructiveButton", DestructiveColor);
         CreateButtonPrefab("NeutralButton",     NeutralColor);
@@ -91,7 +92,7 @@ public static class PrefabKitSetup
 
     private static void CreateConfirmDialogPrefab(PopupAnimationConfig animConfig)
     {
-        var bigWindow = LoadPrefab(UIPrefabDir, "BigPopupWindow");
+        var bigWindow = LoadPrefab(WindowPrefabDir, "BigPopupWindow");
         var root      = InstantiateNested(bigWindow, "ConfirmDialogPopup");
         var panel     = root.transform.Find("Panel");
 
@@ -108,7 +109,7 @@ public static class PrefabKitSetup
 
     private static void CreateLevelCompletePrefab(PopupAnimationConfig animConfig)
     {
-        var bigWindow = LoadPrefab(UIPrefabDir, "BigPopupWindow");
+        var bigWindow = LoadPrefab(WindowPrefabDir, "BigPopupWindow");
         var root      = InstantiateNested(bigWindow, "LevelCompletePopup");
         var panel     = root.transform.Find("Panel");
 
@@ -126,7 +127,7 @@ public static class PrefabKitSetup
 
     private static void CreateLevelFailedPrefab(PopupAnimationConfig animConfig)
     {
-        var bigWindow = LoadPrefab(UIPrefabDir, "BigPopupWindow");
+        var bigWindow = LoadPrefab(WindowPrefabDir, "BigPopupWindow");
         var root      = InstantiateNested(bigWindow, "LevelFailedPopup");
         var panel     = root.transform.Find("Panel");
 
@@ -145,7 +146,7 @@ public static class PrefabKitSetup
 
     private static void CreateRewardedAdPrefab(PopupAnimationConfig animConfig)
     {
-        var smallWindow = LoadPrefab(UIPrefabDir, "SmallPopupWindow");
+        var smallWindow = LoadPrefab(WindowPrefabDir, "SmallPopupWindow");
         var root        = InstantiateNested(smallWindow, "RewardedAdPopup");
         var panel       = root.transform.Find("Panel");
 
@@ -162,7 +163,7 @@ public static class PrefabKitSetup
 
     private static void CreateIAPPurchasePrefab(PopupAnimationConfig animConfig)
     {
-        var smallWindow = LoadPrefab(UIPrefabDir, "SmallPopupWindow");
+        var smallWindow = LoadPrefab(WindowPrefabDir, "SmallPopupWindow");
         var root        = InstantiateNested(smallWindow, "IAPPurchasePopup");
         var panel       = root.transform.Find("Panel");
 
@@ -181,7 +182,7 @@ public static class PrefabKitSetup
 
     private static void CreateObjectRestoredPrefab(PopupAnimationConfig animConfig)
     {
-        var smallWindow = LoadPrefab(UIPrefabDir, "SmallPopupWindow");
+        var smallWindow = LoadPrefab(WindowPrefabDir, "SmallPopupWindow");
         var root        = InstantiateNested(smallWindow, "ObjectRestoredPopup");
         var panel       = root.transform.Find("Panel");
 
@@ -294,7 +295,7 @@ public static class PrefabKitSetup
         panelImage.color         = PanelColor;
         panelImage.raycastTarget = true;
 
-        SaveComponentPrefab(root, UIPrefabDir, name);
+        SaveComponentPrefab(root, WindowPrefabDir, name);
         Object.DestroyImmediate(root);
     }
 
@@ -344,12 +345,16 @@ public static class PrefabKitSetup
     {
         if (!AssetDatabase.IsValidFolder(UIPrefabDir))
             AssetDatabase.CreateFolder("Assets/Prefabs", "UI");
+        if (!AssetDatabase.IsValidFolder(WindowPrefabDir))
+            AssetDatabase.CreateFolder(UIPrefabDir, "Windows");
         if (!AssetDatabase.IsValidFolder(ButtonPrefabDir))
             AssetDatabase.CreateFolder(UIPrefabDir, "Buttons");
         if (!AssetDatabase.IsValidFolder(TextPrefabDir))
             AssetDatabase.CreateFolder(UIPrefabDir, "Text");
+        if (!AssetDatabase.IsValidFolder("Assets/Prefabs/Game"))
+            AssetDatabase.CreateFolder("Assets/Prefabs", "Game");
         if (!AssetDatabase.IsValidFolder(PopupPrefabDir))
-            AssetDatabase.CreateFolder(UIPrefabDir, "Popups");
+            AssetDatabase.CreateFolder("Assets/Prefabs/Game", "Popups");
     }
 
     private static void SaveComponentPrefab(GameObject go, string dir, string name)
