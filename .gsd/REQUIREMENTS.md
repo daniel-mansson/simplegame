@@ -893,13 +893,123 @@ Use it to track what is actively in scope, what has been validated by completed 
 | R098 | primary-user-loop | deferred | none | none | unmapped |
 | R099 | quality-attribute | deferred | none | none | unmapped |
 | R060 | core-capability | active | M011/S03 | M011/S01, M011/S02, M011/S04 | unmapped |
+| R101 | core-capability | active | M012/S01 | M012/S02, M012/S03 | mapped |
+| R102 | quality-attribute | active | M012/S01 | M012/S03 | mapped |
+| R103 | primary-user-loop | active | M012/S01 | M012/S02, M012/S03 | mapped |
+| R104 | primary-user-loop | active | M012/S02 | M012/S01 | mapped |
+| R105 | core-capability | active | M012/S01 | M012/S02 | mapped |
+| R106 | constraint | active | M012/S01 | M012/S04 | mapped |
+| R107 | core-capability | active | M012/S03 | M012/S02 | mapped |
+| R108 | quality-attribute | active | M012/S04 | M012/S01 | mapped |
+| R109 | integration | active | M012/S03 | M012/S01 | mapped |
+
+## New Requirements (M012)
+
+### R101 — PuzzleModel as ID-only state machine
+- Class: core-capability
+- Status: active
+- Description: PuzzleModel is a pure C# class with no Unity references that owns board state, a shared ordered deck, and N explicitly-tracked slots. All operations are on integer piece IDs.
+- Why it matters: Eliminates the sync bugs caused by the old tray-window lookahead design.
+- Source: user
+- Primary owning slice: M012/S01
+- Supporting slices: M012/S02, M012/S03
+- Validation: unmapped
+- Notes: Lives in SimpleGame.Puzzle asmdef with noEngineReferences:true.
+
+### R102 — Configurable slot count via ScriptableObject
+- Class: quality-attribute
+- Status: active
+- Description: Slot count is a field on a PuzzleModelConfig ScriptableObject, not hardcoded. Default is 3.
+- Why it matters: Level designers can vary slot count without code changes.
+- Source: user
+- Primary owning slice: M012/S01
+- Supporting slices: M012/S03
+- Validation: unmapped
+- Notes: Config asset read by InGameSceneController and passed to PuzzleModel constructor.
+
+### R103 — Slots refill independently from shared deck top
+- Class: primary-user-loop
+- Status: active
+- Description: When a slot's piece is correctly placed on the board, that slot immediately draws the next piece from the shared deck's top. Each slot refills independently; they share one deck.
+- Why it matters: Core mechanic — the player manages which slots to play from as the deck drains.
+- Source: user
+- Primary owning slice: M012/S01
+- Supporting slices: M012/S02, M012/S03
+- Validation: unmapped
+- Notes: Slot becomes null/empty when deck is exhausted and no more pieces are available.
+
+### R104 — Wrong tap costs heart; slot piece unchanged
+- Class: primary-user-loop
+- Status: active
+- Description: Tapping a slot whose piece cannot be legally placed (no placed neighbour on board) costs one heart. The slot piece does not change. The slot is not refilled.
+- Why it matters: Classic skill-test mechanic — guess wrong and pay. Same piece stays so player can try to place it later once a neighbour is placed.
+- Source: user
+- Primary owning slice: M012/S02
+- Supporting slices: M012/S01
+- Validation: unmapped
+- Notes: Consistent with R057 (heart system). Board adjacency rule unchanged (D064).
+
+### R105 — Model fires typed events; presenter reacts
+- Class: core-capability
+- Status: active
+- Description: PuzzleModel exposes typed events (OnSlotChanged, OnPiecePlaced, OnCompleted). InGamePresenter subscribes in Initialize() and pushes to the view reactively. No polling or state diffing in the presenter.
+- Why it matters: Eliminates view sync bugs. Aligns with D028 (service/model reactive callbacks permitted).
+- Source: user
+- Primary owning slice: M012/S01
+- Supporting slices: M012/S02
+- Validation: unmapped
+- Notes: Consistent with D027 (view→presenter events) and D028 (model→presenter reactive callbacks).
+
+### R106 — PuzzleSession deleted; replaced by PuzzleModel
+- Class: constraint
+- Status: active
+- Description: PuzzleSession, IPuzzleLevel, and PuzzleLevel are deleted. PuzzleModel is the sole domain object. IDeck/Deck may be kept as internal implementation details inside PuzzleModel or also deleted.
+- Why it matters: Eliminates the old design entirely; prevents parallel maintenance burden.
+- Source: user
+- Primary owning slice: M012/S01
+- Supporting slices: M012/S04
+- Validation: unmapped
+- Notes: rg "PuzzleSession" Assets/ must return zero results when S04 is complete.
+
+### R107 — View receives slot-indexed updates (not tray window)
+- Class: core-capability
+- Status: active
+- Description: IInGameView exposes RefreshSlot(int slotIndex, int? pieceId) instead of RefreshTray(int?[]). Each slot update is explicit and targeted.
+- Why it matters: Removes the source of view/model sync bugs — the view always knows exactly what changed and where.
+- Source: user
+- Primary owning slice: M012/S03
+- Supporting slices: M012/S02
+- Validation: unmapped
+- Notes: Breaking change to IInGameView interface; MockInGameView and InGameView both updated in S03.
+
+### R108 — Domain tests for PuzzleModel contract
+- Class: quality-attribute
+- Status: active
+- Description: PuzzleDomainTests is rewritten to cover PuzzleModel: slot refill on correct placement, heart event on wrong placement, deck exhaustion, win/lose conditions.
+- Why it matters: Ensures the model contract is machine-verifiable; prevents regressions.
+- Source: inferred
+- Primary owning slice: M012/S04
+- Supporting slices: M012/S01
+- Validation: unmapped
+- Notes: Old PuzzleDomainTests (for PuzzleSession) are deleted and replaced.
+
+### R109 — JigsawLevelFactory feeds PuzzleModel cleanly
+- Class: integration
+- Status: active
+- Description: JigsawLevelFactory.Build() produces output that can be passed directly to PuzzleModel constructor without an intermediate adapter or format conversion in the caller.
+- Why it matters: Clean adapter boundary (D062) — factory is the only coupling point to SimpleJigsaw.
+- Source: inferred
+- Primary owning slice: M012/S03
+- Supporting slices: M012/S01
+- Validation: unmapped
+- Notes: Factory output format may change from JigsawBuildResult{Level, RawBoard} to a richer struct that includes the flat piece list, seeds, and deck as PuzzleModel expects.
 
 ## Coverage Summary
 
-- Total requirements: 101
-- Active: 25
+- Total requirements: 110
+- Active: 34
 - Validated: 53
 - Deferred: 18
 - Out of scope: 4
-- Unmapped active requirements: 8 (R060, R091–R097 — all owned by M011)
-- Note: R079–R083 validated by M008. R084–R089 validated by M009. R091–R097 added for M011 puzzle domain model. R060 promoted from deferred to active (owned by M011). Some validated/deferred requirements (R018, R019, R041, R042, R044) have traceability table entries only — no full body section.
+- Unmapped active requirements: 8 (R060, R091–R097 — all owned by M011) + 9 new M012 requirements mapped to slices
+- Note: R101–R109 added for M012 PuzzleModel refactor.

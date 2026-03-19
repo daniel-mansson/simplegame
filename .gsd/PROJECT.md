@@ -45,4 +45,5 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 - [x] M008: Popup Animation & UI Component Kit — PopupViewBase, blocker fade, TMP kit
 - [x] M009: In-Scene Screens, Popup Stack, Coins & Overlay HUD — InSceneScreenManager, coin balance, stacked popups
 - [x] M010: Simple Jigsaw Package Integration — git submodule, local UPM package, JigsawDemo scene
-- [ ] M011: Puzzle Domain Model & API — Pure puzzle model, jigsaw adapter, InGame wired with real placement logic and rendered tappable pieces
+- [x] M011: Puzzle Domain Model & API — Pure puzzle model, jigsaw adapter, InGame wired with real placement logic and rendered tappable pieces
+- [ ] M012: Stable Core Game — PuzzleModel Refactor — Replace buggy PuzzleSession + tray-window logic with PuzzleModel owning board, shared deck, and N explicitly-tracked slots
