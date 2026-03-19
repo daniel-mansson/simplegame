@@ -5,8 +5,9 @@ namespace SimpleGame.Game.Puzzle
 {
     /// <summary>
     /// The sole bridge between the SimpleJigsaw package and the puzzle domain model.
-    /// Converts a SimpleJigsaw.PuzzleBoard into an IPuzzleLevel and returns both
-    /// the domain level and the raw board for rendering via PieceObjectFactory.
+    /// Converts a <see cref="SimpleJigsaw.PuzzleBoard"/> into puzzle domain data and
+    /// returns both the raw board for rendering and the flat piece/seed/deck lists needed
+    /// to construct a <see cref="PuzzleModel"/> directly.
     ///
     /// This is the ONLY file in SimpleGame.Game that may import SimpleJigsaw types.
     /// All other game code works exclusively with SimpleGame.Puzzle interfaces.
@@ -14,28 +15,48 @@ namespace SimpleGame.Game.Puzzle
     public static class JigsawLevelFactory
     {
         /// <summary>
-        /// Result of a build operation — domain level for game logic, raw board for rendering.
+        /// Result of a build operation.
         /// </summary>
         public readonly struct JigsawBuildResult
         {
-            /// <summary>Domain level — pass to PuzzleSession constructor.</summary>
-            public IPuzzleLevel Level { get; }
-
             /// <summary>
             /// Raw SimpleJigsaw board — pass to PieceObjectFactory.CreateAll for rendering.
             /// Keep this reference only in the adapter/rendering layer; never expose to presenters.
             /// </summary>
             public SimpleJigsaw.PuzzleBoard RawBoard { get; }
 
-            public JigsawBuildResult(IPuzzleLevel level, SimpleJigsaw.PuzzleBoard rawBoard)
+            /// <summary>All puzzle pieces (including seeds), ready to pass to PuzzleModel.</summary>
+            public IReadOnlyList<IPuzzlePiece> PieceList { get; }
+
+            /// <summary>IDs of pieces pre-placed on the board (anchors).</summary>
+            public IReadOnlyList<int> SeedIds { get; }
+
+            /// <summary>Ordered deck of non-seed piece IDs, ready to pass to PuzzleModel.</summary>
+            public IReadOnlyList<int> DeckOrder { get; }
+
+            /// <summary>
+            /// Legacy accessor: domain level in IPuzzleLevel form.
+            /// Kept for editor tools that still use this shape.
+            /// Prefer constructing <see cref="PuzzleModel"/> directly from the flat fields above.
+            /// </summary>
+            public IPuzzleLevel Level { get; }
+
+            public JigsawBuildResult(
+                SimpleJigsaw.PuzzleBoard rawBoard,
+                IReadOnlyList<IPuzzlePiece> pieceList,
+                IReadOnlyList<int> seedIds,
+                IReadOnlyList<int> deckOrder)
             {
-                Level = level;
-                RawBoard = rawBoard;
+                RawBoard  = rawBoard;
+                PieceList = pieceList;
+                SeedIds   = seedIds;
+                DeckOrder = deckOrder;
+                Level     = new PuzzleLevel(pieceList, seedIds, new IDeck[] { new Deck(deckOrder) });
             }
         }
 
         /// <summary>
-        /// Builds a puzzle level from a grid layout configuration.
+        /// Builds puzzle data from a grid layout configuration.
         /// </summary>
         /// <param name="config">Grid layout — rows, columns, edge profile.</param>
         /// <param name="seed">Deterministic RNG seed for edge type assignment.</param>
@@ -43,15 +64,10 @@ namespace SimpleGame.Game.Puzzle
         /// Piece IDs pre-placed on the board before gameplay.
         /// Pass null or empty to use no seeds (not recommended — nothing will be placeable).
         /// </param>
-        /// <param name="deckOrders">
-        /// Ordered piece ID sequences, one per slot.
-        /// Pass null to auto-generate a single shared deck of all non-seed pieces in ID order.
-        /// </param>
         public static JigsawBuildResult Build(
             SimpleJigsaw.GridLayoutConfig config,
-            int seed,
-            int[] seedPieceIds = null,
-            int[][] deckOrders = null)
+            int   seed,
+            int[] seedPieceIds = null)
         {
             // Generate the jigsaw board — this is the only SimpleJigsaw call
             var rawBoard = SimpleJigsaw.BoardFactory.Generate(config, seed);
@@ -68,32 +84,19 @@ namespace SimpleGame.Game.Puzzle
             }
 
             // Resolve seeds
-            var seeds = seedPieceIds ?? System.Array.Empty<int>();
+            var seeds = (IReadOnlyList<int>)(seedPieceIds ?? System.Array.Empty<int>());
 
-            // Resolve decks
-            List<IDeck> decks;
-            if (deckOrders != null && deckOrders.Length > 0)
+            // Build flat deck: all non-seed pieces in ascending ID order
+            var seedSet = new HashSet<int>(seeds);
+            var deckOrder = new List<int>(pieces.Count);
+            foreach (var piece in pieces)
             {
-                decks = new List<IDeck>(deckOrders.Length);
-                foreach (var order in deckOrders)
-                    decks.Add(new Deck(order));
+                if (!seedSet.Contains(piece.Id))
+                    deckOrder.Add(piece.Id);
             }
-            else
-            {
-                // Default: single shared deck of all non-seed pieces in ascending ID order
-                var seedSet = new HashSet<int>(seeds);
-                var defaultOrder = new List<int>(pieces.Count);
-                foreach (var piece in pieces)
-                {
-                    if (!seedSet.Contains(piece.Id))
-                        defaultOrder.Add(piece.Id);
-                }
-                defaultOrder.Sort();
-                decks = new List<IDeck> { new Deck(defaultOrder) };
-            }
+            deckOrder.Sort();
 
-            var level = new PuzzleLevel(pieces, seeds, decks);
-            return new JigsawBuildResult(level, rawBoard);
+            return new JigsawBuildResult(rawBoard, pieces, seeds, deckOrder);
         }
     }
 }

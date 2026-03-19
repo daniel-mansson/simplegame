@@ -58,7 +58,7 @@ This milestone is complete only when all are true:
 - [x] **S02: InGamePresenter rewrite** `risk:medium` `depends:[S01]`
   > After this: InGamePresenter tests pass with PuzzleModel events driving view; tray-window logic gone.
 
-- [ ] **S03: View + SceneController wiring** `risk:medium` `depends:[S02]`
+- [x] **S03: View + SceneController wiring** `risk:medium` `depends:[S02]`
   > After this: play-from-editor works end-to-end — slot-indexed view, PuzzleModelConfig slot count, JigsawLevelFactory feeding PuzzleModel.
 
 - [ ] **S04: Tests & cleanup** `risk:low` `depends:[S03]`

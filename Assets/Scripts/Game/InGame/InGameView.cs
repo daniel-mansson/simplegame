@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -11,10 +10,13 @@ namespace SimpleGame.Game.InGame
     /// Layout:
     ///   HUD  — Level label (centre), Hearts (left), Piece counter (right) — top strip
     ///   Board — 3D jigsaw pieces in world space (managed by InGameSceneController)
-    ///   Tray  — Bottom strip: up to 3 visible deck pieces as 3D meshes, no button
+    ///   Tray  — Bottom strip: slot-indexed 3D meshes; no button
     ///
     /// InGameSceneController calls RegisterPieceCallbacks() after spawning so this view
     /// can reposition GameObjects without holding a reference to them itself.
+    ///
+    /// <para>The presenter now calls <see cref="RefreshSlot"/> for targeted slot updates
+    /// instead of sending the full tray window each time.</para>
     /// </summary>
     public class InGameView : MonoBehaviour, IInGameView
     {
@@ -30,18 +32,16 @@ namespace SimpleGame.Game.InGame
         public event Action<int> OnTapPiece;
 
         // Delegates wired by InGameSceneController after SpawnPieces
-        private Action<int, int> _onMovePieceToSlot;   // (pieceId, slotIndex 0-2)
+        private Action<int, int> _onMovePieceToSlot;   // (pieceId, slotIndex)
         private Action<int>      _onRevealPiece;        // pieceId → board position
-        private Action           _onHideTray;
 
-        // Current tray window — up to 3 piece IDs (null = empty slot)
-        private int?[] _trayWindow = new int?[3];
+        // Per-slot tracking: slotIndex → current piece ID (null = empty)
+        private int?[] _slotContents;
 
         // ── MonoBehaviour ─────────────────────────────────────────────────
 
         private void Awake()
         {
-            // Deck panel and place button not used — 3D tray pieces handle all interaction
             if (_deckPanel   != null) _deckPanel.SetActive(false);
             if (_placeButton != null) _placeButton.gameObject.SetActive(false);
         }
@@ -50,63 +50,57 @@ namespace SimpleGame.Game.InGame
 
         /// <summary>
         /// Called by InGameSceneController after piece GameObjects are spawned.
-        /// <paramref name="onMovePieceToSlot"/> (pieceId, slotIdx) repositions the piece
-        /// into tray slot 0, 1, or 2.
+        /// <paramref name="onMovePieceToSlot"/> (pieceId, slotIdx) repositions the piece.
         /// <paramref name="onRevealPiece"/> moves the piece to its solved board position.
         /// </summary>
         public void RegisterPieceCallbacks(
             Action<int, int> onMovePieceToSlot,
             Action<int>      onRevealPiece,
-            Action           onHideTray = null)
+            Action           onHideTray = null)    // onHideTray kept for scene compatibility
         {
             _onMovePieceToSlot = onMovePieceToSlot;
             _onRevealPiece     = onRevealPiece;
-            _onHideTray        = onHideTray;
         }
 
-        /// <summary>Called by PieceTapHandler when a board or tray piece is tapped.</summary>
+        /// <summary>Called by PieceTapHandler when a tray piece is tapped.</summary>
         public void NotifyPieceTapped(int pieceId) => OnTapPiece?.Invoke(pieceId);
 
         // ── IInGameView ───────────────────────────────────────────────────
 
-        public void RefreshTray(int?[] pieceIds)
+        /// <summary>
+        /// Update a single tray slot. If <paramref name="pieceId"/> is null the slot
+        /// becomes visually empty. Otherwise the piece is repositioned to that slot.
+        /// </summary>
+        public void RefreshSlot(int slotIndex, int? pieceId)
         {
-            if (pieceIds == null || pieceIds.Length == 0)
+            // Grow tracking array on demand (slot count varies with config)
+            if (_slotContents == null || slotIndex >= _slotContents.Length)
             {
-                _onHideTray?.Invoke();
-                if (_deckLabel != null) _deckLabel.text = "";
-                _trayWindow = new int?[3];
-                return;
+                var grown = new int?[slotIndex + 1];
+                if (_slotContents != null)
+                    System.Array.Copy(_slotContents, grown, _slotContents.Length);
+                _slotContents = grown;
             }
 
-            // Move pieces that have changed slot positions
-            for (int slot = 0; slot < 3; slot++)
-            {
-                var newId = slot < pieceIds.Length ? pieceIds[slot] : null;
-                var oldId = _trayWindow[slot];
+            var oldId = _slotContents[slotIndex];
+            _slotContents[slotIndex] = pieceId;
 
-                if (newId == oldId) continue;
+            if (pieceId == oldId) return;
 
-                // A piece just left this slot — nothing to do here (caller handles reveal)
-                if (newId.HasValue)
-                    _onMovePieceToSlot?.Invoke(newId.Value, slot);
+            if (pieceId.HasValue)
+                _onMovePieceToSlot?.Invoke(pieceId.Value, slotIndex);
 
-                _trayWindow[slot] = newId;
-            }
-
-            // Update status label with front piece
-            if (_deckLabel != null)
-            {
-                var front = pieceIds.Length > 0 ? pieceIds[0] : null;
-                _deckLabel.text = front.HasValue ? $"Piece {front.Value + 1}" : "";
-            }
+            // Update status label when slot 0 changes (slot 0 = front/most prominent)
+            if (slotIndex == 0 && _deckLabel != null)
+                _deckLabel.text = pieceId.HasValue ? $"Piece {pieceId.Value + 1}" : "";
         }
 
         public void RevealPiece(int pieceId)
         {
-            // Clear it from tray window tracking
-            for (int i = 0; i < 3; i++)
-                if (_trayWindow[i] == pieceId) _trayWindow[i] = null;
+            // Clear from slot tracking
+            if (_slotContents != null)
+                for (int i = 0; i < _slotContents.Length; i++)
+                    if (_slotContents[i] == pieceId) _slotContents[i] = null;
 
             _onRevealPiece?.Invoke(pieceId);
         }

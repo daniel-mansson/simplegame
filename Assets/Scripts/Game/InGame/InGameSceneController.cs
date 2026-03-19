@@ -39,6 +39,9 @@ namespace SimpleGame.Game.InGame
         [SerializeField] private int _puzzleSeed = 42;
         [SerializeField] private int _seedPieceId = 0;
 
+        [Header("Puzzle Model")]
+        [SerializeField] private PuzzleModelConfig _puzzleModelConfig;
+
         [Header("Transitions")]
         [SerializeField] private UnityTransitionPlayer _transitionPlayer;
 
@@ -197,12 +200,20 @@ namespace SimpleGame.Game.InGame
                 _session.ResetForNewGame(_defaultLevelId, _defaultTotalPieces);
             }
 
-            // Determine the level factory: use injected factory, or real jigsaw, or fallback stub.
-            // S04: use JigsawLevelFactory when a GridLayoutConfig is assigned.
-            System.Func<IPuzzleLevel> factory;
+            // Determine slot count from config (default 3 if no config assigned)
+            int slotCount = _puzzleModelConfig != null ? _puzzleModelConfig.SlotCount : 3;
+
+            // Determine the model factory: use injected factory, or real jigsaw, or fallback stub.
+            System.Func<SimpleGame.Puzzle.PuzzleModel> modelFactory;
             if (_levelFactory != null)
             {
-                factory = _levelFactory;
+                // Legacy test seam: convert IPuzzleLevel → PuzzleModel
+                modelFactory = () =>
+                {
+                    var lvl = _levelFactory();
+                    _currentLevel = lvl;
+                    return LevelToPuzzleModel(lvl, slotCount);
+                };
             }
             else if (_gridLayoutConfig != null)
             {
@@ -210,27 +221,32 @@ namespace SimpleGame.Game.InGame
                     _gridLayoutConfig, _puzzleSeed,
                     seedPieceIds: new[] { _seedPieceId });
 
-                // Fix piece count in session to match actual grid (e.g. 3×3 = 9, not _defaultTotalPieces)
-                if (_session.TotalPieces != buildResult.Level.TotalPieceCount)
-                    _session.ResetForNewGame(_session.CurrentLevelId, buildResult.Level.TotalPieceCount);
+                // Fix piece count in session to match actual grid
+                if (_session.TotalPieces != buildResult.PieceList.Count)
+                    _session.ResetForNewGame(_session.CurrentLevelId, buildResult.PieceList.Count);
 
                 // Spawn piece GameObjects with tap handlers (once per scene load)
                 SpawnPieces(buildResult.RawBoard);
 
-                factory = () => JigsawLevelFactory.Build(
-                    _gridLayoutConfig, _puzzleSeed,
-                    seedPieceIds: new[] { _seedPieceId }).Level;
+                // Capture for lambda closure
+                var pieces   = buildResult.PieceList;
+                var seedIds  = buildResult.SeedIds;
+                var deckOrder = buildResult.DeckOrder;
+                modelFactory = () => new SimpleGame.Puzzle.PuzzleModel(pieces, seedIds, deckOrder, slotCount);
             }
             else
             {
-                factory = () => BuildStubLevel(_session.TotalPieces);
+                modelFactory = () =>
+                {
+                    _currentLevel = BuildStubLevel(_session.TotalPieces);
+                    return LevelToPuzzleModel(_currentLevel, slotCount);
+                };
             }
 
             while (true)
             {
-                // Rebuild level each retry — ensures deck state is fresh
-                _currentLevel = factory();
-                var model     = BuildPuzzleModel(_currentLevel, slotCount: 3);
+                // Rebuild model each retry — ensures deck state is fresh
+                var model     = modelFactory();
                 var presenter = _uiFactory.CreateInGamePresenter(ActiveView, model);
                 presenter.Initialize();
                 try
@@ -661,12 +677,12 @@ namespace SimpleGame.Game.InGame
         }
 
         /// <summary>
-        /// Temporary bridge (removed in S03): converts an IPuzzleLevel into a PuzzleModel.
-        /// Extracts the first deck from the level and uses it as the shared deck.
+        /// Converts an <see cref="IPuzzleLevel"/> (from legacy test seam or stub)
+        /// to a <see cref="SimpleGame.Puzzle.PuzzleModel"/>.
+        /// Uses the first deck in the level as the shared deck.
         /// </summary>
-        private static SimpleGame.Puzzle.PuzzleModel BuildPuzzleModel(IPuzzleLevel level, int slotCount)
+        private static SimpleGame.Puzzle.PuzzleModel LevelToPuzzleModel(IPuzzleLevel level, int slotCount)
         {
-            // Collect deck order from first deck (or all non-seed pieces in order if no deck)
             var deckList = new System.Collections.Generic.List<int>();
             if (level.Decks != null && level.Decks.Count > 0)
             {

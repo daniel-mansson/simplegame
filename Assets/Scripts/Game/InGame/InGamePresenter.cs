@@ -124,16 +124,11 @@ namespace SimpleGame.Game.InGame
         // ── Model event handlers ──────────────────────────────────────────
 
         /// <summary>
-        /// Temporary bridge: broadcasts slot change as a one-element RefreshTray call.
-        /// Replaced in S03 when IInGameView gains RefreshSlot(int, int?).
+        /// Calls <see cref="IInGameView.RefreshSlot"/> with the updated slot content.
         /// </summary>
         private void HandleSlotChanged(int slotIndex, int? pieceId)
         {
-            // Build full slot window for view (slot count may vary)
-            var window = new int?[_model.SlotCount];
-            for (int i = 0; i < _model.SlotCount; i++)
-                window[i] = _model.GetSlot(i);
-            View.RefreshTray(window);
+            View.RefreshSlot(slotIndex, pieceId);
         }
 
         private void HandlePiecePlaced(int pieceId)
@@ -160,20 +155,22 @@ namespace SimpleGame.Game.InGame
 
         private void HandleCompleted()
         {
-            View.RefreshTray(System.Array.Empty<int?>());
+            // Clear all slots
+            for (int i = 0; i < _model.SlotCount; i++)
+                View.RefreshSlot(i, null);
             Debug.Log("[Ads] Interstitial ad opportunity — level complete");
             _actionTcs?.TrySetResult(InGameAction.Win);
         }
 
         // ── Helpers ───────────────────────────────────────────────────────
 
-        /// <summary>Sends the current slot state to the view on Initialize.</summary>
+        /// <summary>
+        /// Sends the current slot state to the view on Initialize.
+        /// </summary>
         private void PushAllSlots()
         {
-            var window = new int?[_model.SlotCount];
             for (int i = 0; i < _model.SlotCount; i++)
-                window[i] = _model.GetSlot(i);
-            View.RefreshTray(window);
+                View.RefreshSlot(i, _model.GetSlot(i));
         }
     }
 }

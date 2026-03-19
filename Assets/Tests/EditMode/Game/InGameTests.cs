@@ -28,17 +28,18 @@ namespace SimpleGame.Tests.Game
         public string LastLevelLabelText { get; private set; }
         public int UpdateLevelLabelCallCount { get; private set; }
 
-        // Tray state
-        public int?[] LastTrayWindow { get; private set; } = System.Array.Empty<int?>();
-        public bool   TrayHidden     => LastTrayWindow == null || LastTrayWindow.Length == 0;
-        public int?   FrontPiece     => LastTrayWindow?.Length > 0 ? LastTrayWindow[0] : null;
+        // Slot state — slotIndex → current piece ID
+        private readonly System.Collections.Generic.Dictionary<int, int?> _slots
+            = new System.Collections.Generic.Dictionary<int, int?>();
+
+        public int? GetSlot(int index) => _slots.TryGetValue(index, out var v) ? v : null;
         public int    LastRevealedPieceId { get; private set; } = -1;
 
-        public void UpdateHearts(string text)         { LastHeartsText = text; UpdateHeartsCallCount++; }
-        public void UpdatePieceCounter(string text)   { LastPieceCounterText = text; UpdatePieceCounterCallCount++; }
-        public void UpdateLevelLabel(string text)     { LastLevelLabelText = text; UpdateLevelLabelCallCount++; }
-        public void RefreshTray(int?[] pieceIds)      { LastTrayWindow = pieceIds; }
-        public void RevealPiece(int pieceId)          { LastRevealedPieceId = pieceId; }
+        public void UpdateHearts(string text)       { LastHeartsText = text; UpdateHeartsCallCount++; }
+        public void UpdatePieceCounter(string text) { LastPieceCounterText = text; UpdatePieceCounterCallCount++; }
+        public void UpdateLevelLabel(string text)   { LastLevelLabelText = text; UpdateLevelLabelCallCount++; }
+        public void RefreshSlot(int slotIndex, int? pieceId) { _slots[slotIndex] = pieceId; }
+        public void RevealPiece(int pieceId)        { LastRevealedPieceId = pieceId; }
 
         /// <summary>Fires OnTapPiece with the given piece ID — simulates a tap on that piece.</summary>
         public void SimulateTapPiece(int pieceId) => OnTapPiece?.Invoke(pieceId);

@@ -9,7 +9,7 @@ namespace SimpleGame.Tests.Game
 {
     /// <summary>
     /// EditMode tests for JigsawLevelFactory.
-    /// Verifies the adapter correctly maps SimpleJigsaw.PuzzleBoard → IPuzzleLevel.
+    /// Verifies the adapter correctly maps SimpleJigsaw.PuzzleBoard → puzzle domain data.
     ///
     /// 2×2 grid topology (IDs = row * cols + col):
     ///   [0][1]
@@ -42,7 +42,7 @@ namespace SimpleGame.Tests.Game
         public void Build_2x2Grid_ReturnsFourPieces()
         {
             var result = JigsawLevelFactory.Build(_config2x2, seed: 42, seedPieceIds: new[] { 0 });
-            Assert.That(result.Level.Pieces.Count, Is.EqualTo(4));
+            Assert.That(result.PieceList.Count, Is.EqualTo(4));
         }
 
         [Test]
@@ -57,7 +57,7 @@ namespace SimpleGame.Tests.Game
         public void Build_2x2Grid_EachPieceHasTwoNeighbors()
         {
             var result = JigsawLevelFactory.Build(_config2x2, seed: 42, seedPieceIds: new[] { 0 });
-            foreach (var piece in result.Level.Pieces)
+            foreach (var piece in result.PieceList)
             {
                 Assert.That(piece.NeighborIds.Count, Is.EqualTo(2),
                     $"Piece {piece.Id} in a 2×2 grid should have exactly 2 neighbors.");
@@ -68,9 +68,9 @@ namespace SimpleGame.Tests.Game
         public void Build_2x2Grid_NeighborRelationshipsAreSymmetric()
         {
             var result = JigsawLevelFactory.Build(_config2x2, seed: 42, seedPieceIds: new[] { 0 });
-            var pieceById = result.Level.Pieces.ToDictionary(p => p.Id);
+            var pieceById = result.PieceList.ToDictionary(p => p.Id);
 
-            foreach (var piece in result.Level.Pieces)
+            foreach (var piece in result.PieceList)
             {
                 foreach (var neighborId in piece.NeighborIds)
                 {
@@ -81,18 +81,28 @@ namespace SimpleGame.Tests.Game
         }
 
         [Test]
-        public void Build_SeedIdsArePreservedInLevel()
+        public void Build_SeedIdsArePreservedInResult()
         {
             var result = JigsawLevelFactory.Build(_config2x2, seed: 42, seedPieceIds: new[] { 0 });
-            Assert.That(result.Level.SeedIds, Contains.Item(0));
+            Assert.That(result.SeedIds, Contains.Item(0));
         }
 
         [Test]
         public void Build_DefaultDeck_ContainsAllNonSeedPieces()
         {
-            // No explicit deckOrders → auto-generated deck of non-seed pieces
+            // Default deck: all non-seed pieces in ascending ID order
             var result = JigsawLevelFactory.Build(_config2x2, seed: 42, seedPieceIds: new[] { 0 });
-            Assert.That(result.Level.Decks.Count, Is.EqualTo(1));
+
+            Assert.That(result.DeckOrder, Has.No.Member(0), "Seed piece should not be in the deck.");
+            Assert.That(result.DeckOrder.Count, Is.EqualTo(3), "Deck should contain the 3 non-seed pieces.");
+            Assert.That(result.DeckOrder, Is.Ordered, "Default deck should be in ascending ID order.");
+        }
+
+        [Test]
+        public void Build_DeckOrder_MatchesLegacyLevelDeck()
+        {
+            // The Level legacy accessor should expose the same deck order as DeckOrder
+            var result = JigsawLevelFactory.Build(_config2x2, seed: 42, seedPieceIds: new[] { 0 });
 
             var deckPieces = new List<int>();
             var deck = result.Level.Decks[0];
@@ -102,47 +112,31 @@ namespace SimpleGame.Tests.Game
                 deck.Advance();
             }
 
-            Assert.That(deckPieces, Has.No.Member(0), "Seed piece should not be in the deck.");
-            Assert.That(deckPieces.Count, Is.EqualTo(3), "Deck should contain the 3 non-seed pieces.");
-            Assert.That(deckPieces, Is.Ordered, "Default deck should be in ascending ID order.");
+            CollectionAssert.AreEqual(result.DeckOrder, deckPieces,
+                "Legacy Level.Decks[0] should match DeckOrder.");
         }
 
         [Test]
-        public void Build_ExplicitDeckOrders_ArePreserved()
-        {
-            // Explicit deck order: 3, 2, 1
-            var deckOrder = new[] { new[] { 3, 2, 1 } };
-            var result = JigsawLevelFactory.Build(_config2x2, seed: 42, seedPieceIds: new[] { 0 }, deckOrders: deckOrder);
-
-            var deck = result.Level.Decks[0];
-            Assert.That(deck.Peek(), Is.EqualTo(3));
-            deck.Advance();
-            Assert.That(deck.Peek(), Is.EqualTo(2));
-            deck.Advance();
-            Assert.That(deck.Peek(), Is.EqualTo(1));
-        }
-
-        [Test]
-        public void Build_PuzzleSessionCanCompleteLevelFromDefaultDeck()
+        public void Build_PuzzleModelCanCompleteLevelFromDefaultDeck()
         {
             // Seed piece 0. Neighbors of 0 are 1 and 2. Neighbor of both 1 and 2 is 3.
-            // Valid placement order from default deck (1, 2, 3): 1, 2, 3.
+            // Valid placement via PuzzleModel (single slot): 1, 2, 3.
             var result = JigsawLevelFactory.Build(_config2x2, seed: 42, seedPieceIds: new[] { 0 });
-            var session = new PuzzleSession(result.Level);
+            var model = new PuzzleModel(result.PieceList, result.SeedIds, result.DeckOrder, slotCount: 1);
 
-            // Place piece 1 (neighbors seed 0) — should be Placed
-            var r1 = session.TryPlace(1);
-            Assert.That(r1, Is.EqualTo(PlacementResult.Placed), "Piece 1 should be placeable (neighbors seed 0).");
+            // Slot 0 = piece 1 (neighbours seed 0) — correct
+            var r1 = model.TryPlace(0);
+            Assert.That(r1, Is.EqualTo(SlotTapResult.Placed), "Piece 1 should be placeable (neighbors seed 0).");
 
-            // Place piece 2 (neighbors seed 0) — should be Placed
-            var r2 = session.TryPlace(2);
-            Assert.That(r2, Is.EqualTo(PlacementResult.Placed), "Piece 2 should be placeable (neighbors seed 0).");
+            // Slot 0 now = piece 2 (neighbours seed 0) — correct
+            var r2 = model.TryPlace(0);
+            Assert.That(r2, Is.EqualTo(SlotTapResult.Placed), "Piece 2 should be placeable (neighbors seed 0).");
 
-            // Place piece 3 (neighbors 1 and 2) — should be Placed
-            var r3 = session.TryPlace(3);
-            Assert.That(r3, Is.EqualTo(PlacementResult.Placed), "Piece 3 should be placeable (neighbors 1 and 2).");
+            // Slot 0 now = piece 3 (neighbours 1 and 2) — correct
+            var r3 = model.TryPlace(0);
+            Assert.That(r3, Is.EqualTo(SlotTapResult.Placed), "Piece 3 should be placeable (neighbors 1 and 2).");
 
-            Assert.That(session.IsComplete, Is.True, "Session should be complete after all pieces placed.");
+            Assert.That(model.IsComplete, Is.True, "Model should be complete after all pieces placed.");
         }
     }
 }
