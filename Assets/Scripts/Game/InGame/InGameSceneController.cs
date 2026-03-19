@@ -78,6 +78,9 @@ namespace SimpleGame.Game.InGame
         /// <summary>Runtime GridLayoutConfig created per RunAsync; reused across retries, destroyed on next RunAsync entry.</summary>
         private SimpleJigsaw.GridLayoutConfig _runtimeGridConfig;
 
+        /// <summary>Debug override — when set, bypasses LevelProgression and uses these values directly.</summary>
+        private (int rows, int cols, int slots)? _debugOverride;
+
         /// <summary>
         /// Cancels any in-flight RunAsync (self-bootstrap or previous GameBootstrapper call)
         /// when a new RunAsync is entered. Ensures only one game loop runs at a time.
@@ -234,8 +237,10 @@ namespace SimpleGame.Game.InGame
             }
 
             // Determine slot count from config (default 3 if no config assigned)
-            // Slot count scales with level: levelId/3 + 3, clamped to [1, 5]
-            int slotCount = Mathf.Clamp(_session.CurrentLevelId / 3 + 3, 1, 5);
+            // Slot count: debug override takes priority, then formula levelId/3+3 clamped to [1,5]
+            int slotCount = _debugOverride.HasValue
+                ? Mathf.Max(1, _debugOverride.Value.slots)
+                : Mathf.Clamp(_session.CurrentLevelId / 3 + 3, 1, 5);
 
             // Determine the model factory: use injected factory, or real jigsaw, or fallback stub.
             System.Func<SimpleGame.Puzzle.PuzzleModel> modelFactory;
@@ -247,7 +252,10 @@ namespace SimpleGame.Game.InGame
             else if (_gridLayoutConfig != null)
             {
                 // Derive grid size from level progression (level 1 = 3×3, level 2 = 3×4, etc.)
-                var gridSize = LevelProgression.GetGridSize(_session.CurrentLevelId);
+                // Derive grid size from level progression, unless a debug override is active
+                var gridSize = _debugOverride.HasValue
+                    ? new LevelProgression.GridSize(_debugOverride.Value.rows, _debugOverride.Value.cols)
+                    : LevelProgression.GetGridSize(_session.CurrentLevelId);
                 _runtimeGridConfig = UnityEngine.ScriptableObject.CreateInstance<SimpleJigsaw.GridLayoutConfig>();
                 _runtimeGridConfig.Rows           = gridSize.Rows;
                 _runtimeGridConfig.Columns        = gridSize.Cols;
@@ -459,6 +467,15 @@ namespace SimpleGame.Game.InGame
 
         /// <summary>Test seam — remove the win popup delay so tests don't hang.</summary>
         public void SetWinPopupDelay(float seconds) => _winPopupDelaySec = seconds;
+
+        /// <summary>
+        /// Debug override — bypasses LevelProgression for the next RunAsync invocation.
+        /// Pass null to clear and return to normal progression.
+        /// </summary>
+        public void SetDebugOverride(int rows, int cols, int slots)
+            => _debugOverride = (rows, cols, slots);
+
+        public void ClearDebugOverride() => _debugOverride = null;
 
         /// <summary>
         /// Spawns piece GameObjects using PieceObjectFactory and attaches PieceTapHandler to each.
