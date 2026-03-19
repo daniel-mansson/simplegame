@@ -85,6 +85,18 @@ namespace SimpleGame.Puzzle
             return _level.Decks[slotIndex].Peek();
         }
 
+        /// <summary>
+        /// Peeks ahead in a deck: returns the piece ID at <paramref name="offset"/>
+        /// positions from the current front (0 = front, 1 = next, 2 = one after that),
+        /// or null if that position is beyond the deck end.
+        /// </summary>
+        public int? PeekDeckAt(int deckIndex, int offset)
+        {
+            if (deckIndex < 0 || deckIndex >= _level.Decks.Count)
+                return null;
+            return _level.Decks[deckIndex].PeekAt(offset);
+        }
+
         /// <summary>Current state of the board (read-only).</summary>
         public System.Collections.Generic.IReadOnlyCollection<int> PlacedIds => _board.PlacedIds;
     }

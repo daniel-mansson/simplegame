@@ -9,12 +9,12 @@ namespace SimpleGame.Game.InGame
     /// Unity MonoBehaviour implementation of IInGameView.
     ///
     /// Layout:
-    ///   Top strip  — Level label (centre), Hearts (left), Piece counter (right)
-    ///   Board area — 3D jigsaw pieces in world space (managed by InGameSceneController)
-    ///   Tray strip — Deck panel at bottom: "Piece X" label + "Place" button
+    ///   HUD  — Level label (centre), Hearts (left), Piece counter (right) — top strip
+    ///   Board — 3D jigsaw pieces in world space (managed by InGameSceneController)
+    ///   Tray  — Bottom strip: up to 3 visible deck pieces as 3D meshes, no button
     ///
-    /// InGameSceneController calls RegisterPieceCallbacks() after spawning pieces
-    /// so that ShowDeckPiece / RevealPiece can move GameObjects.
+    /// InGameSceneController calls RegisterPieceCallbacks() after spawning so this view
+    /// can reposition GameObjects without holding a reference to them itself.
     /// </summary>
     public class InGameView : MonoBehaviour, IInGameView
     {
@@ -22,75 +22,92 @@ namespace SimpleGame.Game.InGame
         [SerializeField] private Text _pieceCounterText;
         [SerializeField] private Text _levelText;
 
-        [Header("Tray / Deck")]
-        [SerializeField] private GameObject _deckPanel;
-        [SerializeField] private Text _deckLabel;
-        [SerializeField] private Button _placeButton;
+        [Header("Tray — serialized for scene wiring, not used at runtime")]
+        [SerializeField] private GameObject _deckPanel;   // kept for SceneSetup wiring; not toggled
+        [SerializeField] private Text       _deckLabel;   // optional status label
+        [SerializeField] private Button     _placeButton; // disabled at runtime
 
         public event Action<int> OnTapPiece;
 
-        // Piece position delegates — wired by InGameSceneController after spawning
-        private Action<int>        _onRevealPiece;     // pieceId → move to board position
-        private Action<int>        _onShowDeckPiece;   // pieceId → move to tray highlight slot
-        private Action             _onHideDeckPanel;
+        // Delegates wired by InGameSceneController after SpawnPieces
+        private Action<int, int> _onMovePieceToSlot;   // (pieceId, slotIndex 0-2)
+        private Action<int>      _onRevealPiece;        // pieceId → board position
+        private Action           _onHideTray;
 
-        private int _currentDeckPieceId = -1;
+        // Current tray window — up to 3 piece IDs (null = empty slot)
+        private int?[] _trayWindow = new int?[3];
+
+        // ── MonoBehaviour ─────────────────────────────────────────────────
 
         private void Awake()
         {
+            // Place button not used — tapping a tray piece fires OnTapPiece directly
             if (_placeButton != null)
-                _placeButton.onClick.AddListener(OnPlaceButtonClicked);
+                _placeButton.gameObject.SetActive(false);
         }
 
-        private void OnDestroy()
-        {
-            if (_placeButton != null)
-                _placeButton.onClick.RemoveListener(OnPlaceButtonClicked);
-        }
+        // ── Registration ──────────────────────────────────────────────────
 
         /// <summary>
         /// Called by InGameSceneController after piece GameObjects are spawned.
-        /// Wires piece-visibility callbacks so the view can move pieces without
-        /// knowing about Unity GameObjects.
+        /// <paramref name="onMovePieceToSlot"/> (pieceId, slotIdx) repositions the piece
+        /// into tray slot 0, 1, or 2.
+        /// <paramref name="onRevealPiece"/> moves the piece to its solved board position.
         /// </summary>
         public void RegisterPieceCallbacks(
-            Action<int> onRevealPiece,
-            Action<int> onShowDeckPiece,
-            Action      onHideDeckPanel)
+            Action<int, int> onMovePieceToSlot,
+            Action<int>      onRevealPiece,
+            Action           onHideTray = null)
         {
-            _onRevealPiece   = onRevealPiece;
-            _onShowDeckPiece = onShowDeckPiece;
-            _onHideDeckPanel = onHideDeckPanel;
+            _onMovePieceToSlot = onMovePieceToSlot;
+            _onRevealPiece     = onRevealPiece;
+            _onHideTray        = onHideTray;
         }
 
-        private void OnPlaceButtonClicked()
-        {
-            if (_currentDeckPieceId >= 0)
-                OnTapPiece?.Invoke(_currentDeckPieceId);
-        }
-
-        /// <summary>Called by PieceTapHandler when a board piece is tapped directly.</summary>
+        /// <summary>Called by PieceTapHandler when a board or tray piece is tapped.</summary>
         public void NotifyPieceTapped(int pieceId) => OnTapPiece?.Invoke(pieceId);
 
-        // ── IInGameView ──────────────────────────────────────────────────────
+        // ── IInGameView ───────────────────────────────────────────────────
 
-        public void ShowDeckPiece(int pieceId)
+        public void RefreshTray(int?[] pieceIds)
         {
-            _currentDeckPieceId = pieceId;
-            if (_deckPanel  != null) _deckPanel.SetActive(true);
-            if (_deckLabel  != null) _deckLabel.text = $"Next: Piece {pieceId + 1}";
-            _onShowDeckPiece?.Invoke(pieceId);
-        }
+            if (pieceIds == null || pieceIds.Length == 0)
+            {
+                _onHideTray?.Invoke();
+                if (_deckLabel != null) _deckLabel.text = "";
+                _trayWindow = new int?[3];
+                return;
+            }
 
-        public void HideDeckPanel()
-        {
-            _currentDeckPieceId = -1;
-            if (_deckPanel != null) _deckPanel.SetActive(false);
-            _onHideDeckPanel?.Invoke();
+            // Move pieces that have changed slot positions
+            for (int slot = 0; slot < 3; slot++)
+            {
+                var newId = slot < pieceIds.Length ? pieceIds[slot] : null;
+                var oldId = _trayWindow[slot];
+
+                if (newId == oldId) continue;
+
+                // A piece just left this slot — nothing to do here (caller handles reveal)
+                if (newId.HasValue)
+                    _onMovePieceToSlot?.Invoke(newId.Value, slot);
+
+                _trayWindow[slot] = newId;
+            }
+
+            // Update status label with front piece
+            if (_deckLabel != null)
+            {
+                var front = pieceIds.Length > 0 ? pieceIds[0] : null;
+                _deckLabel.text = front.HasValue ? $"Piece {front.Value + 1}" : "";
+            }
         }
 
         public void RevealPiece(int pieceId)
         {
+            // Clear it from tray window tracking
+            for (int i = 0; i < 3; i++)
+                if (_trayWindow[i] == pieceId) _trayWindow[i] = null;
+
             _onRevealPiece?.Invoke(pieceId);
         }
 

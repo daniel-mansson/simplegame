@@ -13,6 +13,13 @@ namespace SimpleGame.Puzzle
         int? Peek();
 
         /// <summary>
+        /// The piece ID at <paramref name="offset"/> positions ahead of the current front,
+        /// or null if that position is beyond the end of the deck.
+        /// Offset 0 is identical to <see cref="Peek"/>.
+        /// </summary>
+        int? PeekAt(int offset);
+
+        /// <summary>
         /// Advances the deck to the next piece.
         /// Returns true if there is a next piece; false if the deck is now exhausted.
         /// </summary>

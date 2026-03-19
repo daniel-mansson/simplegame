@@ -11,7 +11,7 @@ namespace SimpleGame.Game.InGame
     /// <see cref="PuzzleSession"/> — the view fires <see cref="IInGameView.OnTapPiece"/>
     /// with a piece ID and the session determines correct/incorrect.
     ///
-    /// Correct placement: piece counter advances. Win when session IsComplete.
+    /// Correct placement: piece counter advances, tray refills with next 3 pieces.
     /// Incorrect placement: costs a heart. Lose when hearts reach 0.
     /// </summary>
     public class InGamePresenter : Presenter<IInGameView>
@@ -28,9 +28,9 @@ namespace SimpleGame.Game.InGame
                                IHeartService hearts, IPuzzleLevel level, int initialHearts = 3)
             : base(view)
         {
-            _session = session;
-            _hearts = hearts;
-            _level = level;
+            _session       = session;
+            _hearts        = hearts;
+            _level         = level;
             _initialHearts = initialHearts;
         }
 
@@ -45,12 +45,7 @@ namespace SimpleGame.Game.InGame
             View.UpdatePieceCounter($"0/{_level.TotalPieceCount - _level.SeedIds.Count}");
             View.UpdateHearts(_hearts.RemainingHearts.ToString());
 
-            // Show the first deck piece in the tray
-            var first = _puzzleSession.CurrentDeckPiece(0);
-            if (first.HasValue)
-                View.ShowDeckPiece(first.Value);
-            else
-                View.HideDeckPanel();
+            PushTrayWindow();
         }
 
         public override void Dispose()
@@ -60,9 +55,6 @@ namespace SimpleGame.Game.InGame
             _actionTcs = null;
         }
 
-        /// <summary>
-        /// Returns a task that resolves when the game ends (Win or Lose).
-        /// </summary>
         public UniTask<InGameAction> WaitForAction()
         {
             _actionTcs?.TrySetCanceled();
@@ -70,15 +62,33 @@ namespace SimpleGame.Game.InGame
             return _actionTcs.Task;
         }
 
-        /// <summary>
-        /// Restores hearts to full and re-arms the action source so gameplay continues
-        /// from current piece progress. Called after a rewarded ad grants a retry.
-        /// </summary>
         public void RestoreHeartsAndContinue()
         {
             _hearts.Reset(_initialHearts);
             View.UpdateHearts(_hearts.RemainingHearts.ToString());
         }
+
+        // ── Tray helpers ──────────────────────────────────────────────────
+
+        /// <summary>
+        /// Sends the next 3-piece lookahead window to the view.
+        /// Passes an empty array when the deck is exhausted.
+        /// </summary>
+        private void PushTrayWindow()
+        {
+            var p0 = _puzzleSession.PeekDeckAt(0, 0);
+            if (!p0.HasValue)
+            {
+                View.RefreshTray(System.Array.Empty<int?>());
+                return;
+            }
+
+            var p1 = _puzzleSession.PeekDeckAt(0, 1);
+            var p2 = _puzzleSession.PeekDeckAt(0, 2);
+            View.RefreshTray(new int?[] { p0, p1, p2 });
+        }
+
+        // ── Event handler ─────────────────────────────────────────────────
 
         private void HandleTapPiece(int pieceId)
         {
@@ -95,18 +105,13 @@ namespace SimpleGame.Game.InGame
 
                 if (_puzzleSession.IsComplete)
                 {
-                    View.HideDeckPanel();
+                    View.RefreshTray(System.Array.Empty<int?>());
                     Debug.Log("[Ads] Interstitial ad opportunity — level complete");
                     _actionTcs?.TrySetResult(InGameAction.Win);
                 }
                 else
                 {
-                    // Advance tray to next deck piece
-                    var next = _puzzleSession.CurrentDeckPiece(0);
-                    if (next.HasValue)
-                        View.ShowDeckPiece(next.Value);
-                    else
-                        View.HideDeckPanel();
+                    PushTrayWindow();
                 }
             }
             else if (result == PlacementResult.Rejected)

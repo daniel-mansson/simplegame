@@ -54,6 +54,15 @@ namespace SimpleGame.Game.InGame
         /// <summary>Non-seed piece id → (tray world position, tray local scale) for reset on Retry.</summary>
         private Dictionary<int, (Vector3 pos, Vector3 scale)> _traySlotData;
 
+        /// <summary>Snapshot of each piece's initial tray position at spawn — used by Retry reset.</summary>
+        private Dictionary<int, (Vector3 pos, Vector3 scale)> _initialTrayData;
+
+        /// <summary>World-space centre positions of the 3 visible tray slots (set in SpawnPieces).</summary>
+        private Vector3[] _traySlotPositions;
+
+        /// <summary>Scale for each of the 3 tray slots (front is largest).</summary>
+        private Vector3[] _traySlotScales;
+
         /// <summary>The active puzzle level for the current run. Set in RunAsync.</summary>
         private IPuzzleLevel _currentLevel;
 
@@ -420,19 +429,19 @@ namespace SimpleGame.Game.InGame
             _spawnedPieces = pieces;
 
             // ── Layout zones (world units, camera ortho size 5 → ±5 y) ─────
-            // Tray: bottom 22% of screen
-            // Board: everything above tray, minus top 0.8u for HUD
+            // Tray: bottom 32% of screen — 3 big visible pieces, no button
+            // Board: remaining space above tray, minus top 0.8u for HUD
             var cam = Camera.main;
             float orthoH = cam != null && cam.orthographic ? cam.orthographicSize * 2f : 10f;
             float orthoW = cam != null ? orthoH * cam.aspect : 18f;
 
-            float trayFraction = 0.22f;
+            const float trayFraction = 0.32f;
             float trayH        = orthoH * trayFraction;
             float trayY        = -orthoH * 0.5f + trayH * 0.5f;
             float boardBottom  = -orthoH * 0.5f + trayH + 0.15f;
             float boardTop     =  orthoH * 0.5f - 0.8f;
             float boardH       =  boardTop - boardBottom;
-            float boardSize    =  Mathf.Min(orthoW * 0.9f, boardH);
+            float boardSize    =  Mathf.Min(orthoW * 0.72f, boardH);    // 72% wide — slightly smaller
 
             // Scale PuzzleParent: [0,1]² → boardSize²
             parent.localScale = Vector3.one * boardSize;
@@ -456,12 +465,30 @@ namespace SimpleGame.Game.InGame
                 go.AddComponent<PieceTapHandler>().Initialize(pid, _inGameView);
             }
 
-            // ── Tray: move non-seed pieces below the board ─────────────────
-            int nonSeedCount   = rawBoard.Pieces.Count - 1; // one seed
-            float slotW        = Mathf.Min(trayH * 0.85f, orthoW / Mathf.Max(nonSeedCount, 1) * 0.88f);
-            float trayStartX   = -(slotW * nonSeedCount) * 0.5f + slotW * 0.5f;
+            // ── Tray: 3 fixed slots, all non-seed pieces stacked behind slot 2 ──
+            // Slot sizes: slot 0 (front/active) is largest; slots 1 and 2 are smaller.
+            // Only the first 3 deck pieces are visible initially; the rest wait off-screen.
+            const int   kVisibleSlots = 3;
+            float       slotSize0     = trayH * 0.78f;   // front piece — big
+            float       slotSize1     = trayH * 0.62f;   // next piece
+            float       slotSize2     = trayH * 0.50f;   // one after — smallest
+            float       spacing       = orthoW * 0.28f;  // centre-to-centre gap
+            // Centre positions of the 3 slots
+            _traySlotPositions = new Vector3[kVisibleSlots];
+            _traySlotPositions[0] = new Vector3(-spacing,     trayY, 0f);
+            _traySlotPositions[1] = new Vector3(0f,           trayY, 0f);
+            _traySlotPositions[2] = new Vector3( spacing,     trayY, 0f);
+            _traySlotScales = new Vector3[]
+            {
+                Vector3.one * slotSize0,
+                Vector3.one * slotSize1,
+                Vector3.one * slotSize2,
+            };
 
-            _traySlotData = new Dictionary<int, (Vector3, Vector3)>(nonSeedCount);
+            // Hidden off-screen position for pieces not yet in the visible window
+            var hiddenPos = new Vector3(orthoW * 2f, trayY, 0f);
+
+            _traySlotData = new Dictionary<int, (Vector3 pos, Vector3 scale)>();
 
             int trayIdx = 0;
             foreach (var desc in rawBoard.Pieces)
@@ -469,28 +496,61 @@ namespace SimpleGame.Game.InGame
                 if (desc.Id == _seedPieceId) continue;
                 if (!_pieceObjects.TryGetValue(desc.Id, out var go)) continue;
 
-                var trayPos   = new Vector3(trayStartX + trayIdx * slotW, trayY, 0f);
-                var trayScale = Vector3.one * slotW;
+                Vector3 pos, scale;
+                if (trayIdx < kVisibleSlots)
+                {
+                    pos   = _traySlotPositions[trayIdx];
+                    scale = _traySlotScales[trayIdx];
+                }
+                else
+                {
+                    // Queue behind slot 2, hidden off to the right
+                    pos   = hiddenPos;
+                    scale = _traySlotScales[2];
+                }
 
                 go.transform.SetParent(null, worldPositionStays: false);
-                go.transform.position   = trayPos;
-                go.transform.localScale = trayScale;
+                go.transform.position   = pos;
+                go.transform.localScale = scale;
 
-                _traySlotData[desc.Id] = (trayPos, trayScale);
+                _traySlotData[desc.Id] = (pos, scale);
                 trayIdx++;
             }
 
+            // Snapshot initial positions for Retry reset (before any MovePieceToTraySlot calls)
+            _initialTrayData = new Dictionary<int, (Vector3, Vector3)>(_traySlotData);
+
             // ── Wire piece-position callbacks onto InGameView ──────────────
             _inGameView.RegisterPieceCallbacks(
-                onRevealPiece:   RevealPiece,
-                onShowDeckPiece: _ => { /* tray pieces stay put; front piece is implicit */ },
-                onHideDeckPanel: null
+                onMovePieceToSlot: MovePieceToTraySlot,
+                onRevealPiece:     RevealPiece
             );
 
-            Debug.Log($"[InGameSceneController] Spawned {pieces.Count} pieces — 1 seed, {nonSeedCount} in tray.");
+            Debug.Log($"[InGameSceneController] Spawned {pieces.Count} pieces — 1 seed, {trayIdx} in tray ({Mathf.Min(trayIdx, kVisibleSlots)} visible).");
         }
 
         /// <summary>Move a piece from its tray world position to its solved board position.</summary>
+        /// <summary>
+        /// Move a piece to one of the 3 visible tray slots (called by RefreshTray).
+        /// Also updates _traySlotData so Retry reset uses the slot position.
+        /// </summary>
+        private void MovePieceToTraySlot(int pieceId, int slotIndex)
+        {
+            if (!_pieceObjects.TryGetValue(pieceId, out var go)) return;
+            if (_traySlotPositions == null || slotIndex >= _traySlotPositions.Length) return;
+
+            var pos   = _traySlotPositions[slotIndex];
+            var scale = _traySlotScales[slotIndex];
+
+            go.transform.SetParent(null, worldPositionStays: false);
+            go.transform.position   = pos;
+            go.transform.localScale = scale;
+
+            // Update tray data so Retry can restore the original (slot 0) position
+            if (_traySlotData != null)
+                _traySlotData[pieceId] = (pos, scale);
+        }
+
         private void RevealPiece(int pieceId)
         {
             if (!_pieceObjects.TryGetValue(pieceId, out var go)) return;
@@ -520,20 +580,21 @@ namespace SimpleGame.Game.InGame
         /// </summary>
         private void ResetPiecesToTray()
         {
-            if (_pieceObjects == null || _traySlotData == null) return;
+            if (_pieceObjects == null || _initialTrayData == null) return;
 
-            int trayIdx = 0;
-            foreach (var kv in _traySlotData)
+            foreach (var kv in _initialTrayData)
             {
-                int pieceId       = kv.Key;
-                var (pos, scale)  = kv.Value;
+                int pieceId      = kv.Key;
+                var (pos, scale) = kv.Value;
                 if (!_pieceObjects.TryGetValue(pieceId, out var go)) continue;
 
                 go.transform.SetParent(null, worldPositionStays: false);
                 go.transform.position   = pos;
                 go.transform.localScale = scale;
-                trayIdx++;
             }
+
+            // Restore mutable slot data to initial state for next session
+            _traySlotData = new Dictionary<int, (Vector3, Vector3)>(_initialTrayData);
         }
 
         /// <summary>

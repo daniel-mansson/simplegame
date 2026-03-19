@@ -20,6 +20,13 @@ namespace SimpleGame.Puzzle
         public int? Peek() => _index < _pieceIds.Count ? (int?)_pieceIds[_index] : null;
 
         /// <inheritdoc/>
+        public int? PeekAt(int offset)
+        {
+            var i = _index + offset;
+            return i < _pieceIds.Count ? (int?)_pieceIds[i] : null;
+        }
+
+        /// <inheritdoc/>
         public bool Advance()
         {
             if (_index < _pieceIds.Count)

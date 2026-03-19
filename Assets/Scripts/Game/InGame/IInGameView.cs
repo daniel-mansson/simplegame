@@ -6,8 +6,8 @@ namespace SimpleGame.Game.InGame
     public interface IInGameView : IView
     {
         /// <summary>
-        /// Fired when the player taps the current tray piece button.
-        /// Carries the piece ID of the front deck piece.
+        /// Fired when the player taps a tray piece.
+        /// Carries the piece ID that was tapped.
         /// </summary>
         event Action<int> OnTapPiece;
 
@@ -16,16 +16,15 @@ namespace SimpleGame.Game.InGame
         void UpdateLevelLabel(string text);
 
         /// <summary>
-        /// Show the tray piece button for the given piece ID.
-        /// Called by the presenter each time the deck advances.
+        /// Refresh the visible tray window. <paramref name="pieceIds"/> has up to 3 entries:
+        /// index 0 = front (active, highlighted), index 1 = next, index 2 = one after.
+        /// Null entries mean that slot is empty (deck running out).
+        /// Pass an empty/null array to hide the tray entirely.
         /// </summary>
-        void ShowDeckPiece(int pieceId);
-
-        /// <summary>Hide the tray panel (deck exhausted).</summary>
-        void HideDeckPanel();
+        void RefreshTray(int?[] pieceIds);
 
         /// <summary>
-        /// Move piece from tray to its solved board position.
+        /// Move piece from its tray position to its solved board position.
         /// Called by the presenter after a successful placement.
         /// </summary>
         void RevealPiece(int pieceId);
