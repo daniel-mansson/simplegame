@@ -93,6 +93,7 @@ namespace SimpleGame.Game.InGame
         private void HandleTapPiece(int pieceId)
         {
             var result = _puzzleSession.TryPlace(pieceId);
+            Debug.Log($"[InGamePresenter] HandleTapPiece pieceId={pieceId} result={result}");
 
             if (result == PlacementResult.Placed)
             {

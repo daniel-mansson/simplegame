@@ -374,10 +374,22 @@ public static class SceneSetup
     {
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         var cam = CreateSceneCamera("InGameCamera");
-        CreateFullScreenCanvas("Canvas", 0, out var canvas);
-        canvas.renderMode = RenderMode.ScreenSpaceCamera;
-        canvas.worldCamera = cam;
+
+        // PhysicsRaycaster on the camera lets OnMouseDown fire on 3D piece colliders
+        cam.gameObject.AddComponent<PhysicsRaycaster>();
+
+        // Build InGame canvas manually — deliberately NO GraphicRaycaster so it
+        // does not intercept pointer events intended for the 3D jigsaw pieces.
+        var canvasGO = new GameObject("Canvas");
+        var canvas   = canvasGO.AddComponent<Canvas>();
+        canvas.renderMode   = RenderMode.ScreenSpaceCamera;
+        canvas.worldCamera  = cam;
         canvas.planeDistance = 1f;
+        canvas.sortingOrder  = 0;
+        var scaler = canvasGO.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode        = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920, 1080);
+        // GraphicRaycaster intentionally omitted
 
         // ── HUD: top strip (y 88–97%) ─────────────────────────────────────
         var levelGO   = CreateText("LevelText",       "Level 1", canvas.transform,

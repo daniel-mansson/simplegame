@@ -23,6 +23,7 @@ namespace SimpleGame.Game.InGame
 
         private void OnMouseDown()
         {
+            Debug.Log($"[PieceTapHandler] Tapped piece {_pieceId}");
             _view?.NotifyPieceTapped(_pieceId);
         }
     }
