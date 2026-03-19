@@ -75,6 +75,7 @@ namespace SimpleGame.Game.InGame
 
         public void RefreshTray(int?[] pieceIds)
         {
+            Debug.Log($"[InGameView] RefreshTray [{string.Join(",", System.Array.ConvertAll(pieceIds ?? System.Array.Empty<int?>(), p => p?.ToString() ?? "null"))}] window was [{string.Join(",", System.Array.ConvertAll(_trayWindow, p => p?.ToString() ?? "null"))}]");
             if (pieceIds == null || pieceIds.Length == 0)
             {
                 _onHideTray?.Invoke();

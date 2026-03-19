@@ -463,7 +463,12 @@ namespace SimpleGame.Game.InGame
                 var box  = go.AddComponent<BoxCollider>();
                 if (mesh != null) { box.center = mesh.bounds.center; box.size = mesh.bounds.size; }
 
-                go.AddComponent<PieceTapHandler>().Initialize(pid, _inGameView);
+                // Seed piece is already placed — disable its collider immediately so it
+                // never intercepts rays aimed at tray pieces.
+                if (pid == _seedPieceId)
+                    box.enabled = false;
+                else
+                    go.AddComponent<PieceTapHandler>().Initialize(pid, _inGameView);
             }
 
             // ── Tray: 3 fixed slots, all non-seed pieces stacked behind slot 2 ──
@@ -544,8 +549,8 @@ namespace SimpleGame.Game.InGame
             go.transform.SetParent(null, worldPositionStays: false);
             go.transform.position   = pos;
             go.transform.localScale = scale;
+            Debug.Log($"[InGameSceneController] MovePieceToTraySlot piece={pieceId} slot={slotIndex} pos={pos}");
 
-            // Update tray data so Retry can restore the original (slot 0) position
             if (_traySlotData != null)
                 _traySlotData[pieceId] = (pos, scale);
         }
@@ -559,6 +564,13 @@ namespace SimpleGame.Game.InGame
             go.transform.SetParent(boardParent, worldPositionStays: false);
             go.transform.localPosition = boardParent.InverseTransformPoint(solved);
             go.transform.localScale    = Vector3.one;
+
+            // Disable collider — board pieces can't be tapped again and must not block
+            // rays aimed at tray pieces behind them in screen space.
+            var col = go.GetComponent<Collider>();
+            if (col != null) col.enabled = false;
+
+            Debug.Log($"[InGameSceneController] RevealPiece {pieceId} → world={go.transform.position} solved={solved}");
         }
 
         /// <summary>
@@ -590,6 +602,10 @@ namespace SimpleGame.Game.InGame
                 go.transform.SetParent(null, worldPositionStays: false);
                 go.transform.position   = pos;
                 go.transform.localScale = scale;
+
+                // Re-enable collider so tray pieces are tappable again
+                var col = go.GetComponent<Collider>();
+                if (col != null) col.enabled = true;
             }
 
             // Restore mutable slot data to initial state for next session
