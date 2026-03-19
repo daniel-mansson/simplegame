@@ -52,7 +52,7 @@ This milestone is complete only when all are true:
 
 ## Slices
 
-- [ ] **S01: PuzzleModel — board, deck, N slots** `risk:high` `depends:[]`
+- [x] **S01: PuzzleModel — board, deck, N slots** `risk:high` `depends:[]`
   > After this: EditMode tests prove PuzzleModel handles slot refill, heart events, win/lose — no Unity, no presenter.
 
 - [ ] **S02: InGamePresenter rewrite** `risk:medium` `depends:[S01]`
