@@ -551,9 +551,22 @@ namespace SimpleGame.Game.InGame
                     go.AddComponent<PieceTapHandler>().Initialize(pid, _inGameView);
             }
 
-            // ── Tray: slotCount slots — size depends only on slot count, not grid size ──
-            // Divide available tray height by slot count and scale up so pieces feel substantial.
-            float slotSize = (trayH / slotCount) * 1.8f;
+            // ── Tray: slotCount slots — fill available width ──────────────
+            // Each slot gets an equal share of screen width minus a small margin.
+            float slotSize = (orthoW * 0.92f) / slotCount;
+
+            // Compute normalised scale: pieces from large grids have smaller meshes in [0,1]² space.
+            // Sample the first non-seed piece's mesh to derive the world extent at boardSize scale.
+            float normSlotScale = slotSize; // fallback: assume mesh fills boardSize
+            foreach (var kv in _pieceObjects)
+            {
+                if (kv.Key == seedPieceId) continue;
+                var sampleMesh = kv.Value.GetComponent<MeshFilter>()?.sharedMesh;
+                if (sampleMesh == null) continue;
+                float extent = Mathf.Max(sampleMesh.bounds.size.x, sampleMesh.bounds.size.y) * boardSize;
+                if (extent > 0.0001f) normSlotScale = slotSize / extent;
+                break;
+            }
 
             // Very tight packing — slots overlap slightly, held apart by a small fraction of piece size.
             float slotSpacing    = slotSize * 0.45f;
@@ -570,7 +583,7 @@ namespace SimpleGame.Game.InGame
                 float x = trayStartX + i * slotSpacing;
                 float y = trayY + (i % 2 == 1 ? -staggerY : 0f);
                 _traySlotPositions[i] = new Vector3(x, y, -2f);
-                _traySlotScales[i]    = Vector3.one * slotSize;
+                _traySlotScales[i]    = Vector3.one * normSlotScale;
             }
 
             // Hidden off-screen position for pieces not yet drawn into a slot
