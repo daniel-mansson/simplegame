@@ -119,6 +119,43 @@ namespace SimpleGame.Game.InGame
             _levelFailedViewOverride = levelFailedView;
         }
 
+        /// <summary>
+        /// Play-from-editor bootstrap: called by Unity on Start when the InGame scene
+        /// is entered directly (i.e. GameBootstrapper never ran). Creates stub services
+        /// so RunAsync can proceed without the full boot chain.
+        /// </summary>
+        private void Start()
+        {
+            if (_uiFactory != null) return; // already initialized by GameBootstrapper
+
+            Debug.Log("[InGameSceneController] Play-from-editor: bootstrapping with stub services.");
+            var session      = new GameSessionService();
+            var hearts       = new HeartService();
+            var progression  = new ProgressionService();
+            var metaProgression = (MetaProgressionService)null; // not needed for editor preview
+            // GoldenPieceService needs a save service; use NullGoldenPieceService for editor preview
+            IGoldenPieceService goldenPieces = new NullGoldenPieceService();
+            _uiFactory   = new UIFactory(new GameService(), progression, session, hearts, metaProgression, goldenPieces, null);
+            _progression  = progression;
+            _session      = session;
+            _goldenPieces = goldenPieces;
+            _hearts       = hearts;
+            _popupManager = null; // popups won't show in editor preview; acceptable
+
+            RunAsync().Forget();
+        }
+
+        /// <summary>No-op golden piece service for play-from-editor preview.</summary>
+        private sealed class NullGoldenPieceService : IGoldenPieceService
+        {
+            public int Balance => 0;
+            public void Earn(int amount) { }
+            public bool TrySpend(int amount) => false;
+            public void Save() { }
+            public void ResetAll() { }
+        }
+
+
         public async UniTask<ScreenId> RunAsync(CancellationToken ct = default)
         {
             // Play-from-editor fallback: if no level was set via session, use defaults.
