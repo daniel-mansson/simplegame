@@ -430,6 +430,15 @@ namespace SimpleGame.Game.InGame
         {
             if (_inGameView == null) return;
 
+            // Destroy any pieces from a previous level before spawning new ones.
+            // The InGame scene stays loaded across levels, so this prevents accumulation.
+            if (_spawnedPieces != null)
+            {
+                foreach (var old in _spawnedPieces)
+                    if (old != null) UnityEngine.Object.Destroy(old);
+                _spawnedPieces = null;
+            }
+
             var parent = _puzzleParent != null ? _puzzleParent : transform;
             var config = _pieceRenderConfig;
 
