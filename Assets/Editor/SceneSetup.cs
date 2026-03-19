@@ -431,6 +431,20 @@ public static class SceneSetup
         else Debug.LogWarning("[SceneSetup] DefaultGridConfig.asset not found.");
         if (renderConfig != null) WireSerializedField(inGameController, "_pieceRenderConfig", renderConfig);
 
+        // Transition overlay — same prefab used by Boot scene
+        var transitionPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/TransitionOverlay.prefab");
+        if (transitionPrefab != null)
+        {
+            var transitionInstance = (GameObject)PrefabUtility.InstantiatePrefab(transitionPrefab);
+            transitionInstance.name = "RetryTransitionOverlay";
+            transitionInstance.SetActive(false);
+            WireSerializedField(inGameController, "_transitionPlayer", transitionInstance.GetComponent<UnityTransitionPlayer>());
+        }
+        else
+        {
+            Debug.LogWarning("[SceneSetup] TransitionOverlay.prefab not found — retry will use runtime fallback.");
+        }
+
         bool saved = EditorSceneManager.SaveScene(scene, InGamePath);
         Debug.Log(saved ? "[SceneSetup] InGame scene saved." : "[SceneSetup] ERROR saving InGame scene.");
     }

@@ -3,6 +3,8 @@ using System.Threading;
 using Cysharp.Threading.Tasks;
 using SimpleGame.Core;
 using SimpleGame.Core.PopupManagement;
+using SimpleGame.Core.TransitionManagement;
+using SimpleGame.Core.Unity.TransitionManagement;
 using SimpleGame.Game.Boot;
 using SimpleGame.Game.Popup;
 using SimpleGame.Game.Puzzle;
@@ -37,6 +39,9 @@ namespace SimpleGame.Game.InGame
         [SerializeField] private int _puzzleSeed = 42;
         [SerializeField] private int _seedPieceId = 0;
 
+        [Header("Transitions")]
+        [SerializeField] private UnityTransitionPlayer _transitionPlayer;
+
         /// <summary>Spawned piece GameObjects — destroyed on scene unload.</summary>
         private List<GameObject> _spawnedPieces;
 
@@ -45,6 +50,9 @@ namespace SimpleGame.Game.InGame
 
         /// <summary>Piece id → solved world position (populated in SpawnPieces).</summary>
         private Dictionary<int, Vector3> _solvedWorldPositions;
+
+        /// <summary>Non-seed piece id → (tray world position, tray local scale) for reset on Retry.</summary>
+        private Dictionary<int, (Vector3 pos, Vector3 scale)> _traySlotData;
 
         /// <summary>The active puzzle level for the current run. Set in RunAsync.</summary>
         private IPuzzleLevel _currentLevel;
@@ -258,8 +266,9 @@ namespace SimpleGame.Game.InGame
                                 continue;
                             }
 
-                            // Retry: break inner loop to create fresh presenter
+                            // Retry: fade out, reset pieces to tray, fade back in, fresh presenter
                             _session.CurrentScore = 0;
+                            await RetryTransitionAsync(ct);
                             break;
                         }
                     }
@@ -452,15 +461,22 @@ namespace SimpleGame.Game.InGame
             float slotW        = Mathf.Min(trayH * 0.85f, orthoW / Mathf.Max(nonSeedCount, 1) * 0.88f);
             float trayStartX   = -(slotW * nonSeedCount) * 0.5f + slotW * 0.5f;
 
+            _traySlotData = new Dictionary<int, (Vector3, Vector3)>(nonSeedCount);
+
             int trayIdx = 0;
             foreach (var desc in rawBoard.Pieces)
             {
                 if (desc.Id == _seedPieceId) continue;
                 if (!_pieceObjects.TryGetValue(desc.Id, out var go)) continue;
 
+                var trayPos   = new Vector3(trayStartX + trayIdx * slotW, trayY, 0f);
+                var trayScale = Vector3.one * slotW;
+
                 go.transform.SetParent(null, worldPositionStays: false);
-                go.transform.position   = new Vector3(trayStartX + trayIdx * slotW, trayY, 0f);
-                go.transform.localScale = Vector3.one * slotW;
+                go.transform.position   = trayPos;
+                go.transform.localScale = trayScale;
+
+                _traySlotData[desc.Id] = (trayPos, trayScale);
                 trayIdx++;
             }
 
@@ -487,9 +503,67 @@ namespace SimpleGame.Game.InGame
         }
 
         /// <summary>
-        /// Builds a stub linear-chain level: piece 0 is the seed, each subsequent
-        /// piece neighbors the previous one. Replaced by JigsawLevelFactory in S04.
+        /// Fade to black, reset all non-seed pieces back to their tray positions,
+        /// then fade back in — gives a clean level-restart feel without a scene reload.
         /// </summary>
+        private async UniTask RetryTransitionAsync(CancellationToken ct)
+        {
+            var tp = GetTransitionPlayer();
+            if (tp != null) await tp.FadeOutAsync(ct);
+            ResetPiecesToTray();
+            if (tp != null) await tp.FadeInAsync(ct);
+        }
+
+        /// <summary>
+        /// Move all non-seed pieces back to their tray positions and scale.
+        /// The seed piece stays at its solved position (it is the board anchor).
+        /// </summary>
+        private void ResetPiecesToTray()
+        {
+            if (_pieceObjects == null || _traySlotData == null) return;
+
+            int trayIdx = 0;
+            foreach (var kv in _traySlotData)
+            {
+                int pieceId       = kv.Key;
+                var (pos, scale)  = kv.Value;
+                if (!_pieceObjects.TryGetValue(pieceId, out var go)) continue;
+
+                go.transform.SetParent(null, worldPositionStays: false);
+                go.transform.position   = pos;
+                go.transform.localScale = scale;
+                trayIdx++;
+            }
+        }
+
+        /// <summary>
+        /// Returns the wired transition player, or creates a minimal runtime one.
+        /// Returns null if running in EditMode test context (no game loop available).
+        /// </summary>
+        private ITransitionPlayer GetTransitionPlayer()
+        {
+            if (_transitionPlayer != null) return _transitionPlayer;
+
+            // In EditMode tests there is no game loop — skip the fade.
+            if (!Application.isPlaying) return null;
+
+            // Runtime fallback: create a simple fade overlay
+            var go     = new GameObject("RetryFadeOverlay");
+            var canvas = go.AddComponent<Canvas>();
+            canvas.renderMode   = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 999;
+            go.AddComponent<UnityEngine.UI.Image>().color = Color.black;
+            var cg = go.AddComponent<CanvasGroup>();
+            cg.alpha = 0f;
+            cg.blocksRaycasts = false;
+            var tp = go.AddComponent<UnityTransitionPlayer>();
+            var field = typeof(UnityTransitionPlayer)
+                .GetField("_canvasGroup",
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            field?.SetValue(tp, cg);
+            _transitionPlayer = tp;
+            return tp;
+        }
         private static IPuzzleLevel BuildStubLevel(int totalPieces)
         {
             if (totalPieces <= 0) totalPieces = 1;
