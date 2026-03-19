@@ -537,7 +537,6 @@ namespace SimpleGame.Game.InGame
             // ── Tray: slotCount slots — sized to match board pieces, staggered layout ──
             // Board piece world size = boardSize / cols (each piece occupies 1/cols of the board).
             // Slot pieces target ~110% of that so they read slightly larger than on-board.
-            int boardCols  = gridSize.Cols;
             float pieceWorldSize = boardSize / boardCols;
             float slotSize = pieceWorldSize * 1.10f;
 
