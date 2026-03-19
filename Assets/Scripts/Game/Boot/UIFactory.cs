@@ -50,9 +50,9 @@ namespace SimpleGame.Game.Boot
             return new ConfirmDialogPresenter(view);
         }
 
-        public InGamePresenter CreateInGamePresenter(IInGameView view, IPuzzleLevel level)
+        public InGamePresenter CreateInGamePresenter(IInGameView view, PuzzleModel model)
         {
-            return new InGamePresenter(view, _session, _hearts, level);
+            return new InGamePresenter(view, _session, _hearts, model);
         }
 
         public LevelCompletePresenter CreateLevelCompletePresenter(ILevelCompleteView view)

@@ -230,7 +230,8 @@ namespace SimpleGame.Game.InGame
             {
                 // Rebuild level each retry — ensures deck state is fresh
                 _currentLevel = factory();
-                var presenter = _uiFactory.CreateInGamePresenter(ActiveView, _currentLevel);
+                var model     = BuildPuzzleModel(_currentLevel, slotCount: 3);
+                var presenter = _uiFactory.CreateInGamePresenter(ActiveView, model);
                 presenter.Initialize();
                 try
                 {
@@ -657,6 +658,26 @@ namespace SimpleGame.Game.InGame
             var deck = new Deck(deckOrder);
 
             return new PuzzleLevel(pieces, seeds, new IDeck[] { deck });
+        }
+
+        /// <summary>
+        /// Temporary bridge (removed in S03): converts an IPuzzleLevel into a PuzzleModel.
+        /// Extracts the first deck from the level and uses it as the shared deck.
+        /// </summary>
+        private static SimpleGame.Puzzle.PuzzleModel BuildPuzzleModel(IPuzzleLevel level, int slotCount)
+        {
+            // Collect deck order from first deck (or all non-seed pieces in order if no deck)
+            var deckList = new System.Collections.Generic.List<int>();
+            if (level.Decks != null && level.Decks.Count > 0)
+            {
+                var deck = level.Decks[0];
+                for (int offset = 0; offset < deck.Count; offset++)
+                {
+                    var id = deck.PeekAt(offset);
+                    if (id.HasValue) deckList.Add(id.Value);
+                }
+            }
+            return new SimpleGame.Puzzle.PuzzleModel(level.Pieces, level.SeedIds, deckList, slotCount);
         }
     }
 }

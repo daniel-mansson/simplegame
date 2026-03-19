@@ -7,54 +7,81 @@ using UnityEngine;
 namespace SimpleGame.Game.InGame
 {
     /// <summary>
-    /// Presenter for the InGame scene. Delegates all placement decisions to
-    /// <see cref="PuzzleSession"/> — the view fires <see cref="IInGameView.OnTapPiece"/>
-    /// with a piece ID and the session determines correct/incorrect.
+    /// Presenter for the InGame scene. Subscribes to <see cref="PuzzleModel"/> events
+    /// and drives <see cref="IInGameView"/> reactively — no tray-window lookahead,
+    /// no deck-cursor walking.
     ///
-    /// Correct placement: piece counter advances, tray refills with next 3 pieces.
-    /// Incorrect placement: costs a heart. Lose when hearts reach 0.
+    /// <para>Event wiring (all in <see cref="Initialize"/>):</para>
+    /// <list type="bullet">
+    ///   <item><see cref="PuzzleModel.OnSlotChanged"/> → <see cref="IInGameView.RefreshTray"/> (temporary bridge until S03 slot-indexed view API)</item>
+    ///   <item><see cref="PuzzleModel.OnPiecePlaced"/> → <see cref="IInGameView.RevealPiece"/> + counter update</item>
+    ///   <item><see cref="PuzzleModel.OnRejected"/> → heart deduction + optional Lose signal</item>
+    ///   <item><see cref="PuzzleModel.OnCompleted"/> → Win signal</item>
+    /// </list>
+    ///
+    /// <para>The view still fires <c>OnTapPiece(pieceId)</c> (old API, changed in S03).
+    /// This presenter bridges it by scanning slots for the tapped piece ID and calling
+    /// <see cref="PuzzleModel.TryPlace(int)"/> with the matching slot index.</para>
     /// </summary>
     public class InGamePresenter : Presenter<IInGameView>
     {
         private readonly GameSessionService _session;
-        private readonly IHeartService _hearts;
-        private readonly IPuzzleLevel _level;
-        private readonly int _initialHearts;
+        private readonly IHeartService      _hearts;
+        private readonly PuzzleModel        _model;
+        private readonly int                _initialHearts;
 
-        private PuzzleSession _puzzleSession;
         private UniTaskCompletionSource<InGameAction> _actionTcs;
 
         public InGamePresenter(IInGameView view, GameSessionService session,
-                               IHeartService hearts, IPuzzleLevel level, int initialHearts = 3)
+                               IHeartService hearts, PuzzleModel model,
+                               int initialHearts = 3)
             : base(view)
         {
             _session       = session;
             _hearts        = hearts;
-            _level         = level;
+            _model         = model;
             _initialHearts = initialHearts;
         }
 
         public override void Initialize()
         {
-            _puzzleSession = new PuzzleSession(_level);
             _hearts.Reset(_initialHearts);
 
+            // ── Subscribe to model events ─────────────────────────────────
+            _model.OnSlotChanged += HandleSlotChanged;
+            _model.OnPiecePlaced += HandlePiecePlaced;
+            _model.OnRejected    += HandleRejected;
+            _model.OnCompleted   += HandleCompleted;
+
+            // ── Subscribe to view events ──────────────────────────────────
             View.OnTapPiece += HandleTapPiece;
 
+            // ── Initial display ───────────────────────────────────────────
             View.UpdateLevelLabel($"Level {_session.CurrentLevelId}");
-            View.UpdatePieceCounter($"0/{_level.TotalPieceCount - _level.SeedIds.Count}");
+            View.UpdatePieceCounter($"0/{_model.TotalNonSeedCount}");
             View.UpdateHearts(_hearts.RemainingHearts.ToString());
 
-            PushTrayWindow();
+            // Push initial tray state — one call per slot
+            PushAllSlots();
         }
 
         public override void Dispose()
         {
+            _model.OnSlotChanged -= HandleSlotChanged;
+            _model.OnPiecePlaced -= HandlePiecePlaced;
+            _model.OnRejected    -= HandleRejected;
+            _model.OnCompleted   -= HandleCompleted;
+
             View.OnTapPiece -= HandleTapPiece;
+
             _actionTcs?.TrySetCanceled();
             _actionTcs = null;
         }
 
+        /// <summary>
+        /// Returns a task that completes with the outcome action (Win or Lose).
+        /// Called by <see cref="InGameSceneController"/> to await the result.
+        /// </summary>
         public UniTask<InGameAction> WaitForAction()
         {
             _actionTcs?.TrySetCanceled();
@@ -62,84 +89,91 @@ namespace SimpleGame.Game.InGame
             return _actionTcs.Task;
         }
 
+        /// <summary>
+        /// Restores hearts to the initial count and refreshes the hearts display.
+        /// Called by <see cref="InGameSceneController"/> after a WatchAd or Continue.
+        /// </summary>
         public void RestoreHeartsAndContinue()
         {
             _hearts.Reset(_initialHearts);
             View.UpdateHearts(_hearts.RemainingHearts.ToString());
         }
 
-        // ── Tray helpers ──────────────────────────────────────────────────
+        // ── View event handler ────────────────────────────────────────────
 
         /// <summary>
-        /// Sends the next 3-piece lookahead window to the view.
-        /// Passes an empty array when the deck is exhausted.
+        /// Temporary bridge: view fires OnTapPiece(pieceId) (old API).
+        /// Scans slots for the piece and calls TryPlace on the matching slot.
+        /// Replaced in S03 when the view moves to a slot-indexed tap API.
         /// </summary>
-        private void PushTrayWindow()
-        {
-            // Only show pieces the player can legally place right now.
-            // Walk the deck from front, skip unplaceable, collect up to 3.
-            var window = new int?[3];
-            int filled = 0;
-            int offset = 0;
-            while (filled < 3)
-            {
-                var id = _puzzleSession.PeekDeckAt(0, offset);
-                if (!id.HasValue) break;
-                offset++;
-                if (_puzzleSession.CanPlace(id.Value))
-                    window[filled++] = id;
-            }
-
-            if (filled == 0)
-            {
-                View.RefreshTray(System.Array.Empty<int?>());
-                return;
-            }
-
-            // Layout: [left=window[1], centre=window[0], right=window[2]]
-            View.RefreshTray(new int?[] { window[1], window[0], window[2] });
-        }
-
-        // ── Event handler ─────────────────────────────────────────────────
-
         private void HandleTapPiece(int pieceId)
         {
-            var result = _puzzleSession.TryPlace(pieceId);
-            Debug.Log($"[InGamePresenter] HandleTapPiece pieceId={pieceId} result={result}");
-
-            if (result == PlacementResult.Placed)
+            for (int i = 0; i < _model.SlotCount; i++)
             {
-                View.RevealPiece(pieceId);
-
-                int placed = _puzzleSession.PlacedIds.Count - _level.SeedIds.Count;
-                int total  = _level.TotalPieceCount - _level.SeedIds.Count;
-                _session.CurrentScore = placed;
-                View.UpdatePieceCounter($"{placed}/{total}");
-
-                if (_puzzleSession.IsComplete)
+                if (_model.GetSlot(i) == pieceId)
                 {
-                    View.RefreshTray(System.Array.Empty<int?>());
-                    Debug.Log("[Ads] Interstitial ad opportunity — level complete");
-                    _actionTcs?.TrySetResult(InGameAction.Win);
-                }
-                else
-                {
-                    PushTrayWindow();
+                    Debug.Log($"[InGamePresenter] TapPiece id={pieceId} → slot {i}");
+                    _model.TryPlace(i);
+                    return;
                 }
             }
-            else if (result == PlacementResult.Rejected)
-            {
-                _hearts.UseHeart();
-                View.UpdateHearts(_hearts.RemainingHearts.ToString());
+            // Piece not in any slot — ignore (e.g. tap on a board piece)
+            Debug.Log($"[InGamePresenter] TapPiece id={pieceId} — not found in any slot, ignored.");
+        }
 
-                if (!_hearts.IsAlive)
-                {
-                    _session.CurrentScore = _puzzleSession.PlacedIds.Count - _level.SeedIds.Count;
-                    Debug.Log("[Ads] Interstitial ad opportunity — level failed");
-                    _actionTcs?.TrySetResult(InGameAction.Lose);
-                }
+        // ── Model event handlers ──────────────────────────────────────────
+
+        /// <summary>
+        /// Temporary bridge: broadcasts slot change as a one-element RefreshTray call.
+        /// Replaced in S03 when IInGameView gains RefreshSlot(int, int?).
+        /// </summary>
+        private void HandleSlotChanged(int slotIndex, int? pieceId)
+        {
+            // Build full slot window for view (slot count may vary)
+            var window = new int?[_model.SlotCount];
+            for (int i = 0; i < _model.SlotCount; i++)
+                window[i] = _model.GetSlot(i);
+            View.RefreshTray(window);
+        }
+
+        private void HandlePiecePlaced(int pieceId)
+        {
+            View.RevealPiece(pieceId);
+
+            _session.CurrentScore = _model.PlacedCount;
+            View.UpdatePieceCounter($"{_model.PlacedCount}/{_model.TotalNonSeedCount}");
+        }
+
+        private void HandleRejected(int slotIndex, int pieceId)
+        {
+            Debug.Log($"[InGamePresenter] Rejected slot={slotIndex} piece={pieceId}");
+            _hearts.UseHeart();
+            View.UpdateHearts(_hearts.RemainingHearts.ToString());
+
+            if (!_hearts.IsAlive)
+            {
+                _session.CurrentScore = _model.PlacedCount;
+                Debug.Log("[Ads] Interstitial ad opportunity — level failed");
+                _actionTcs?.TrySetResult(InGameAction.Lose);
             }
-            // AlreadyPlaced: silently ignore
+        }
+
+        private void HandleCompleted()
+        {
+            View.RefreshTray(System.Array.Empty<int?>());
+            Debug.Log("[Ads] Interstitial ad opportunity — level complete");
+            _actionTcs?.TrySetResult(InGameAction.Win);
+        }
+
+        // ── Helpers ───────────────────────────────────────────────────────
+
+        /// <summary>Sends the current slot state to the view on Initialize.</summary>
+        private void PushAllSlots()
+        {
+            var window = new int?[_model.SlotCount];
+            for (int i = 0; i < _model.SlotCount; i++)
+                window[i] = _model.GetSlot(i);
+            View.RefreshTray(window);
         }
     }
 }

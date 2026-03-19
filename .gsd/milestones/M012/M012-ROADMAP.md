@@ -55,7 +55,7 @@ This milestone is complete only when all are true:
 - [x] **S01: PuzzleModel — board, deck, N slots** `risk:high` `depends:[]`
   > After this: EditMode tests prove PuzzleModel handles slot refill, heart events, win/lose — no Unity, no presenter.
 
-- [ ] **S02: InGamePresenter rewrite** `risk:medium` `depends:[S01]`
+- [x] **S02: InGamePresenter rewrite** `risk:medium` `depends:[S01]`
   > After this: InGamePresenter tests pass with PuzzleModel events driving view; tray-window logic gone.
 
 - [ ] **S03: View + SceneController wiring** `risk:medium` `depends:[S02]`
