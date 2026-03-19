@@ -471,22 +471,23 @@ namespace SimpleGame.Game.InGame
                     go.AddComponent<PieceTapHandler>().Initialize(pid, _inGameView);
             }
 
-            // ── Tray: 3 fixed slots, all non-seed pieces stacked behind slot 2 ──
-            // Slot sizes: slot 0 (front/active) is largest; slots 1 and 2 are smaller.
-            // Only the first 3 deck pieces are visible initially; the rest wait off-screen.
-            const int   kVisibleSlots = 3;
-            float       slotSize      = trayH * 0.72f;   // all tray pieces the same size
-            float       spacing       = orthoW * 0.22f;  // tighter spacing — keeps slot 2 away from screen edge
+            // ── Tray: 3 slots — centre is active/front, left and right are previews ──
+            // Deck order: centre=front piece, left=next, right=one-after.
+            const int   kVisibleSlots  = 3;
+            float       slotSizeFront  = trayH * 0.80f;   // centre (active) — biggest
+            float       slotSizePreview = trayH * 0.58f;  // side previews — smaller
+            float       spacing        = orthoW * 0.22f;
 
+            // Slot layout: index 0=left-preview, index 1=centre-active, index 2=right-preview
             _traySlotPositions = new Vector3[kVisibleSlots];
-            _traySlotPositions[0] = new Vector3(-spacing, trayY, -2f);
-            _traySlotPositions[1] = new Vector3(0f,       trayY, -2f);
-            _traySlotPositions[2] = new Vector3( spacing, trayY, -2f);
+            _traySlotPositions[0] = new Vector3(-spacing, trayY, -2f);  // left preview
+            _traySlotPositions[1] = new Vector3(0f,       trayY, -2f);  // centre — active
+            _traySlotPositions[2] = new Vector3( spacing, trayY, -2f);  // right preview
             _traySlotScales = new Vector3[]
             {
-                Vector3.one * slotSize,
-                Vector3.one * slotSize,
-                Vector3.one * slotSize,
+                Vector3.one * slotSizePreview,
+                Vector3.one * slotSizeFront,
+                Vector3.one * slotSizePreview,
             };
 
             // Hidden off-screen position for pieces not yet in the visible window

@@ -75,33 +75,42 @@ namespace SimpleGame.Game.InGame
         /// Sends the next 3-piece lookahead window to the view.
         /// Passes an empty array when the deck is exhausted.
         /// </summary>
+        /// <summary>
+        /// Sends up to 3 unplaced deck pieces to the view.
+        /// Skips already-placed pieces so the tray always shows 3 placeable pieces
+        /// regardless of which order the player taps them.
+        /// Layout: [left-preview, centre, right-preview] — centre is the closest to
+        /// the front of the deck, but all 3 are tappable.
+        /// </summary>
         private void PushTrayWindow()
         {
-            var p0 = _puzzleSession.PeekDeckAt(0, 0);
-            if (!p0.HasValue)
+            // Collect the next 3 unplaced pieces from deck 0
+            var window = new int?[3];
+            int filled  = 0;
+            int offset  = 0;
+            while (filled < 3)
+            {
+                var id = _puzzleSession.PeekDeckAt(0, offset);
+                if (!id.HasValue) break;
+                offset++;
+                if (_puzzleSession.PlacedIds.Contains(id.Value)) continue; // skip placed
+                window[filled++] = id;
+            }
+
+            if (filled == 0)
             {
                 View.RefreshTray(System.Array.Empty<int?>());
                 return;
             }
 
-            var p1 = _puzzleSession.PeekDeckAt(0, 1);
-            var p2 = _puzzleSession.PeekDeckAt(0, 2);
-            View.RefreshTray(new int?[] { p0, p1, p2 });
+            // Map to [left-preview=window[1], centre=window[0], right-preview=window[2]]
+            View.RefreshTray(new int?[] { window[1], window[0], window[2] });
         }
 
         // ── Event handler ─────────────────────────────────────────────────
 
         private void HandleTapPiece(int pieceId)
         {
-            // Only the front deck piece is placeable — the other visible pieces are previews
-            var front = _puzzleSession.PeekDeckAt(0, 0);
-            if (!front.HasValue || front.Value != pieceId)
-            {
-                Debug.Log($"[InGamePresenter] Tap piece={pieceId} ignored — front deck piece is {front}");
-                return;
-            }
-
-            Debug.Log($"[InGamePresenter] HandleTapPiece pieceId={pieceId} isPlacedBefore={_puzzleSession.PlacedIds.Contains(pieceId)} placedCount={_puzzleSession.PlacedIds.Count}");
             var result = _puzzleSession.TryPlace(pieceId);
             Debug.Log($"[InGamePresenter] HandleTapPiece pieceId={pieceId} result={result}");
 
