@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e24a9b265ad287e49861746afcc73ee9, type: 3}
   m_Name: DefaultGridConfig
   m_EditorClassIdentifier: SimpleJigsaw.Runtime::SimpleJigsaw.GridLayoutConfig
-  Rows: 3
-  Columns: 3
+  Rows: 4
+  Columns: 4
   EdgeProfile: {fileID: 11400000, guid: 726cc726d56f79d4faa4c12fa7c72f07, type: 2}
   PieceThickness: 0.05
