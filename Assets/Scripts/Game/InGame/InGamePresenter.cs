@@ -1,4 +1,3 @@
-using System.Linq;
 using Cysharp.Threading.Tasks;
 using SimpleGame.Core.MVP;
 using SimpleGame.Game.Services;
@@ -75,36 +74,21 @@ namespace SimpleGame.Game.InGame
         /// Sends the next 3-piece lookahead window to the view.
         /// Passes an empty array when the deck is exhausted.
         /// </summary>
-        /// <summary>
-        /// Sends up to 3 unplaced deck pieces to the view.
-        /// Skips already-placed pieces so the tray always shows 3 placeable pieces
-        /// regardless of which order the player taps them.
-        /// Layout: [left-preview, centre, right-preview] — centre is the closest to
-        /// the front of the deck, but all 3 are tappable.
-        /// </summary>
         private void PushTrayWindow()
         {
-            // Collect the next 3 unplaced pieces from deck 0
-            var window = new int?[3];
-            int filled  = 0;
-            int offset  = 0;
-            while (filled < 3)
-            {
-                var id = _puzzleSession.PeekDeckAt(0, offset);
-                if (!id.HasValue) break;
-                offset++;
-                if (_puzzleSession.PlacedIds.Contains(id.Value)) continue; // skip placed
-                window[filled++] = id;
-            }
-
-            if (filled == 0)
+            // Deck cursor always points to an unplaced piece after any placement.
+            // Collect the next 3 from the deck front.
+            var w0 = _puzzleSession.PeekDeckAt(0, 0);
+            if (!w0.HasValue)
             {
                 View.RefreshTray(System.Array.Empty<int?>());
                 return;
             }
+            var w1 = _puzzleSession.PeekDeckAt(0, 1);
+            var w2 = _puzzleSession.PeekDeckAt(0, 2);
 
-            // Map to [left-preview=window[1], centre=window[0], right-preview=window[2]]
-            View.RefreshTray(new int?[] { window[1], window[0], window[2] });
+            // Layout: [left-preview=w1, centre=w0, right-preview=w2]
+            View.RefreshTray(new int?[] { w1, w0, w2 });
         }
 
         // ── Event handler ─────────────────────────────────────────────────

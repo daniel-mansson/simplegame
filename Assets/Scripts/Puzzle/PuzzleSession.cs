@@ -62,11 +62,16 @@ namespace SimpleGame.Puzzle
                 _board.Place(pieceId);
                 result = PlacementResult.Placed;
 
-                // Advance any deck whose front piece was this piece
+                // Advance each deck's cursor past any pieces that are now placed,
+                // so the front always points to an unplaced piece (or becomes empty).
                 foreach (var deck in _level.Decks)
                 {
-                    if (deck.Peek() == pieceId)
+                    var front = deck.Peek();
+                    while (front.HasValue && _board.IsPlaced(front.Value))
+                    {
                         deck.Advance();
+                        front = deck.Peek();
+                    }
                 }
             }
 
