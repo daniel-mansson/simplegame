@@ -72,6 +72,9 @@ namespace SimpleGame.Game.InGame
         /// </summary>
         private System.Func<SimpleGame.Puzzle.PuzzleModel> _modelFactory;
 
+        /// <summary>Runtime GridLayoutConfig created per RunAsync; reused across retries, destroyed on next RunAsync entry.</summary>
+        private SimpleJigsaw.GridLayoutConfig _runtimeGridConfig;
+
         /// <summary>
         /// Cancels any in-flight RunAsync (self-bootstrap or previous GameBootstrapper call)
         /// when a new RunAsync is entered. Ensures only one game loop runs at a time.
@@ -213,6 +216,13 @@ namespace SimpleGame.Game.InGame
             _runCts = CancellationTokenSource.CreateLinkedTokenSource(ct, destroyCancellationToken);
             ct = _runCts.Token;
 
+            // Destroy any GridLayoutConfig from a previous run
+            if (_runtimeGridConfig != null)
+            {
+                UnityEngine.Object.Destroy(_runtimeGridConfig);
+                _runtimeGridConfig = null;
+            }
+
             // Play-from-editor fallback: if no level was set via session, use defaults.
             if (_session.CurrentLevelId == 0)
             {
@@ -233,41 +243,35 @@ namespace SimpleGame.Game.InGame
             {
                 // Derive grid size from level progression (level 1 = 3×3, level 2 = 3×4, etc.)
                 var gridSize = LevelProgression.GetGridSize(_session.CurrentLevelId);
-                var runtimeConfig = UnityEngine.ScriptableObject.CreateInstance<SimpleJigsaw.GridLayoutConfig>();
-                runtimeConfig.Rows           = gridSize.Rows;
-                runtimeConfig.Columns        = gridSize.Cols;
-                runtimeConfig.EdgeProfile    = _gridLayoutConfig.EdgeProfile;
-                runtimeConfig.PieceThickness = _gridLayoutConfig.PieceThickness;
+                _runtimeGridConfig = UnityEngine.ScriptableObject.CreateInstance<SimpleJigsaw.GridLayoutConfig>();
+                _runtimeGridConfig.Rows           = gridSize.Rows;
+                _runtimeGridConfig.Columns        = gridSize.Cols;
+                _runtimeGridConfig.EdgeProfile    = _gridLayoutConfig.EdgeProfile;
+                _runtimeGridConfig.PieceThickness = _gridLayoutConfig.PieceThickness;
 
-                // Random seed per run — determines board edge shapes, start piece, and deck order
-                int levelSeed = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
-                var buildResult = JigsawLevelFactory.Build(runtimeConfig, levelSeed);
-
-                UnityEngine.Object.Destroy(runtimeConfig);
-
-                UnityEngine.Debug.Log($"[InGameSceneController] Level {_session.CurrentLevelId} seed={levelSeed} grid={gridSize.Rows}x{gridSize.Cols}");
-
-                // Fix piece count in session to match actual grid
-                if (_session.TotalPieces != buildResult.PieceList.Count)
-                    _session.ResetForNewGame(_session.CurrentLevelId, buildResult.PieceList.Count);
-
-                // Spawn piece GameObjects with tap handlers (once per scene load)
-                SpawnPieces(buildResult.RawBoard, buildResult.SeedIds[0]);
-
-                // Capture for lambda closure
-                var pieces    = buildResult.PieceList;
-                var seedIds   = buildResult.SeedIds;
-                var deckOrder = buildResult.DeckOrder;
-                modelFactory = () => new SimpleGame.Puzzle.PuzzleModel(pieces, seedIds, deckOrder, slotCount);
+                // modelFactory re-builds with a fresh random seed each call (first run + every retry).
+                // SpawnPieces is called inside so the piece GameObjects match the new layout.
+                modelFactory = () =>
+                {
+                    int levelSeed = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
+                    var result = JigsawLevelFactory.Build(_runtimeGridConfig, levelSeed);
+                    UnityEngine.Debug.Log($"[InGameSceneController] Level {_session.CurrentLevelId} seed={levelSeed} grid={gridSize.Rows}x{gridSize.Cols}");
+                    if (_session.TotalPieces != result.PieceList.Count)
+                        _session.ResetForNewGame(_session.CurrentLevelId, result.PieceList.Count);
+                    SpawnPieces(result.RawBoard, result.SeedIds[0]);
+                    return new SimpleGame.Puzzle.PuzzleModel(result.PieceList, result.SeedIds, result.DeckOrder, slotCount);
+                };
             }
             else
             {
                 modelFactory = () => BuildStubModel(_session.TotalPieces, slotCount);
             }
 
+            try
+            {
             while (true)
             {
-                // Rebuild model each retry — ensures deck state is fresh
+                // Rebuild model each retry — ensures deck state is fresh (new seed, new spawn)
                 var model     = modelFactory();
                 var presenter = _uiFactory.CreateInGamePresenter(ActiveView, model);
                 presenter.Initialize();
@@ -630,7 +634,7 @@ namespace SimpleGame.Game.InGame
         {
             var tp = GetTransitionPlayer();
             if (tp != null) await tp.FadeOutAsync(ct);
-            ResetPiecesToTray();
+            // Pieces are re-spawned by modelFactory() after this returns — no reset needed.
             if (tp != null) await tp.FadeInAsync(ct);
         }
 
