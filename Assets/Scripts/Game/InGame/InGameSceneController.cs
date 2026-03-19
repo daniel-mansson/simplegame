@@ -272,7 +272,7 @@ namespace SimpleGame.Game.InGame
                     UnityEngine.Debug.Log($"[InGameSceneController] Level {_session.CurrentLevelId} seed={result.Seed} grid={gridSize.Rows}x{gridSize.Cols} slots={slotCount}");
                     if (_session.TotalPieces != result.PieceList.Count)
                         _session.ResetForNewGame(_session.CurrentLevelId, result.PieceList.Count);
-                    SpawnPieces(result.RawBoard, result.SeedIds[0], slotCount, result.DeckOrder, gridSize.Cols);
+                    SpawnPieces(result.RawBoard, result.SeedIds[0], slotCount, result.DeckOrder);
                     return new SimpleGame.Puzzle.PuzzleModel(result.PieceList, result.SeedIds, result.DeckOrder, slotCount);
                 };
             }
@@ -481,7 +481,7 @@ namespace SimpleGame.Game.InGame
         /// Spawns piece GameObjects using PieceObjectFactory and attaches PieceTapHandler to each.
         /// Called once at scene start when a GridLayoutConfig is assigned.
         /// </summary>
-        private void SpawnPieces(SimpleJigsaw.PuzzleBoard rawBoard, int seedPieceId, int slotCount, System.Collections.Generic.IReadOnlyList<int> deckOrder, int boardCols)
+        private void SpawnPieces(SimpleJigsaw.PuzzleBoard rawBoard, int seedPieceId, int slotCount, System.Collections.Generic.IReadOnlyList<int> deckOrder)
         {
             if (_inGameView == null) return;
 
@@ -551,10 +551,9 @@ namespace SimpleGame.Game.InGame
                     go.AddComponent<PieceTapHandler>().Initialize(pid, _inGameView);
             }
 
-            // ── Tray: slotCount slots — sized to match board pieces, staggered layout ──
-            // Board piece world size = boardSize / cols (each piece occupies 1/cols of the board).
-            float pieceWorldSize = boardSize / boardCols;
-            float slotSize = pieceWorldSize * 2.8f;
+            // ── Tray: slotCount slots — size depends only on slot count, not grid size ──
+            // Divide available tray height by slot count and scale up so pieces feel substantial.
+            float slotSize = (trayH / slotCount) * 1.8f;
 
             // Very tight packing — slots overlap slightly, held apart by a small fraction of piece size.
             float slotSpacing    = slotSize * 0.45f;
