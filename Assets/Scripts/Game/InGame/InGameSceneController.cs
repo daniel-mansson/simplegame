@@ -209,9 +209,19 @@ namespace SimpleGame.Game.InGame
             }
             else if (_gridLayoutConfig != null)
             {
+                // Derive grid size from level progression (level 1 = 3×3, level 2 = 3×4, etc.)
+                var gridSize = LevelProgression.GetGridSize(_session.CurrentLevelId);
+                var runtimeConfig = UnityEngine.ScriptableObject.CreateInstance<SimpleJigsaw.GridLayoutConfig>();
+                runtimeConfig.Rows           = gridSize.Rows;
+                runtimeConfig.Columns        = gridSize.Cols;
+                runtimeConfig.EdgeProfile    = _gridLayoutConfig.EdgeProfile;
+                runtimeConfig.PieceThickness = _gridLayoutConfig.PieceThickness;
+
                 var buildResult = JigsawLevelFactory.Build(
-                    _gridLayoutConfig, _puzzleSeed,
+                    runtimeConfig, _puzzleSeed,
                     seedPieceIds: new[] { _seedPieceId });
+
+                UnityEngine.Object.Destroy(runtimeConfig);
 
                 // Fix piece count in session to match actual grid
                 if (_session.TotalPieces != buildResult.PieceList.Count)
