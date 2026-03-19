@@ -34,16 +34,21 @@ namespace SimpleGame.Game.Puzzle
             /// <summary>Ordered deck of non-seed piece IDs, ready to pass to PuzzleModel.</summary>
             public IReadOnlyList<int> DeckOrder { get; }
 
+            /// <summary>The RNG seed used for this build (board layout + seed selection + shuffle).</summary>
+            public int Seed { get; }
+
             public JigsawBuildResult(
                 SimpleJigsaw.PuzzleBoard rawBoard,
                 IReadOnlyList<IPuzzlePiece> pieceList,
                 IReadOnlyList<int> seedIds,
-                IReadOnlyList<int> deckOrder)
+                IReadOnlyList<int> deckOrder,
+                int seed)
             {
                 RawBoard  = rawBoard;
                 PieceList = pieceList;
                 SeedIds   = seedIds;
                 DeckOrder = deckOrder;
+                Seed      = seed;
             }
         }
 
@@ -51,10 +56,14 @@ namespace SimpleGame.Game.Puzzle
         /// Builds puzzle data from a grid layout configuration.
         /// </summary>
         /// <param name="config">Grid layout — rows, columns, edge profile.</param>
-        /// <param name="seed">Deterministic RNG seed for edge type assignment.</param>
+        /// <param name="seed">
+        /// RNG seed controlling board edge generation, seed-piece selection, and deck shuffle.
+        /// Pass a random value each run for variety; pass a fixed value for deterministic replay.
+        /// </param>
         /// <param name="seedPieceIds">
-        /// Piece IDs pre-placed on the board before gameplay.
-        /// Pass null or empty to use no seeds (not recommended — nothing will be placeable).
+        /// Explicit seed piece override. When null (the default) one piece is chosen randomly
+        /// from the board using <paramref name="seed"/>. Pass a non-null array to force specific
+        /// pieces (useful in tests).
         /// </param>
         public static JigsawBuildResult Build(
             SimpleJigsaw.GridLayoutConfig config,
@@ -75,10 +84,22 @@ namespace SimpleGame.Game.Puzzle
                 pieces.Add(new PuzzlePiece(descriptor.Id, neighborIds));
             }
 
-            // Resolve seeds
-            var seeds = (IReadOnlyList<int>)(seedPieceIds ?? System.Array.Empty<int>());
+            // RNG — single instance driven by seed; used for seed-piece selection and deck shuffle
+            var rng = new System.Random(seed);
 
-            // Build flat deck: all non-seed pieces in ascending ID order
+            // Resolve seeds — pick one piece at random when not explicitly provided
+            IReadOnlyList<int> seeds;
+            if (seedPieceIds != null)
+            {
+                seeds = seedPieceIds;
+            }
+            else
+            {
+                var randomSeedId = rawBoard.Pieces[rng.Next(rawBoard.Pieces.Count)].Id;
+                seeds = new[] { randomSeedId };
+            }
+
+            // Build deck: all non-seed pieces, shuffled with Fisher-Yates
             var seedSet = new HashSet<int>(seeds);
             var deckOrder = new List<int>(pieces.Count);
             foreach (var piece in pieces)
@@ -86,9 +107,19 @@ namespace SimpleGame.Game.Puzzle
                 if (!seedSet.Contains(piece.Id))
                     deckOrder.Add(piece.Id);
             }
-            deckOrder.Sort();
+            Shuffle(deckOrder, rng);
 
-            return new JigsawBuildResult(rawBoard, pieces, seeds, deckOrder);
+            return new JigsawBuildResult(rawBoard, pieces, seeds, deckOrder, seed);
+        }
+
+        /// <summary>Fisher-Yates in-place shuffle.</summary>
+        private static void Shuffle<T>(List<T> list, System.Random rng)
+        {
+            for (int i = list.Count - 1; i > 0; i--)
+            {
+                int j = rng.Next(i + 1);
+                (list[i], list[j]) = (list[j], list[i]);
+            }
         }
     }
 }

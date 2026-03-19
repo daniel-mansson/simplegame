@@ -239,18 +239,20 @@ namespace SimpleGame.Game.InGame
                 runtimeConfig.EdgeProfile    = _gridLayoutConfig.EdgeProfile;
                 runtimeConfig.PieceThickness = _gridLayoutConfig.PieceThickness;
 
-                var buildResult = JigsawLevelFactory.Build(
-                    runtimeConfig, _puzzleSeed,
-                    seedPieceIds: new[] { _seedPieceId });
+                // Random seed per run — determines board edge shapes, start piece, and deck order
+                int levelSeed = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
+                var buildResult = JigsawLevelFactory.Build(runtimeConfig, levelSeed);
 
                 UnityEngine.Object.Destroy(runtimeConfig);
+
+                UnityEngine.Debug.Log($"[InGameSceneController] Level {_session.CurrentLevelId} seed={levelSeed} grid={gridSize.Rows}x{gridSize.Cols}");
 
                 // Fix piece count in session to match actual grid
                 if (_session.TotalPieces != buildResult.PieceList.Count)
                     _session.ResetForNewGame(_session.CurrentLevelId, buildResult.PieceList.Count);
 
                 // Spawn piece GameObjects with tap handlers (once per scene load)
-                SpawnPieces(buildResult.RawBoard);
+                SpawnPieces(buildResult.RawBoard, buildResult.SeedIds[0]);
 
                 // Capture for lambda closure
                 var pieces    = buildResult.PieceList;
@@ -448,7 +450,7 @@ namespace SimpleGame.Game.InGame
         /// Spawns piece GameObjects using PieceObjectFactory and attaches PieceTapHandler to each.
         /// Called once at scene start when a GridLayoutConfig is assigned.
         /// </summary>
-        private void SpawnPieces(SimpleJigsaw.PuzzleBoard rawBoard)
+        private void SpawnPieces(SimpleJigsaw.PuzzleBoard rawBoard, int seedPieceId)
         {
             if (_inGameView == null) return;
 
@@ -512,7 +514,7 @@ namespace SimpleGame.Game.InGame
 
                 // Seed piece is already placed — disable its collider immediately so it
                 // never intercepts rays aimed at tray pieces.
-                if (pid == _seedPieceId)
+                if (pid == seedPieceId)
                     box.enabled = false;
                 else
                     go.AddComponent<PieceTapHandler>().Initialize(pid, _inGameView);
@@ -543,7 +545,7 @@ namespace SimpleGame.Game.InGame
             int trayIdx = 0;
             foreach (var desc in rawBoard.Pieces)
             {
-                if (desc.Id == _seedPieceId) continue;
+                if (desc.Id == seedPieceId) continue;
                 if (!_pieceObjects.TryGetValue(desc.Id, out var go)) continue;
 
                 Vector3 pos, scale;

@@ -90,20 +90,21 @@ namespace SimpleGame.Tests.Game
         [Test]
         public void Build_DefaultDeck_ContainsAllNonSeedPieces()
         {
-            // Default deck: all non-seed pieces in ascending ID order
+            // Deck must contain all non-seed pieces; seed not included; order is shuffled
             var result = JigsawLevelFactory.Build(_config2x2, seed: 42, seedPieceIds: new[] { 0 });
 
             Assert.That(result.DeckOrder, Has.No.Member(0), "Seed piece should not be in the deck.");
             Assert.That(result.DeckOrder.Count, Is.EqualTo(3), "Deck should contain the 3 non-seed pieces.");
-            Assert.That(result.DeckOrder, Is.Ordered, "Default deck should be in ascending ID order.");
+            // All non-seed IDs (1,2,3) must appear exactly once
+            CollectionAssert.AreEquivalent(new[] { 1, 2, 3 }, result.DeckOrder);
         }
 
         [Test]
-        public void Build_DeckOrder_IsAscending()
+        public void Build_DeckOrder_ContainsAllNonSeedPieces_Unordered()
         {
-            // Default deck should be in ascending ID order
+            // Deck is shuffled — assert containment, not order
             var result = JigsawLevelFactory.Build(_config2x2, seed: 42, seedPieceIds: new[] { 0 });
-            Assert.That(result.DeckOrder, Is.Ordered, "Default deck should be in ascending ID order.");
+            CollectionAssert.AreEquivalent(new[] { 1, 2, 3 }, result.DeckOrder);
         }
 
         [Test]
