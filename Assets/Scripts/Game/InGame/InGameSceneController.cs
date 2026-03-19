@@ -260,7 +260,7 @@ namespace SimpleGame.Game.InGame
                     UnityEngine.Debug.Log($"[InGameSceneController] Level {_session.CurrentLevelId} seed={result.Seed} grid={gridSize.Rows}x{gridSize.Cols} slots={slotCount}");
                     if (_session.TotalPieces != result.PieceList.Count)
                         _session.ResetForNewGame(_session.CurrentLevelId, result.PieceList.Count);
-                    SpawnPieces(result.RawBoard, result.SeedIds[0]);
+                    SpawnPieces(result.RawBoard, result.SeedIds[0], slotCount, result.DeckOrder);
                     return new SimpleGame.Puzzle.PuzzleModel(result.PieceList, result.SeedIds, result.DeckOrder, slotCount);
                 };
             }
@@ -454,7 +454,7 @@ namespace SimpleGame.Game.InGame
         /// Spawns piece GameObjects using PieceObjectFactory and attaches PieceTapHandler to each.
         /// Called once at scene start when a GridLayoutConfig is assigned.
         /// </summary>
-        private void SpawnPieces(SimpleJigsaw.PuzzleBoard rawBoard, int seedPieceId)
+        private void SpawnPieces(SimpleJigsaw.PuzzleBoard rawBoard, int seedPieceId, int slotCount, System.Collections.Generic.IReadOnlyList<int> deckOrder)
         {
             if (_inGameView == null) return;
 
@@ -524,45 +524,53 @@ namespace SimpleGame.Game.InGame
                     go.AddComponent<PieceTapHandler>().Initialize(pid, _inGameView);
             }
 
-            // ── Tray: 3 slots — all equal size, evenly spaced ──
-            const int   kVisibleSlots = 3;
-            float       slotSize     = trayH * 0.70f;   // uniform size for all slots
-            float       spacing      = orthoW * 0.22f;
+            // ── Tray: slotCount slots — equal size, evenly spaced ──────────
+            // Slot size shrinks slightly as slot count increases.
+            float slotSize = trayH * Mathf.Lerp(0.70f, 0.48f, (slotCount - 3) / 2f);
+            float totalTrayWidth = orthoW * 0.88f;
+            float slotSpacing = slotCount > 1 ? totalTrayWidth / (slotCount - 1) : 0f;
+            float trayStartX = -(totalTrayWidth * 0.5f);
 
-            // Slot layout: index 0=left, index 1=centre, index 2=right
-            _traySlotPositions = new Vector3[kVisibleSlots];
-            _traySlotPositions[0] = new Vector3(-spacing, trayY, -2f);
-            _traySlotPositions[1] = new Vector3(0f,       trayY, -2f);
-            _traySlotPositions[2] = new Vector3( spacing, trayY, -2f);
-            _traySlotScales = new Vector3[]
+            _traySlotPositions = new Vector3[slotCount];
+            _traySlotScales    = new Vector3[slotCount];
+            for (int i = 0; i < slotCount; i++)
             {
-                Vector3.one * slotSize,
-                Vector3.one * slotSize,
-                Vector3.one * slotSize,
-            };
+                float x = slotCount > 1 ? trayStartX + i * slotSpacing : 0f;
+                _traySlotPositions[i] = new Vector3(x, trayY, -2f);
+                _traySlotScales[i]    = Vector3.one * slotSize;
+            }
 
-            // Hidden off-screen position for pieces not yet in the visible window
+            // Hidden off-screen position for pieces not yet drawn into a slot
             var hiddenPos = new Vector3(orthoW * 2f, trayY, -2f);
 
             _traySlotData = new Dictionary<int, (Vector3 pos, Vector3 scale)>();
 
-            int trayIdx = 0;
+            // Build a set of the first slotCount deck pieces — these are the ones the model
+            // puts in visible slots 0..slotCount-1 at start. All others start hidden.
+            var initialSlotSet = new HashSet<int>();
+            for (int i = 0; i < slotCount && i < deckOrder.Count; i++)
+                initialSlotSet.Add(deckOrder[i]);
+
+            // Map deck order index → slot index for positioning
+            var deckSlotIndex = new Dictionary<int, int>();
+            for (int i = 0; i < slotCount && i < deckOrder.Count; i++)
+                deckSlotIndex[deckOrder[i]] = i;
+
             foreach (var desc in rawBoard.Pieces)
             {
                 if (desc.Id == seedPieceId) continue;
                 if (!_pieceObjects.TryGetValue(desc.Id, out var go)) continue;
 
                 Vector3 pos, scale;
-                if (trayIdx < kVisibleSlots)
+                if (deckSlotIndex.TryGetValue(desc.Id, out int slotIdx))
                 {
-                    pos   = _traySlotPositions[trayIdx];
-                    scale = _traySlotScales[trayIdx];
+                    pos   = _traySlotPositions[slotIdx];
+                    scale = _traySlotScales[slotIdx];
                 }
                 else
                 {
-                    // Queue behind slot 2, hidden off to the right
                     pos   = hiddenPos;
-                    scale = _traySlotScales[2];
+                    scale = _traySlotScales[slotCount - 1];
                 }
 
                 go.transform.SetParent(null, worldPositionStays: false);
@@ -570,7 +578,6 @@ namespace SimpleGame.Game.InGame
                 go.transform.localScale = scale;
 
                 _traySlotData[desc.Id] = (pos, scale);
-                trayIdx++;
             }
 
             // Snapshot initial positions for Retry reset (before any MovePieceToTraySlot calls)
@@ -582,7 +589,7 @@ namespace SimpleGame.Game.InGame
                 onRevealPiece:     RevealPiece
             );
 
-            Debug.Log($"[InGameSceneController] Spawned {pieces.Count} pieces — 1 seed, {trayIdx} in tray ({Mathf.Min(trayIdx, kVisibleSlots)} visible).");
+            Debug.Log($"[InGameSceneController] Spawned {pieces.Count} pieces — 1 seed, {deckOrder.Count} in deck, {slotCount} visible slots.");
         }
 
         /// <summary>Move a piece from its tray world position to its solved board position.</summary>
