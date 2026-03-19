@@ -269,8 +269,6 @@ namespace SimpleGame.Game.InGame
                 modelFactory = () => BuildStubModel(_session.TotalPieces, slotCount);
             }
 
-            try
-            {
             while (true)
             {
                 // Rebuild model each retry — ensures deck state is fresh (new seed, new spawn)
