@@ -558,27 +558,26 @@ namespace SimpleGame.Game.InGame
             float slotSize = Mathf.Min(slotSizeByHeight, slotSizeByWidth);
 
             // Compute normalised scale: pieces from large grids have smaller meshes in [0,1]² space.
-            // Sample the first non-seed piece's mesh to derive the world extent at boardSize scale.
-            float normSlotScale = slotSize; // fallback: assume mesh fills boardSize
+            // Each piece mesh is roughly 1/cols × 1/rows in local units; parent is scaled to boardSize.
+            // Sample the first non-seed piece's mesh bounds to get the true world extent.
+            float normSlotScale = slotSize; // fallback
             foreach (var kv in _pieceObjects)
             {
                 if (kv.Key == seedPieceId) continue;
                 var sampleMesh = kv.Value.GetComponent<MeshFilter>()?.sharedMesh;
                 if (sampleMesh == null) continue;
+                // mesh.bounds.size is in local space (1/cols units); multiply by boardSize = world extent
                 float extent = Mathf.Max(sampleMesh.bounds.size.x, sampleMesh.bounds.size.y) * boardSize;
                 if (extent > 0.0001f) normSlotScale = slotSize / extent;
                 break;
             }
 
-            // Spacing: distribute slots evenly across screen width with a small margin.
-            // When slotCount==1 the single piece is centred.
-            float totalUsableWidth = orthoW * 0.92f;
-            float slotSpacing    = slotCount > 1 ? totalUsableWidth / slotCount : 0f;
+            // Spacing: tight pack with 45% of rendered piece size between centres.
+            // staggerY in rendered units (slotSize), not scale units.
+            float slotSpacing    = slotSize * 0.55f;
             float totalTrayWidth = slotSpacing * (slotCount - 1) + slotSize;
             float trayStartX     = -totalTrayWidth * 0.5f + slotSize * 0.5f;
-
-            // Stagger: every second slot drops slightly so overlapping pieces read as distinct.
-            float staggerY = slotSize * 0.18f;
+            float staggerY       = slotSize * 0.18f;
 
             _traySlotPositions = new Vector3[slotCount];
             _traySlotScales    = new Vector3[slotCount];
