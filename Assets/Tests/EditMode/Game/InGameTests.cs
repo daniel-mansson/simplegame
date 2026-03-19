@@ -27,24 +27,16 @@ namespace SimpleGame.Tests.Game
         public int UpdatePieceCounterCallCount { get; private set; }
         public string LastLevelLabelText { get; private set; }
         public int UpdateLevelLabelCallCount { get; private set; }
+        public int LastDeckPieceId { get; private set; } = -1;
+        public bool DeckHidden { get; private set; }
+        public int LastRevealedPieceId { get; private set; } = -1;
 
-        public void UpdateHearts(string text)
-        {
-            LastHeartsText = text;
-            UpdateHeartsCallCount++;
-        }
-
-        public void UpdatePieceCounter(string text)
-        {
-            LastPieceCounterText = text;
-            UpdatePieceCounterCallCount++;
-        }
-
-        public void UpdateLevelLabel(string text)
-        {
-            LastLevelLabelText = text;
-            UpdateLevelLabelCallCount++;
-        }
+        public void UpdateHearts(string text)         { LastHeartsText = text; UpdateHeartsCallCount++; }
+        public void UpdatePieceCounter(string text)   { LastPieceCounterText = text; UpdatePieceCounterCallCount++; }
+        public void UpdateLevelLabel(string text)     { LastLevelLabelText = text; UpdateLevelLabelCallCount++; }
+        public void ShowDeckPiece(int pieceId)        { LastDeckPieceId = pieceId; DeckHidden = false; }
+        public void HideDeckPanel()                   { DeckHidden = true; }
+        public void RevealPiece(int pieceId)          { LastRevealedPieceId = pieceId; }
 
         /// <summary>Fires OnTapPiece with the given piece ID — simulates a tap on that piece.</summary>
         public void SimulateTapPiece(int pieceId) => OnTapPiece?.Invoke(pieceId);

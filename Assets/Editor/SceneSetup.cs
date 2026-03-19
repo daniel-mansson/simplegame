@@ -379,43 +379,57 @@ public static class SceneSetup
         canvas.worldCamera = cam;
         canvas.planeDistance = 1f;
 
-        // Level label
-        var levelGO = CreateText("LevelText", "Level 1", canvas.transform,
-            new Vector2(0.2f, 0.88f), new Vector2(0.8f, 0.97f), 32);
+        // ── HUD: top strip (y 88–97%) ─────────────────────────────────────
+        var levelGO   = CreateText("LevelText",       "Level 1", canvas.transform,
+            new Vector2(0.25f, 0.90f), new Vector2(0.75f, 0.99f), 32);
+        var heartsGO  = CreateText("HeartsText",      "❤ ❤ ❤",  canvas.transform,
+            new Vector2(0.02f, 0.90f), new Vector2(0.30f, 0.99f), 26);
+        var counterGO = CreateText("PieceCounterText","0/0",      canvas.transform,
+            new Vector2(0.70f, 0.90f), new Vector2(0.98f, 0.99f), 26);
 
-        // Hearts display
-        var heartsGO = CreateText("HeartsText", "3", canvas.transform,
-            new Vector2(0.05f, 0.88f), new Vector2(0.2f, 0.97f), 28);
+        // ── Deck / Tray panel: bottom strip (y 0–18%) ─────────────────────
+        var deckPanelGO = new GameObject("DeckPanel");
+        deckPanelGO.transform.SetParent(canvas.transform, false);
+        var deckPanelRect = deckPanelGO.AddComponent<RectTransform>();
+        deckPanelRect.anchorMin        = new Vector2(0f,    0f);
+        deckPanelRect.anchorMax        = new Vector2(1f,    0.18f);
+        deckPanelRect.sizeDelta        = Vector2.zero;
+        deckPanelRect.anchoredPosition = Vector2.zero;
+        var deckBg = deckPanelGO.AddComponent<Image>();
+        deckBg.color = new Color(0.1f, 0.1f, 0.15f, 0.85f);
 
-        // Piece counter
-        var pieceCounterGO = CreateText("PieceCounterText", "0/0", canvas.transform,
-            new Vector2(0.3f, 0.72f), new Vector2(0.7f, 0.85f), 36);
+        // "Next piece" label — left half of tray
+        var deckLabelGO = CreateText("DeckLabel", "Next: Piece 1", deckPanelGO.transform,
+            new Vector2(0.02f, 0.15f), new Vector2(0.60f, 0.85f), 28);
 
-        // Wire InGameView (no placeholder buttons — tapping is handled by PieceTapHandler)
+        // "Place" button — right third of tray
+        CreateButton("PlaceButton", "Place ▶", deckPanelGO.transform, out var placeButtonGO);
+        SetRect(placeButtonGO, new Vector2(0.62f, 0.10f), new Vector2(0.97f, 0.90f));
+
+        // ── Wire InGameView ────────────────────────────────────────────────
         var inGameView = canvas.gameObject.AddComponent<InGameView>();
-        WireSerializedField(inGameView, "_heartsText", heartsGO.GetComponent<Text>());
-        WireSerializedField(inGameView, "_pieceCounterText", pieceCounterGO.GetComponent<Text>());
-        WireSerializedField(inGameView, "_levelText", levelGO.GetComponent<Text>());
+        WireSerializedField(inGameView, "_heartsText",       heartsGO.GetComponent<Text>());
+        WireSerializedField(inGameView, "_pieceCounterText", counterGO.GetComponent<Text>());
+        WireSerializedField(inGameView, "_levelText",        levelGO.GetComponent<Text>());
+        WireSerializedField(inGameView, "_deckPanel",        deckPanelGO);
+        WireSerializedField(inGameView, "_deckLabel",        deckLabelGO.GetComponent<Text>());
+        WireSerializedField(inGameView, "_placeButton",      placeButtonGO.GetComponent<Button>());
 
-        // PuzzleParent — empty GameObject where jigsaw piece meshes are spawned at runtime
+        // ── PuzzleParent — world-space root for 3-D piece meshes ──────────
         var puzzleParentGO = new GameObject("PuzzleParent");
-        puzzleParentGO.transform.SetParent(null); // root-level, not under canvas
+        puzzleParentGO.transform.SetParent(null);
 
-        // InGameSceneController
+        // ── InGameSceneController ─────────────────────────────────────────
         var sceneControllerGO = new GameObject("InGameSceneController");
         var inGameController = sceneControllerGO.AddComponent<InGameSceneController>();
-        WireSerializedField(inGameController, "_inGameView", inGameView);
+        WireSerializedField(inGameController, "_inGameView",   inGameView);
         WireSerializedField(inGameController, "_puzzleParent", puzzleParentGO.transform);
 
-        // Wire default puzzle config assets
-        var gridConfig = AssetDatabase.LoadAssetAtPath<SimpleJigsaw.GridLayoutConfig>("Assets/Data/DefaultGridConfig.asset");
-        var renderConfig = AssetDatabase.LoadAssetAtPath<SimpleJigsaw.PieceRenderConfig>("Assets/Data/DefaultPieceRenderConfig.asset");
-        if (gridConfig != null)
-            WireSerializedField(inGameController, "_gridLayoutConfig", gridConfig);
-        else
-            Debug.LogWarning("[SceneSetup] DefaultGridConfig.asset not found — run Tools/Setup/Create And Register Scenes after asset import.");
-        if (renderConfig != null)
-            WireSerializedField(inGameController, "_pieceRenderConfig", renderConfig);
+        var gridConfig   = AssetDatabase.LoadAssetAtPath<GridLayoutConfig>("Assets/Data/DefaultGridConfig.asset");
+        var renderConfig = AssetDatabase.LoadAssetAtPath<PieceRenderConfig>("Assets/Data/DefaultPieceRenderConfig.asset");
+        if (gridConfig   != null) WireSerializedField(inGameController, "_gridLayoutConfig", gridConfig);
+        else Debug.LogWarning("[SceneSetup] DefaultGridConfig.asset not found.");
+        if (renderConfig != null) WireSerializedField(inGameController, "_pieceRenderConfig", renderConfig);
 
         bool saved = EditorSceneManager.SaveScene(scene, InGamePath);
         Debug.Log(saved ? "[SceneSetup] InGame scene saved." : "[SceneSetup] ERROR saving InGame scene.");

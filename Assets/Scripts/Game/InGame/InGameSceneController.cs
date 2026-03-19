@@ -40,6 +40,12 @@ namespace SimpleGame.Game.InGame
         /// <summary>Spawned piece GameObjects — destroyed on scene unload.</summary>
         private List<GameObject> _spawnedPieces;
 
+        /// <summary>Piece id → spawned GameObject (populated in SpawnPieces).</summary>
+        private Dictionary<int, GameObject> _pieceObjects;
+
+        /// <summary>Piece id → solved world position (populated in SpawnPieces).</summary>
+        private Dictionary<int, Vector3> _solvedWorldPositions;
+
         /// <summary>The active puzzle level for the current run. Set in RunAsync.</summary>
         private IPuzzleLevel _currentLevel;
 
@@ -398,40 +404,86 @@ namespace SimpleGame.Game.InGame
                 pieces = SimpleJigsaw.PieceObjectFactory.CreateAll(rawBoard, config, parent);
             else
                 pieces = SimpleJigsaw.PieceObjectFactory.CreateAll(rawBoard,
-                    new UnityEngine.Material(UnityEngine.Shader.Find("Standard") ??
-                                             UnityEngine.Shader.Find("Universal Render Pipeline/Lit")),
+                    new UnityEngine.Material(Shader.Find("Standard") ??
+                                             Shader.Find("Universal Render Pipeline/Lit")),
                     parent);
 
             _spawnedPieces = pieces;
 
-            // Scale the PuzzleParent so the normalized 0-1 board fills most of the camera view.
-            // Pieces are laid out in [0,1]² space; camera is orthographic.
-            // Target: board fills ~80% of the shorter screen dimension.
+            // ── Layout zones (world units, camera ortho size 5 → ±5 y) ─────
+            // Tray: bottom 22% of screen
+            // Board: everything above tray, minus top 0.8u for HUD
             var cam = Camera.main;
-            if (cam != null && cam.orthographic)
-            {
-                float screenH = cam.orthographicSize * 2f;
-                float screenW = screenH * cam.aspect;
-                float targetSize = Mathf.Min(screenW, screenH) * 0.85f;
-                parent.localScale = Vector3.one * targetSize;
-                // Center the board: pieces span [0,1] so center is at (0.5, 0.5).
-                // After scaling, shift parent so scaled center sits at world origin.
-                parent.position = new Vector3(-targetSize * 0.5f, -targetSize * 0.5f, 0f);
-            }
+            float orthoH = cam != null && cam.orthographic ? cam.orthographicSize * 2f : 10f;
+            float orthoW = cam != null ? orthoH * cam.aspect : 18f;
 
-            // Add MeshCollider to each piece so OnMouseDown fires from physics raycasts.
+            float trayFraction = 0.22f;
+            float trayH        = orthoH * trayFraction;
+            float trayY        = -orthoH * 0.5f + trayH * 0.5f;
+            float boardBottom  = -orthoH * 0.5f + trayH + 0.15f;
+            float boardTop     =  orthoH * 0.5f - 0.8f;
+            float boardH       =  boardTop - boardBottom;
+            float boardSize    =  Mathf.Min(orthoW * 0.9f, boardH);
+
+            // Scale PuzzleParent: [0,1]² → boardSize²
+            parent.localScale = Vector3.one * boardSize;
+            parent.position   = new Vector3(-boardSize * 0.5f, boardBottom, 0f);
+
+            // ── Build piece lookup + record solved positions ───────────────
+            _pieceObjects         = new Dictionary<int, GameObject>(pieces.Count);
+            _solvedWorldPositions = new Dictionary<int, Vector3>(pieces.Count);
+
             for (int i = 0; i < pieces.Count; i++)
             {
-                var pieceId = rawBoard.Pieces[i].Id;
-                var mesh = pieces[i].GetComponent<UnityEngine.MeshFilter>()?.sharedMesh;
-                if (mesh != null)
-                    pieces[i].AddComponent<UnityEngine.MeshCollider>().sharedMesh = mesh;
+                var pid = rawBoard.Pieces[i].Id;
+                var go  = pieces[i];
+                _pieceObjects[pid]         = go;
+                _solvedWorldPositions[pid] = parent.TransformPoint(go.transform.localPosition);
 
-                var handler = pieces[i].AddComponent<PieceTapHandler>();
-                handler.Initialize(pieceId, _inGameView);
+                var mesh = go.GetComponent<MeshFilter>()?.sharedMesh;
+                if (mesh != null)
+                    go.AddComponent<MeshCollider>().sharedMesh = mesh;
+
+                go.AddComponent<PieceTapHandler>().Initialize(pid, _inGameView);
             }
 
-            Debug.Log($"[InGameSceneController] Spawned {pieces.Count} pieces with tap handlers.");
+            // ── Tray: move non-seed pieces below the board ─────────────────
+            int nonSeedCount   = rawBoard.Pieces.Count - 1; // one seed
+            float slotW        = Mathf.Min(trayH * 0.85f, orthoW / Mathf.Max(nonSeedCount, 1) * 0.88f);
+            float trayStartX   = -(slotW * nonSeedCount) * 0.5f + slotW * 0.5f;
+
+            int trayIdx = 0;
+            foreach (var desc in rawBoard.Pieces)
+            {
+                if (desc.Id == _seedPieceId) continue;
+                if (!_pieceObjects.TryGetValue(desc.Id, out var go)) continue;
+
+                go.transform.SetParent(null, worldPositionStays: false);
+                go.transform.position   = new Vector3(trayStartX + trayIdx * slotW, trayY, 0f);
+                go.transform.localScale = Vector3.one * slotW;
+                trayIdx++;
+            }
+
+            // ── Wire piece-position callbacks onto InGameView ──────────────
+            _inGameView.RegisterPieceCallbacks(
+                onRevealPiece:   RevealPiece,
+                onShowDeckPiece: _ => { /* tray pieces stay put; front piece is implicit */ },
+                onHideDeckPanel: null
+            );
+
+            Debug.Log($"[InGameSceneController] Spawned {pieces.Count} pieces — 1 seed, {nonSeedCount} in tray.");
+        }
+
+        /// <summary>Move a piece from its tray world position to its solved board position.</summary>
+        private void RevealPiece(int pieceId)
+        {
+            if (!_pieceObjects.TryGetValue(pieceId, out var go)) return;
+            if (!_solvedWorldPositions.TryGetValue(pieceId, out var solved)) return;
+
+            var boardParent = _puzzleParent != null ? _puzzleParent : transform;
+            go.transform.SetParent(boardParent, worldPositionStays: false);
+            go.transform.localPosition = boardParent.InverseTransformPoint(solved);
+            go.transform.localScale    = Vector3.one;
         }
 
         /// <summary>

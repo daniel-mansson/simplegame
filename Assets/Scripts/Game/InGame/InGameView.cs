@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -6,11 +7,14 @@ namespace SimpleGame.Game.InGame
 {
     /// <summary>
     /// Unity MonoBehaviour implementation of IInGameView.
-    /// Owns wiring between Unity UI components and view interface events.
-    /// Has zero references to presenters, services, or managers.
     ///
-    /// OnTapPiece is fired by PieceTapHandler components on each puzzle piece GameObject
-    /// (wired in S04). Until then it can be fired programmatically for testing.
+    /// Layout:
+    ///   Top strip  — Level label (centre), Hearts (left), Piece counter (right)
+    ///   Board area — 3D jigsaw pieces in world space (managed by InGameSceneController)
+    ///   Tray strip — Deck panel at bottom: "Piece X" label + "Place" button
+    ///
+    /// InGameSceneController calls RegisterPieceCallbacks() after spawning pieces
+    /// so that ShowDeckPiece / RevealPiece can move GameObjects.
     /// </summary>
     public class InGameView : MonoBehaviour, IInGameView
     {
@@ -18,16 +22,77 @@ namespace SimpleGame.Game.InGame
         [SerializeField] private Text _pieceCounterText;
         [SerializeField] private Text _levelText;
 
-        /// <summary>
-        /// Fired by PieceTapHandler on each piece GameObject when the player taps a piece.
-        /// Carries the piece ID. Wired externally in S04 — no direct UI button for this.
-        /// </summary>
+        [Header("Tray / Deck")]
+        [SerializeField] private GameObject _deckPanel;
+        [SerializeField] private Text _deckLabel;
+        [SerializeField] private Button _placeButton;
+
         public event Action<int> OnTapPiece;
 
+        // Piece position delegates — wired by InGameSceneController after spawning
+        private Action<int>        _onRevealPiece;     // pieceId → move to board position
+        private Action<int>        _onShowDeckPiece;   // pieceId → move to tray highlight slot
+        private Action             _onHideDeckPanel;
+
+        private int _currentDeckPieceId = -1;
+
+        private void Awake()
+        {
+            if (_placeButton != null)
+                _placeButton.onClick.AddListener(OnPlaceButtonClicked);
+        }
+
+        private void OnDestroy()
+        {
+            if (_placeButton != null)
+                _placeButton.onClick.RemoveListener(OnPlaceButtonClicked);
+        }
+
         /// <summary>
-        /// Called by PieceTapHandler (or test code) to notify the presenter of a tap.
+        /// Called by InGameSceneController after piece GameObjects are spawned.
+        /// Wires piece-visibility callbacks so the view can move pieces without
+        /// knowing about Unity GameObjects.
         /// </summary>
+        public void RegisterPieceCallbacks(
+            Action<int> onRevealPiece,
+            Action<int> onShowDeckPiece,
+            Action      onHideDeckPanel)
+        {
+            _onRevealPiece   = onRevealPiece;
+            _onShowDeckPiece = onShowDeckPiece;
+            _onHideDeckPanel = onHideDeckPanel;
+        }
+
+        private void OnPlaceButtonClicked()
+        {
+            if (_currentDeckPieceId >= 0)
+                OnTapPiece?.Invoke(_currentDeckPieceId);
+        }
+
+        /// <summary>Called by PieceTapHandler when a board piece is tapped directly.</summary>
         public void NotifyPieceTapped(int pieceId) => OnTapPiece?.Invoke(pieceId);
+
+        // ── IInGameView ──────────────────────────────────────────────────────
+
+        public void ShowDeckPiece(int pieceId)
+        {
+            _currentDeckPieceId = pieceId;
+            if (_deckPanel  != null) _deckPanel.SetActive(true);
+            if (_deckLabel  != null) _deckLabel.text = $"Next: Piece {pieceId + 1}";
+            _onShowDeckPiece?.Invoke(pieceId);
+        }
+
+        public void HideDeckPanel()
+        {
+            _currentDeckPieceId = -1;
+            if (_deckPanel != null) _deckPanel.SetActive(false);
+            _onHideDeckPanel?.Invoke();
+        }
+
+        public void RevealPiece(int pieceId)
+        {
+            _onRevealPiece?.Invoke(pieceId);
+        }
 
         public void UpdateHearts(string text)
         {

@@ -44,6 +44,13 @@ namespace SimpleGame.Game.InGame
             View.UpdateLevelLabel($"Level {_session.CurrentLevelId}");
             View.UpdatePieceCounter($"0/{_level.TotalPieceCount - _level.SeedIds.Count}");
             View.UpdateHearts(_hearts.RemainingHearts.ToString());
+
+            // Show the first deck piece in the tray
+            var first = _puzzleSession.CurrentDeckPiece(0);
+            if (first.HasValue)
+                View.ShowDeckPiece(first.Value);
+            else
+                View.HideDeckPanel();
         }
 
         public override void Dispose()
@@ -79,15 +86,27 @@ namespace SimpleGame.Game.InGame
 
             if (result == PlacementResult.Placed)
             {
+                View.RevealPiece(pieceId);
+
                 int placed = _puzzleSession.PlacedIds.Count - _level.SeedIds.Count;
-                int total = _level.TotalPieceCount - _level.SeedIds.Count;
+                int total  = _level.TotalPieceCount - _level.SeedIds.Count;
                 _session.CurrentScore = placed;
                 View.UpdatePieceCounter($"{placed}/{total}");
 
                 if (_puzzleSession.IsComplete)
                 {
+                    View.HideDeckPanel();
                     Debug.Log("[Ads] Interstitial ad opportunity — level complete");
                     _actionTcs?.TrySetResult(InGameAction.Win);
+                }
+                else
+                {
+                    // Advance tray to next deck piece
+                    var next = _puzzleSession.CurrentDeckPiece(0);
+                    if (next.HasValue)
+                        View.ShowDeckPiece(next.Value);
+                    else
+                        View.HideDeckPanel();
                 }
             }
             else if (result == PlacementResult.Rejected)
@@ -102,7 +121,7 @@ namespace SimpleGame.Game.InGame
                     _actionTcs?.TrySetResult(InGameAction.Lose);
                 }
             }
-            // AlreadyPlaced: silently ignore — no state change, no heart cost
+            // AlreadyPlaced: silently ignore
         }
     }
 }
