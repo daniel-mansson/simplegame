@@ -458,9 +458,10 @@ namespace SimpleGame.Game.InGame
                 _pieceObjects[pid]         = go;
                 _solvedWorldPositions[pid] = parent.TransformPoint(go.transform.localPosition);
 
+                // BoxCollider sized to mesh bounds — reliable for OnMouseDown on any mesh shape
                 var mesh = go.GetComponent<MeshFilter>()?.sharedMesh;
-                if (mesh != null)
-                    go.AddComponent<MeshCollider>().sharedMesh = mesh;
+                var box  = go.AddComponent<BoxCollider>();
+                if (mesh != null) { box.center = mesh.bounds.center; box.size = mesh.bounds.size; }
 
                 go.AddComponent<PieceTapHandler>().Initialize(pid, _inGameView);
             }
@@ -469,20 +470,18 @@ namespace SimpleGame.Game.InGame
             // Slot sizes: slot 0 (front/active) is largest; slots 1 and 2 are smaller.
             // Only the first 3 deck pieces are visible initially; the rest wait off-screen.
             const int   kVisibleSlots = 3;
-            float       slotSize0     = trayH * 0.78f;   // front piece — big
-            float       slotSize1     = trayH * 0.62f;   // next piece
-            float       slotSize2     = trayH * 0.50f;   // one after — smallest
+            float       slotSize      = trayH * 0.72f;   // all tray pieces the same size
             float       spacing       = orthoW * 0.28f;  // centre-to-centre gap
-            // Centre positions of the 3 slots
+
             _traySlotPositions = new Vector3[kVisibleSlots];
             _traySlotPositions[0] = new Vector3(-spacing, trayY, -2f);
             _traySlotPositions[1] = new Vector3(0f,       trayY, -2f);
             _traySlotPositions[2] = new Vector3( spacing, trayY, -2f);
             _traySlotScales = new Vector3[]
             {
-                Vector3.one * slotSize0,
-                Vector3.one * slotSize1,
-                Vector3.one * slotSize2,
+                Vector3.one * slotSize,
+                Vector3.one * slotSize,
+                Vector3.one * slotSize,
             };
 
             // Hidden off-screen position for pieces not yet in the visible window

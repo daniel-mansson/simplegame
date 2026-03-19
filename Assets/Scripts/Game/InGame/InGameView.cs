@@ -41,9 +41,9 @@ namespace SimpleGame.Game.InGame
 
         private void Awake()
         {
-            // Place button not used — tapping a tray piece fires OnTapPiece directly
-            if (_placeButton != null)
-                _placeButton.gameObject.SetActive(false);
+            // Deck panel and place button not used — 3D tray pieces handle all interaction
+            if (_deckPanel   != null) _deckPanel.SetActive(false);
+            if (_placeButton != null) _placeButton.gameObject.SetActive(false);
         }
 
         // ── Registration ──────────────────────────────────────────────────
