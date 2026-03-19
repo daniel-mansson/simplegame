@@ -73,9 +73,10 @@ namespace SimpleGame.Game.InGame
         private System.Func<SimpleGame.Puzzle.PuzzleModel> _modelFactory;
 
         /// <summary>
-        /// Cancels any in-flight self-bootstrap RunAsync when GameBootstrapper takes over.
+        /// Cancels any in-flight RunAsync (self-bootstrap or previous GameBootstrapper call)
+        /// when a new RunAsync is entered. Ensures only one game loop runs at a time.
         /// </summary>
-        private CancellationTokenSource _selfBootstrapCts;
+        private CancellationTokenSource _runCts;
 
         private IViewResolver _viewResolver;
         private IInGameView _viewOverride;
@@ -124,10 +125,10 @@ namespace SimpleGame.Game.InGame
                                ICoinsService coins = null, IViewResolver viewResolver = null,
                                ICurrencyOverlay overlay = null)
         {
-            // Cancel any in-flight self-bootstrap RunAsync before GameBootstrapper takes over.
-            _selfBootstrapCts?.Cancel();
-            _selfBootstrapCts?.Dispose();
-            _selfBootstrapCts = null;
+            // Cancel any in-flight RunAsync before GameBootstrapper takes over.
+            _runCts?.Cancel();
+            _runCts?.Dispose();
+            _runCts = null;
 
             _uiFactory = uiFactory;
             _progression = progression;
@@ -189,10 +190,7 @@ namespace SimpleGame.Game.InGame
             _hearts       = hearts;
             _popupManager = null;
 
-            _selfBootstrapCts = new CancellationTokenSource();
-            var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
-                _selfBootstrapCts.Token, destroyCancellationToken);
-            RunAsync(linkedCts.Token).Forget();
+            RunAsync().Forget();
         }
 
         /// <summary>No-op golden piece service for play-from-editor preview.</summary>
@@ -208,6 +206,13 @@ namespace SimpleGame.Game.InGame
 
         public async UniTask<ScreenId> RunAsync(CancellationToken ct = default)
         {
+            // Single-flight guard: cancel any previous RunAsync (self-bootstrap or stale call)
+            // and replace _runCts so this invocation is the only live one.
+            _runCts?.Cancel();
+            _runCts?.Dispose();
+            _runCts = CancellationTokenSource.CreateLinkedTokenSource(ct, destroyCancellationToken);
+            ct = _runCts.Token;
+
             // Play-from-editor fallback: if no level was set via session, use defaults.
             if (_session.CurrentLevelId == 0)
             {
@@ -271,7 +276,7 @@ namespace SimpleGame.Game.InGame
                     {
                         ct.ThrowIfCancellationRequested();
 
-                        var action = await presenter.WaitForAction();
+                        var action = await presenter.WaitForAction(ct);
 
                         if (action == InGameAction.Win)
                         {

@@ -79,13 +79,19 @@ namespace SimpleGame.Game.InGame
         }
 
         /// <summary>
-        /// Returns a task that completes with the outcome action (Win or Lose).
-        /// Called by <see cref="InGameSceneController"/> to await the result.
+        /// Returns a task that completes with the outcome action (Win or Lose),
+        /// or throws <see cref="OperationCanceledException"/> if <paramref name="ct"/> fires.
         /// </summary>
-        public UniTask<InGameAction> WaitForAction()
+        public UniTask<InGameAction> WaitForAction(CancellationToken ct = default)
         {
             _actionTcs?.TrySetCanceled();
             _actionTcs = new UniTaskCompletionSource<InGameAction>();
+
+            // Wire cancellation directly into the TCS so cancelling the token
+            // immediately unblocks any awaiter — no polling required.
+            if (ct.CanBeCanceled)
+                ct.Register(() => _actionTcs?.TrySetCanceled());
+
             return _actionTcs.Task;
         }
 
