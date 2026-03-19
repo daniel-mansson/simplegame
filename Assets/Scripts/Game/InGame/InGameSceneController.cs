@@ -126,21 +126,31 @@ namespace SimpleGame.Game.InGame
         /// </summary>
         private void Start()
         {
-            if (_uiFactory != null) return; // already initialized by GameBootstrapper
+            if (_uiFactory != null) return; // GameBootstrapper already called Initialize() — it will call RunAsync()
+
+            // Boot is loading additively (BootInjector). Wait one frame so GameBootstrapper
+            // gets a chance to call Initialize(). If it does, _uiFactory will be set and we skip.
+            // If Boot is not in the build settings (pure editor play without Boot scene), self-bootstrap.
+            WaitForBootOrSelfBootstrap().Forget();
+        }
+
+        private async UniTaskVoid WaitForBootOrSelfBootstrap()
+        {
+            // Give BootInjector + GameBootstrapper time to initialize us (~2 frames is enough).
+            await UniTask.DelayFrame(3);
+            if (_uiFactory != null) return; // GameBootstrapper got here first — all good
 
             Debug.Log("[InGameSceneController] Play-from-editor: bootstrapping with stub services.");
-            var session      = new GameSessionService();
-            var hearts       = new HeartService();
-            var progression  = new ProgressionService();
-            var metaProgression = (MetaProgressionService)null; // not needed for editor preview
-            // GoldenPieceService needs a save service; use NullGoldenPieceService for editor preview
+            var session         = new GameSessionService();
+            var hearts          = new HeartService();
+            var progression     = new ProgressionService();
             IGoldenPieceService goldenPieces = new NullGoldenPieceService();
-            _uiFactory   = new UIFactory(new GameService(), progression, session, hearts, metaProgression, goldenPieces, null);
+            _uiFactory   = new UIFactory(new GameService(), progression, session, hearts, null, goldenPieces, null);
             _progression  = progression;
             _session      = session;
             _goldenPieces = goldenPieces;
             _hearts       = hearts;
-            _popupManager = null; // popups won't show in editor preview; acceptable
+            _popupManager = null;
 
             RunAsync().Forget();
         }
@@ -176,6 +186,10 @@ namespace SimpleGame.Game.InGame
                 var buildResult = JigsawLevelFactory.Build(
                     _gridLayoutConfig, _puzzleSeed,
                     seedPieceIds: new[] { _seedPieceId });
+
+                // Fix piece count in session to match actual grid (e.g. 3×3 = 9, not _defaultTotalPieces)
+                if (_session.TotalPieces != buildResult.Level.TotalPieceCount)
+                    _session.ResetForNewGame(_session.CurrentLevelId, buildResult.Level.TotalPieceCount);
 
                 // Spawn piece GameObjects with tap handlers (once per scene load)
                 SpawnPieces(buildResult.RawBoard);
@@ -390,10 +404,29 @@ namespace SimpleGame.Game.InGame
 
             _spawnedPieces = pieces;
 
-            // Attach tap handler to each piece — no game logic, just forwards the ID to the view
+            // Scale the PuzzleParent so the normalized 0-1 board fills most of the camera view.
+            // Pieces are laid out in [0,1]² space; camera is orthographic.
+            // Target: board fills ~80% of the shorter screen dimension.
+            var cam = Camera.main;
+            if (cam != null && cam.orthographic)
+            {
+                float screenH = cam.orthographicSize * 2f;
+                float screenW = screenH * cam.aspect;
+                float targetSize = Mathf.Min(screenW, screenH) * 0.85f;
+                parent.localScale = Vector3.one * targetSize;
+                // Center the board: pieces span [0,1] so center is at (0.5, 0.5).
+                // After scaling, shift parent so scaled center sits at world origin.
+                parent.position = new Vector3(-targetSize * 0.5f, -targetSize * 0.5f, 0f);
+            }
+
+            // Add MeshCollider to each piece so OnMouseDown fires from physics raycasts.
             for (int i = 0; i < pieces.Count; i++)
             {
                 var pieceId = rawBoard.Pieces[i].Id;
+                var mesh = pieces[i].GetComponent<UnityEngine.MeshFilter>()?.sharedMesh;
+                if (mesh != null)
+                    pieces[i].AddComponent<UnityEngine.MeshCollider>().sharedMesh = mesh;
+
                 var handler = pieces[i].AddComponent<PieceTapHandler>();
                 handler.Initialize(pieceId, _inGameView);
             }

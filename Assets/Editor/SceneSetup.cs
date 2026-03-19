@@ -508,6 +508,7 @@ internal class SceneSetupHelpers
     internal static Camera CreateSceneCamera(string name)
     {
         var go = new GameObject(name);
+        go.tag = "MainCamera";
         var cam = go.AddComponent<Camera>();
         cam.clearFlags = CameraClearFlags.SolidColor;
         cam.backgroundColor = Color.black;
