@@ -552,8 +552,9 @@ namespace SimpleGame.Game.InGame
             var scale = _traySlotScales[slotIndex];
 
             go.transform.SetParent(null, worldPositionStays: false);
-            go.transform.position   = pos;
-            go.transform.localScale = scale;
+
+            // Animate slide to tray slot (cancel any in-flight tween first)
+            PieceTweener.SlideToSlot(go, pos, scale, destroyCancellationToken).Forget();
 
             if (_traySlotData != null)
                 _traySlotData[pieceId] = (pos, scale);
@@ -565,14 +566,17 @@ namespace SimpleGame.Game.InGame
             if (!_solvedWorldPositions.TryGetValue(pieceId, out var solved)) return;
 
             var boardParent = _puzzleParent != null ? _puzzleParent : transform;
-            go.transform.SetParent(boardParent, worldPositionStays: false);
-            go.transform.localPosition = boardParent.InverseTransformPoint(solved);
-            go.transform.localScale    = Vector3.one;
 
-            // Disable collider — board pieces can't be tapped again and must not block
-            // rays aimed at tray pieces behind them in screen space.
+            // Disable collider immediately — board pieces must not block tray taps
             var col = go.GetComponent<Collider>();
             if (col != null) col.enabled = false;
+
+            // Reparent so localScale=1 lands at the right world size
+            go.transform.SetParent(boardParent, worldPositionStays: true);
+            var targetLocal = boardParent.InverseTransformPoint(solved);
+
+            // Animate: anticipation wind-up → fly to board → settle
+            PieceTweener.PlaceOnBoard(go, targetLocal, destroyCancellationToken).Forget();
         }
 
         /// <summary>
