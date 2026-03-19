@@ -24,6 +24,7 @@ namespace SimpleGame.Game.InGame
         private const float SettleSec   = 0.07f;   // squash-settle at landing
 
         private const float SlideSec    = 0.14f;   // tray slot slide
+        private const float ShakeSec    = 0.40f;   // wrong-tap shake duration
 
         // ── Scale factors ─────────────────────────────────────────────────
         private const float WindupScale = 1.30f;   // puff up before launch
@@ -152,6 +153,36 @@ namespace SimpleGame.Game.InGame
 
             t.position   = targetWorld;
             t.localScale = targetScale;
+        }
+
+        /// <summary>
+        /// Strong lateral shake — 5 oscillations with exponentially decaying amplitude.
+        /// Returns the piece to <paramref name="restWorld"/> on completion.
+        /// </summary>
+        public static async UniTaskVoid ShakePiece(
+            GameObject piece,
+            Vector3    restWorld,
+            CancellationToken ct)
+        {
+            if (piece == null) return;
+            var t = piece.transform;
+
+            const float amplitude = 0.28f;  // world-unit horizontal offset at peak
+            const float cycles    = 5.5f;   // oscillations (half-cycle extra so it ends back at rest)
+
+            float elapsed = 0f;
+            while (elapsed < ShakeSec)
+            {
+                if (piece == null) return;
+                elapsed += Time.deltaTime;
+                float f       = Mathf.Clamp01(elapsed / ShakeSec);
+                float decay   = 1f - EaseOutQuad(f);          // amplitude envelope
+                float offset  = Mathf.Sin(f * cycles * Mathf.PI * 2f) * amplitude * decay;
+                t.position = restWorld + new Vector3(offset, 0f, 0f);
+                await UniTask.Yield(PlayerLoopTiming.Update, ct);
+            }
+            if (piece == null) return;
+            t.position = restWorld;
         }
 
         // ─────────────────────────────────────────────────────────────────

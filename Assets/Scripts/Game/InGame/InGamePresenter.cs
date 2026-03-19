@@ -149,6 +149,7 @@ namespace SimpleGame.Game.InGame
         private void HandleRejected(int slotIndex, int pieceId)
         {
             Debug.Log($"[InGamePresenter] Rejected slot={slotIndex} piece={pieceId}");
+            View.ShakePiece(slotIndex);
             _hearts.UseHeart();
             View.UpdateHearts(_hearts.RemainingHearts.ToString());
 

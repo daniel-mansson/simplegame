@@ -26,5 +26,15 @@ namespace SimpleGame.Game.InGame
         /// Called by the presenter after a successful placement.
         /// </summary>
         void RevealPiece(int pieceId);
+        /// <summary>
+        /// Returns the current slot contents array (read-only mirror for the controller).
+        /// Null entries mean the slot is empty.
+        /// </summary>
+        int?[] GetSlotContents();
+
+        /// <summary>
+        /// Shake the piece at the given slot index to signal an incorrect tap.
+        /// </summary>
+        void ShakePiece(int slotIndex);
     }
 }

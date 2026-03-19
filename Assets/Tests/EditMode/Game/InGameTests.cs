@@ -40,6 +40,8 @@ namespace SimpleGame.Tests.Game
         public void UpdateLevelLabel(string text)   { LastLevelLabelText = text; UpdateLevelLabelCallCount++; }
         public void RefreshSlot(int slotIndex, int? pieceId) { _slots[slotIndex] = pieceId; }
         public void RevealPiece(int pieceId)        { LastRevealedPieceId = pieceId; }
+        public void ShakePiece(int slotIndex)       { }
+        public int?[] GetSlotContents()             { return null; }
 
         /// <summary>Fires OnTapPiece with the given piece ID — simulates a tap on that piece.</summary>
         public void SimulateTapPiece(int pieceId) => OnTapPiece?.Invoke(pieceId);

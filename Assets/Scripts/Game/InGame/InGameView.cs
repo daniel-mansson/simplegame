@@ -34,6 +34,7 @@ namespace SimpleGame.Game.InGame
         // Delegates wired by InGameSceneController after SpawnPieces
         private Action<int, int> _onMovePieceToSlot;   // (pieceId, slotIndex)
         private Action<int>      _onRevealPiece;        // pieceId → board position
+        private Action<int>      _onShakePiece;         // slotIndex → shake the piece in that slot
 
         // Per-slot tracking: slotIndex → current piece ID (null = empty)
         private int?[] _slotContents;
@@ -56,10 +57,12 @@ namespace SimpleGame.Game.InGame
         public void RegisterPieceCallbacks(
             Action<int, int> onMovePieceToSlot,
             Action<int>      onRevealPiece,
+            Action<int>      onShakePiece = null,
             Action           onHideTray = null)    // onHideTray kept for scene compatibility
         {
             _onMovePieceToSlot = onMovePieceToSlot;
             _onRevealPiece     = onRevealPiece;
+            _onShakePiece      = onShakePiece;
         }
 
         /// <summary>Called by PieceTapHandler when a tray piece is tapped.</summary>
@@ -118,6 +121,16 @@ namespace SimpleGame.Game.InGame
         public void UpdateLevelLabel(string text)
         {
             if (_levelText != null) _levelText.text = text;
+        }
+
+        public int?[] GetSlotContents() => _slotContents;
+
+        public void ShakePiece(int slotIndex)
+        {
+            // Resolve which piece ID is currently in this slot, then forward to the controller
+            if (_slotContents == null || slotIndex >= _slotContents.Length) return;
+            if (!_slotContents[slotIndex].HasValue) return;
+            _onShakePiece?.Invoke(slotIndex);
         }
     }
 }

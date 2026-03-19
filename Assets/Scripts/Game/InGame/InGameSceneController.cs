@@ -39,6 +39,9 @@ namespace SimpleGame.Game.InGame
         [SerializeField] private int _puzzleSeed = 42;
         [SerializeField] private int _seedPieceId = 0;
 
+        /// <summary>Delay before win popup appears. Set to 0 in tests via SetWinPopupDelay().</summary>
+        private float _winPopupDelaySec = 1.0f;
+
         [Header("Puzzle Model")]
         [SerializeField] private PuzzleModelConfig _puzzleModelConfig;
 
@@ -154,6 +157,7 @@ namespace SimpleGame.Game.InGame
             _viewOverride = inGameView;
             _levelCompleteViewOverride = levelCompleteView;
             _levelFailedViewOverride = levelFailedView;
+            _winPopupDelaySec = 0f;  // no delay in tests — UniTask.Delay(0) completes immediately
         }
 
         /// <summary>
@@ -291,6 +295,9 @@ namespace SimpleGame.Game.InGame
 
                             _progression.RegisterWin(_session.CurrentScore);
                             _session.Outcome = GameOutcome.Win;
+                            // Brief pause so the player sees the last piece land before the popup
+                            if (_winPopupDelaySec > 0f)
+                                await UniTask.Delay(System.TimeSpan.FromSeconds(_winPopupDelaySec), cancellationToken: ct);
                             await HandleLevelCompletePopupAsync(ct);
                             return ScreenId.MainMenu;
                         }
@@ -450,6 +457,9 @@ namespace SimpleGame.Game.InGame
         public void SetModelFactory(System.Func<SimpleGame.Puzzle.PuzzleModel> factory)
             => _modelFactory = factory;
 
+        /// <summary>Test seam — remove the win popup delay so tests don't hang.</summary>
+        public void SetWinPopupDelay(float seconds) => _winPopupDelaySec = seconds;
+
         /// <summary>
         /// Spawns piece GameObjects using PieceObjectFactory and attaches PieceTapHandler to each.
         /// Called once at scene start when a GridLayoutConfig is assigned.
@@ -527,9 +537,9 @@ namespace SimpleGame.Game.InGame
             // ── Tray: slotCount slots — equal size, evenly spaced ──────────
             // Slot size shrinks slightly as slot count increases.
             float slotSize = trayH * Mathf.Lerp(0.70f, 0.48f, (slotCount - 3) / 2f);
-            float totalTrayWidth = orthoW * 0.88f;
-            float slotSpacing = slotCount > 1 ? totalTrayWidth / (slotCount - 1) : 0f;
-            float trayStartX = -(totalTrayWidth * 0.5f);
+            float totalTrayWidth = slotSize * slotCount + trayH * 0.08f * (slotCount - 1);
+            float slotSpacing = slotCount > 1 ? (totalTrayWidth - slotSize) / (slotCount - 1) : 0f;
+            float trayStartX = -(totalTrayWidth * 0.5f) + slotSize * 0.5f;
 
             _traySlotPositions = new Vector3[slotCount];
             _traySlotScales    = new Vector3[slotCount];
@@ -586,7 +596,8 @@ namespace SimpleGame.Game.InGame
             // ── Wire piece-position callbacks onto InGameView ──────────────
             _inGameView.RegisterPieceCallbacks(
                 onMovePieceToSlot: MovePieceToTraySlot,
-                onRevealPiece:     RevealPiece
+                onRevealPiece:     RevealPiece,
+                onShakePiece:      ShakePieceInSlot
             );
 
             Debug.Log($"[InGameSceneController] Spawned {pieces.Count} pieces — 1 seed, {deckOrder.Count} in deck, {slotCount} visible slots.");
@@ -612,6 +623,18 @@ namespace SimpleGame.Game.InGame
 
             if (_traySlotData != null)
                 _traySlotData[pieceId] = (pos, scale);
+        }
+
+        private void ShakePieceInSlot(int slotIndex)
+        {
+            if (_traySlotPositions == null || slotIndex >= _traySlotPositions.Length) return;
+            // Resolve which piece ID is in this slot via the view's slot contents mirror
+            var slotContents = _inGameView?.GetSlotContents();
+            if (slotContents == null || slotIndex >= slotContents.Length) return;
+            if (!slotContents[slotIndex].HasValue) return;
+            int pieceId = slotContents[slotIndex].Value;
+            if (!_pieceObjects.TryGetValue(pieceId, out var go)) return;
+            PieceTweener.ShakePiece(go, _traySlotPositions[slotIndex], destroyCancellationToken).Forget();
         }
 
         private void RevealPiece(int pieceId)
