@@ -6,6 +6,7 @@ using SimpleGame.Game.InGame;
 using SimpleGame.Game.MainMenu;
 using SimpleGame.Game.Popup;
 using SimpleGame.Game.Settings;
+using SimpleJigsaw;
 using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -405,6 +406,16 @@ public static class SceneSetup
         var inGameController = sceneControllerGO.AddComponent<InGameSceneController>();
         WireSerializedField(inGameController, "_inGameView", inGameView);
         WireSerializedField(inGameController, "_puzzleParent", puzzleParentGO.transform);
+
+        // Wire default puzzle config assets
+        var gridConfig = AssetDatabase.LoadAssetAtPath<SimpleJigsaw.GridLayoutConfig>("Assets/Data/DefaultGridConfig.asset");
+        var renderConfig = AssetDatabase.LoadAssetAtPath<SimpleJigsaw.PieceRenderConfig>("Assets/Data/DefaultPieceRenderConfig.asset");
+        if (gridConfig != null)
+            WireSerializedField(inGameController, "_gridLayoutConfig", gridConfig);
+        else
+            Debug.LogWarning("[SceneSetup] DefaultGridConfig.asset not found — run Tools/Setup/Create And Register Scenes after asset import.");
+        if (renderConfig != null)
+            WireSerializedField(inGameController, "_pieceRenderConfig", renderConfig);
 
         bool saved = EditorSceneManager.SaveScene(scene, InGamePath);
         Debug.Log(saved ? "[SceneSetup] InGame scene saved." : "[SceneSetup] ERROR saving InGame scene.");

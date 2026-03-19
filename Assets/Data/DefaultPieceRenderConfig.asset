@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1bbc2f9787e79fd46adc3f8a5c149a8d, type: 3}
-  m_Name: DemoPieceRenderConfig
+  m_Name: DefaultPieceRenderConfig
   m_EditorClassIdentifier: SimpleJigsaw.Runtime::SimpleJigsaw.PieceRenderConfig
   PieceShader: {fileID: 4800000, guid: c67764c59add49e4f942a4842715923b, type: 3}
   FrontTexture: {fileID: 0}
