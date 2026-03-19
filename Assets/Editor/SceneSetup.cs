@@ -434,6 +434,7 @@ public static class SceneSetup
         // ── InGameSceneController ─────────────────────────────────────────
         var sceneControllerGO = new GameObject("InGameSceneController");
         var inGameController = sceneControllerGO.AddComponent<InGameSceneController>();
+        sceneControllerGO.AddComponent<InGameDebugMenu>();
         WireSerializedField(inGameController, "_inGameView",   inGameView);
         WireSerializedField(inGameController, "_puzzleParent", puzzleParentGO.transform);
 
