@@ -551,9 +551,11 @@ namespace SimpleGame.Game.InGame
                     go.AddComponent<PieceTapHandler>().Initialize(pid, _inGameView);
             }
 
-            // ── Tray: slotCount slots — fill available width ──────────────
-            // Each slot gets an equal share of screen width minus a small margin.
-            float slotSize = (orthoW * 0.92f) / slotCount;
+            // ── Tray: slotCount slots — as large as tray height allows ──────
+            // Target: pieces fill the tray height. Clamp so all slots fit screen width.
+            float slotSizeByHeight = trayH * 0.95f;
+            float slotSizeByWidth  = (orthoW * 0.96f) / slotCount;
+            float slotSize = Mathf.Min(slotSizeByHeight, slotSizeByWidth);
 
             // Compute normalised scale: pieces from large grids have smaller meshes in [0,1]² space.
             // Sample the first non-seed piece's mesh to derive the world extent at boardSize scale.
@@ -568,8 +570,10 @@ namespace SimpleGame.Game.InGame
                 break;
             }
 
-            // Very tight packing — slots overlap slightly, held apart by a small fraction of piece size.
-            float slotSpacing    = slotSize * 0.45f;
+            // Spacing: distribute slots evenly across screen width with a small margin.
+            // When slotCount==1 the single piece is centred.
+            float totalUsableWidth = orthoW * 0.92f;
+            float slotSpacing    = slotCount > 1 ? totalUsableWidth / slotCount : 0f;
             float totalTrayWidth = slotSpacing * (slotCount - 1) + slotSize;
             float trayStartX     = -totalTrayWidth * 0.5f + slotSize * 0.5f;
 
