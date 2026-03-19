@@ -65,17 +65,12 @@ namespace SimpleGame.Game.InGame
         }
 
         /// <summary>Called by PieceTapHandler when a board or tray piece is tapped.</summary>
-        public void NotifyPieceTapped(int pieceId)
-        {
-            Debug.Log($"[InGameView] NotifyPieceTapped pieceId={pieceId}, listeners={OnTapPiece?.GetInvocationList()?.Length ?? 0}");
-            OnTapPiece?.Invoke(pieceId);
-        }
+        public void NotifyPieceTapped(int pieceId) => OnTapPiece?.Invoke(pieceId);
 
         // ── IInGameView ───────────────────────────────────────────────────
 
         public void RefreshTray(int?[] pieceIds)
         {
-            Debug.Log($"[InGameView] RefreshTray [{string.Join(",", System.Array.ConvertAll(pieceIds ?? System.Array.Empty<int?>(), p => p?.ToString() ?? "null"))}] window was [{string.Join(",", System.Array.ConvertAll(_trayWindow, p => p?.ToString() ?? "null"))}]");
             if (pieceIds == null || pieceIds.Length == 0)
             {
                 _onHideTray?.Invoke();

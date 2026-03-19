@@ -476,7 +476,7 @@ namespace SimpleGame.Game.InGame
             // Only the first 3 deck pieces are visible initially; the rest wait off-screen.
             const int   kVisibleSlots = 3;
             float       slotSize      = trayH * 0.72f;   // all tray pieces the same size
-            float       spacing       = orthoW * 0.28f;  // centre-to-centre gap
+            float       spacing       = orthoW * 0.22f;  // tighter spacing — keeps slot 2 away from screen edge
 
             _traySlotPositions = new Vector3[kVisibleSlots];
             _traySlotPositions[0] = new Vector3(-spacing, trayY, -2f);
@@ -549,7 +549,6 @@ namespace SimpleGame.Game.InGame
             go.transform.SetParent(null, worldPositionStays: false);
             go.transform.position   = pos;
             go.transform.localScale = scale;
-            Debug.Log($"[InGameSceneController] MovePieceToTraySlot piece={pieceId} slot={slotIndex} pos={pos}");
 
             if (_traySlotData != null)
                 _traySlotData[pieceId] = (pos, scale);
@@ -569,8 +568,6 @@ namespace SimpleGame.Game.InGame
             // rays aimed at tray pieces behind them in screen space.
             var col = go.GetComponent<Collider>();
             if (col != null) col.enabled = false;
-
-            Debug.Log($"[InGameSceneController] RevealPiece {pieceId} → world={go.transform.position} solved={solved}");
         }
 
         /// <summary>

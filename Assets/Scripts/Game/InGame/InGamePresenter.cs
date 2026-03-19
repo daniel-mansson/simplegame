@@ -1,3 +1,4 @@
+using System.Linq;
 using Cysharp.Threading.Tasks;
 using SimpleGame.Core.MVP;
 using SimpleGame.Game.Services;
@@ -92,6 +93,15 @@ namespace SimpleGame.Game.InGame
 
         private void HandleTapPiece(int pieceId)
         {
+            // Only the front deck piece is placeable — the other visible pieces are previews
+            var front = _puzzleSession.PeekDeckAt(0, 0);
+            if (!front.HasValue || front.Value != pieceId)
+            {
+                Debug.Log($"[InGamePresenter] Tap piece={pieceId} ignored — front deck piece is {front}");
+                return;
+            }
+
+            Debug.Log($"[InGamePresenter] HandleTapPiece pieceId={pieceId} isPlacedBefore={_puzzleSession.PlacedIds.Contains(pieceId)} placedCount={_puzzleSession.PlacedIds.Count}");
             var result = _puzzleSession.TryPlace(pieceId);
             Debug.Log($"[InGamePresenter] HandleTapPiece pieceId={pieceId} result={result}");
 
