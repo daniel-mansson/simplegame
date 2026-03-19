@@ -76,19 +76,28 @@ namespace SimpleGame.Game.InGame
         /// </summary>
         private void PushTrayWindow()
         {
-            // Deck cursor always points to an unplaced piece after any placement.
-            // Collect the next 3 from the deck front.
-            var w0 = _puzzleSession.PeekDeckAt(0, 0);
-            if (!w0.HasValue)
+            // Only show pieces the player can legally place right now.
+            // Walk the deck from front, skip unplaceable, collect up to 3.
+            var window = new int?[3];
+            int filled = 0;
+            int offset = 0;
+            while (filled < 3)
+            {
+                var id = _puzzleSession.PeekDeckAt(0, offset);
+                if (!id.HasValue) break;
+                offset++;
+                if (_puzzleSession.CanPlace(id.Value))
+                    window[filled++] = id;
+            }
+
+            if (filled == 0)
             {
                 View.RefreshTray(System.Array.Empty<int?>());
                 return;
             }
-            var w1 = _puzzleSession.PeekDeckAt(0, 1);
-            var w2 = _puzzleSession.PeekDeckAt(0, 2);
 
-            // Layout: [left-preview=w1, centre=w0, right-preview=w2]
-            View.RefreshTray(new int?[] { w1, w0, w2 });
+            // Layout: [left=window[1], centre=window[0], right=window[2]]
+            View.RefreshTray(new int?[] { window[1], window[0], window[2] });
         }
 
         // ── Event handler ─────────────────────────────────────────────────

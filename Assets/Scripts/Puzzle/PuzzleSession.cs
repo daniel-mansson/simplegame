@@ -104,5 +104,8 @@ namespace SimpleGame.Puzzle
 
         /// <summary>Current state of the board (read-only).</summary>
         public System.Collections.Generic.IReadOnlyCollection<int> PlacedIds => _board.PlacedIds;
+
+        /// <summary>True if the piece can be legally placed right now (has a placed neighbour).</summary>
+        public bool CanPlace(int pieceId) => _board.CanPlace(pieceId);
     }
 }
