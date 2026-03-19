@@ -290,7 +290,7 @@ MonoBehaviour:
   TessConfig: {fileID: 0}
   UseTessellation: 0
   BoardShape: {fileID: 0}
-  PuzzleTexture: {fileID: 0}
+  PuzzleTexture: {fileID: 2800000, guid: 682f9954b64204044b3155850261ba62, type: 3}
   RenderConfig: {fileID: 11400000, guid: 873db7faba7b41beaf51f8df93250b48, type: 2}
 --- !u!4 &200000003
 Transform:

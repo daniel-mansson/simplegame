@@ -66,14 +66,11 @@ namespace SimpleGame.Game.InGame
         /// <summary>Scale for each of the 3 tray slots (front is largest).</summary>
         private Vector3[] _traySlotScales;
 
-        /// <summary>The active puzzle level for the current run. Set in RunAsync.</summary>
-        private IPuzzleLevel _currentLevel;
-
         /// <summary>
-        /// Optional level factory — overrides stub generation.
-        /// Called at the start of each retry to produce a fresh level with reset deck state.
+        /// Optional model factory — overrides stub generation.
+        /// Called at the start of each retry to produce a fresh PuzzleModel with reset deck state.
         /// </summary>
-        private System.Func<IPuzzleLevel> _levelFactory;
+        private System.Func<SimpleGame.Puzzle.PuzzleModel> _modelFactory;
 
         private IViewResolver _viewResolver;
         private IInGameView _viewOverride;
@@ -205,15 +202,10 @@ namespace SimpleGame.Game.InGame
 
             // Determine the model factory: use injected factory, or real jigsaw, or fallback stub.
             System.Func<SimpleGame.Puzzle.PuzzleModel> modelFactory;
-            if (_levelFactory != null)
+            if (_modelFactory != null)
             {
-                // Legacy test seam: convert IPuzzleLevel → PuzzleModel
-                modelFactory = () =>
-                {
-                    var lvl = _levelFactory();
-                    _currentLevel = lvl;
-                    return LevelToPuzzleModel(lvl, slotCount);
-                };
+                // Test seam — use injected factory directly
+                modelFactory = _modelFactory;
             }
             else if (_gridLayoutConfig != null)
             {
@@ -229,18 +221,14 @@ namespace SimpleGame.Game.InGame
                 SpawnPieces(buildResult.RawBoard);
 
                 // Capture for lambda closure
-                var pieces   = buildResult.PieceList;
-                var seedIds  = buildResult.SeedIds;
+                var pieces    = buildResult.PieceList;
+                var seedIds   = buildResult.SeedIds;
                 var deckOrder = buildResult.DeckOrder;
                 modelFactory = () => new SimpleGame.Puzzle.PuzzleModel(pieces, seedIds, deckOrder, slotCount);
             }
             else
             {
-                modelFactory = () =>
-                {
-                    _currentLevel = BuildStubLevel(_session.TotalPieces);
-                    return LevelToPuzzleModel(_currentLevel, slotCount);
-                };
+                modelFactory = () => BuildStubModel(_session.TotalPieces, slotCount);
             }
 
             while (true)
@@ -421,7 +409,8 @@ namespace SimpleGame.Game.InGame
         /// Used by S04 (and tests) to supply real JigsawLevelFactory-built levels.
         /// The factory is called at the start of each retry to ensure fresh deck state.
         /// </summary>
-        public void SetLevelFactory(System.Func<IPuzzleLevel> factory) => _levelFactory = factory;
+        public void SetModelFactory(System.Func<SimpleGame.Puzzle.PuzzleModel> factory)
+            => _modelFactory = factory;
 
         /// <summary>
         /// Spawns piece GameObjects using PieceObjectFactory and attaches PieceTapHandler to each.
@@ -655,7 +644,12 @@ namespace SimpleGame.Game.InGame
             _transitionPlayer = tp;
             return tp;
         }
-        private static IPuzzleLevel BuildStubLevel(int totalPieces)
+
+        /// <summary>
+        /// Builds a linear-chain stub <see cref="SimpleGame.Puzzle.PuzzleModel"/> for
+        /// play-from-editor bootstrapping when no GridLayoutConfig is assigned.
+        /// </summary>
+        private static SimpleGame.Puzzle.PuzzleModel BuildStubModel(int totalPieces, int slotCount)
         {
             if (totalPieces <= 0) totalPieces = 1;
 
@@ -671,29 +665,8 @@ namespace SimpleGame.Game.InGame
             var seeds = new[] { 0 };
             var deckOrder = new int[totalPieces - 1];
             for (int i = 0; i < deckOrder.Length; i++) deckOrder[i] = i + 1;
-            var deck = new Deck(deckOrder);
 
-            return new PuzzleLevel(pieces, seeds, new IDeck[] { deck });
-        }
-
-        /// <summary>
-        /// Converts an <see cref="IPuzzleLevel"/> (from legacy test seam or stub)
-        /// to a <see cref="SimpleGame.Puzzle.PuzzleModel"/>.
-        /// Uses the first deck in the level as the shared deck.
-        /// </summary>
-        private static SimpleGame.Puzzle.PuzzleModel LevelToPuzzleModel(IPuzzleLevel level, int slotCount)
-        {
-            var deckList = new System.Collections.Generic.List<int>();
-            if (level.Decks != null && level.Decks.Count > 0)
-            {
-                var deck = level.Decks[0];
-                for (int offset = 0; offset < deck.Count; offset++)
-                {
-                    var id = deck.PeekAt(offset);
-                    if (id.HasValue) deckList.Add(id.Value);
-                }
-            }
-            return new SimpleGame.Puzzle.PuzzleModel(level.Pieces, level.SeedIds, deckList, slotCount);
+            return new SimpleGame.Puzzle.PuzzleModel(pieces, seeds, deckOrder, slotCount);
         }
     }
 }

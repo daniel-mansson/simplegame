@@ -34,13 +34,6 @@ namespace SimpleGame.Game.Puzzle
             /// <summary>Ordered deck of non-seed piece IDs, ready to pass to PuzzleModel.</summary>
             public IReadOnlyList<int> DeckOrder { get; }
 
-            /// <summary>
-            /// Legacy accessor: domain level in IPuzzleLevel form.
-            /// Kept for editor tools that still use this shape.
-            /// Prefer constructing <see cref="PuzzleModel"/> directly from the flat fields above.
-            /// </summary>
-            public IPuzzleLevel Level { get; }
-
             public JigsawBuildResult(
                 SimpleJigsaw.PuzzleBoard rawBoard,
                 IReadOnlyList<IPuzzlePiece> pieceList,
@@ -51,7 +44,6 @@ namespace SimpleGame.Game.Puzzle
                 PieceList = pieceList;
                 SeedIds   = seedIds;
                 DeckOrder = deckOrder;
-                Level     = new PuzzleLevel(pieceList, seedIds, new IDeck[] { new Deck(deckOrder) });
             }
         }
 

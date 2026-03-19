@@ -46,35 +46,6 @@ namespace SimpleGame.Tests.Game
     }
 
     // ---------------------------------------------------------------------------
-    // Test level helpers
-    // ---------------------------------------------------------------------------
-
-    /// <summary>
-    /// Builds a linear-chain test level matching the stub used by InGameSceneController:
-    /// Piece 0 is the seed. Piece i neighbors i-1 and i+1.
-    /// Correct placement order: 1, 2, 3, ...
-    /// Wrong tap: any piece whose predecessor isn't yet placed (e.g. piece 3 before placing 2).
-    /// </summary>
-    internal static class TestLevelBuilder
-    {
-        public static IPuzzleLevel LinearChain(int totalPieces)
-        {
-            var pieces = new List<IPuzzlePiece>(totalPieces);
-            for (int i = 0; i < totalPieces; i++)
-            {
-                var neighbors = new List<int>();
-                if (i > 0) neighbors.Add(i - 1);
-                if (i < totalPieces - 1) neighbors.Add(i + 1);
-                pieces.Add(new PuzzlePiece(i, neighbors));
-            }
-            var seeds = new[] { 0 };
-            var deckOrder = new int[totalPieces - 1];
-            for (int i = 0; i < deckOrder.Length; i++) deckOrder[i] = i + 1;
-            return new PuzzleLevel(pieces, seeds, new IDeck[] { new Deck(deckOrder) });
-        }
-    }
-
-    // ---------------------------------------------------------------------------
     // InGamePresenter tests
     // ---------------------------------------------------------------------------
     [TestFixture]
@@ -310,10 +281,25 @@ namespace SimpleGame.Tests.Game
             _popupManager = new PopupManager<PopupId>(_popupContainer, _inputBlocker);
         }
 
-        // Helper: inject a known linear-chain level into the controller
+        // Helper: inject a known linear-chain PuzzleModel into the controller (1 slot for determinism)
         // Uses 6 pieces so slots 0=1(placeable), 1=2(NOT placeable until 1 placed), 2=3(not placeable)
         private static void SetStubLevel(InGameSceneController ctrl, int totalPieces)
-            => ctrl.SetLevelFactory(() => TestLevelBuilder.LinearChain(totalPieces));
+        {
+            ctrl.SetModelFactory(() =>
+            {
+                var pieces = new System.Collections.Generic.List<IPuzzlePiece>(totalPieces);
+                for (int i = 0; i < totalPieces; i++)
+                {
+                    var neighbors = new System.Collections.Generic.List<int>();
+                    if (i > 0) neighbors.Add(i - 1);
+                    if (i < totalPieces - 1) neighbors.Add(i + 1);
+                    pieces.Add(new PuzzlePiece(i, neighbors));
+                }
+                var deckOrder = new int[totalPieces - 1];
+                for (int i = 0; i < deckOrder.Length; i++) deckOrder[i] = i + 1;
+                return new PuzzleModel(pieces, new[] { 0 }, deckOrder, slotCount: 3);
+            });
+        }
 
         // Helper: tap pieces 1..count in order (all correct on a linear chain)
         private static void TapAllCorrect(MockInGameView view, int nonSeedCount)

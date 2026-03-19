@@ -99,21 +99,11 @@ namespace SimpleGame.Tests.Game
         }
 
         [Test]
-        public void Build_DeckOrder_MatchesLegacyLevelDeck()
+        public void Build_DeckOrder_IsAscending()
         {
-            // The Level legacy accessor should expose the same deck order as DeckOrder
+            // Default deck should be in ascending ID order
             var result = JigsawLevelFactory.Build(_config2x2, seed: 42, seedPieceIds: new[] { 0 });
-
-            var deckPieces = new List<int>();
-            var deck = result.Level.Decks[0];
-            while (!deck.IsEmpty)
-            {
-                deckPieces.Add(deck.Peek().Value);
-                deck.Advance();
-            }
-
-            CollectionAssert.AreEqual(result.DeckOrder, deckPieces,
-                "Legacy Level.Decks[0] should match DeckOrder.");
+            Assert.That(result.DeckOrder, Is.Ordered, "Default deck should be in ascending ID order.");
         }
 
         [Test]

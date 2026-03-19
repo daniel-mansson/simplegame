@@ -61,7 +61,7 @@ This milestone is complete only when all are true:
 - [x] **S03: View + SceneController wiring** `risk:medium` `depends:[S02]`
   > After this: play-from-editor works end-to-end — slot-indexed view, PuzzleModelConfig slot count, JigsawLevelFactory feeding PuzzleModel.
 
-- [ ] **S04: Tests & cleanup** `risk:low` `depends:[S03]`
+- [x] **S04: Tests & cleanup** `risk:low` `depends:[S03]`
   > After this: all EditMode tests green, PuzzleSession deleted, no regressions, no orphaned references.
 
 ## Boundary Map
