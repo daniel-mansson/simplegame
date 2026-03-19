@@ -230,7 +230,8 @@ namespace SimpleGame.Game.InGame
             }
 
             // Determine slot count from config (default 3 if no config assigned)
-            int slotCount = _puzzleModelConfig != null ? _puzzleModelConfig.SlotCount : 3;
+            // Slot count scales with level: levelId/3 + 3, clamped to [1, 5]
+            int slotCount = Mathf.Clamp(_session.CurrentLevelId / 3 + 3, 1, 5);
 
             // Determine the model factory: use injected factory, or real jigsaw, or fallback stub.
             System.Func<SimpleGame.Puzzle.PuzzleModel> modelFactory;
@@ -250,12 +251,13 @@ namespace SimpleGame.Game.InGame
                 _runtimeGridConfig.PieceThickness = _gridLayoutConfig.PieceThickness;
 
                 // modelFactory re-builds with a fresh random seed each call (first run + every retry).
+                // BuildSolvable runs a greedy solver and retries up to 100 seeds to guarantee solvability.
                 // SpawnPieces is called inside so the piece GameObjects match the new layout.
                 modelFactory = () =>
                 {
-                    int levelSeed = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
-                    var result = JigsawLevelFactory.Build(_runtimeGridConfig, levelSeed);
-                    UnityEngine.Debug.Log($"[InGameSceneController] Level {_session.CurrentLevelId} seed={levelSeed} grid={gridSize.Rows}x{gridSize.Cols}");
+                    int initialSeed = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
+                    var result = JigsawLevelFactory.BuildSolvable(_runtimeGridConfig, slotCount, initialSeed);
+                    UnityEngine.Debug.Log($"[InGameSceneController] Level {_session.CurrentLevelId} seed={result.Seed} grid={gridSize.Rows}x{gridSize.Cols} slots={slotCount}");
                     if (_session.TotalPieces != result.PieceList.Count)
                         _session.ResetForNewGame(_session.CurrentLevelId, result.PieceList.Count);
                     SpawnPieces(result.RawBoard, result.SeedIds[0]);

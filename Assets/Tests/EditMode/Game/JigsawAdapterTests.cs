@@ -129,5 +129,38 @@ namespace SimpleGame.Tests.Game
 
             Assert.That(model.IsComplete, Is.True, "Model should be complete after all pieces placed.");
         }
+
+        [Test]
+        public void BuildSolvable_2x2_ReturnsSolvableResult()
+        {
+            // Any seed piece — let factory choose randomly
+            var result = JigsawLevelFactory.BuildSolvable(_config2x2, slotCount: 1, initialSeed: 99);
+            Assert.That(result.PieceList.Count, Is.EqualTo(4));
+            Assert.That(result.DeckOrder.Count, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void BuildSolvable_2x2_PuzzleIsCompletableWithReturnedDeck()
+        {
+            // Verify the returned layout is actually solvable end-to-end with PuzzleModel
+            var result = JigsawLevelFactory.BuildSolvable(_config2x2, slotCount: 3, initialSeed: 7);
+            var model = new PuzzleModel(result.PieceList, result.SeedIds, result.DeckOrder, slotCount: 3);
+
+            // Greedy: on each pass, place any slot that accepts
+            bool MakeProgress()
+            {
+                bool any = false;
+                for (int s = 0; s < model.SlotCount; s++)
+                    if (model.TryPlace(s) == SlotTapResult.Placed) any = true;
+                return any;
+            }
+
+            int passes = 0;
+            while (!model.IsComplete && passes++ < 50)
+                MakeProgress();
+
+            Assert.That(model.IsComplete, Is.True, "BuildSolvable result must be completable.");
+        }
     }
 }
+

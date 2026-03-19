@@ -52,6 +52,48 @@ namespace SimpleGame.Game.Puzzle
             }
         }
 
+        // ── Public API ────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Builds a guaranteed-solvable puzzle by retrying with new random seeds until
+        /// the greedy solver confirms the layout is completable. Logs an error and returns
+        /// the last attempt if <paramref name="maxAttempts"/> is exhausted.
+        /// </summary>
+        /// <param name="config">Grid layout — rows, columns, edge profile.</param>
+        /// <param name="slotCount">Number of player slots (affects solvability check).</param>
+        /// <param name="initialSeed">Seed for the outer retry RNG. Each attempt draws the next seed from it.</param>
+        /// <param name="maxAttempts">Maximum seeds to try before giving up (default 100).</param>
+        /// <param name="seedPieceIds">Explicit start-piece override — useful in tests.</param>
+        public static JigsawBuildResult BuildSolvable(
+            SimpleJigsaw.GridLayoutConfig config,
+            int   slotCount,
+            int   initialSeed,
+            int   maxAttempts = 100,
+            int[] seedPieceIds = null)
+        {
+            var rng = new System.Random(initialSeed);
+            JigsawBuildResult result = default;
+
+            for (int attempt = 0; attempt < maxAttempts; attempt++)
+            {
+                int seed = rng.Next();
+                result = Build(config, seed, seedPieceIds);
+
+                if (IsSolvable(result, slotCount))
+                {
+                    if (attempt > 0)
+                        UnityEngine.Debug.Log(
+                            $"[JigsawLevelFactory] Solvable layout found after {attempt + 1} attempts (seed={seed}).");
+                    return result;
+                }
+            }
+
+            UnityEngine.Debug.LogError(
+                $"[JigsawLevelFactory] Could not find solvable layout after {maxAttempts} attempts " +
+                $"(slotCount={slotCount}). Using last result (seed={result.Seed}). Puzzle may be unwinnable.");
+            return result;
+        }
+
         /// <summary>
         /// Builds puzzle data from a grid layout configuration.
         /// </summary>
@@ -110,6 +152,66 @@ namespace SimpleGame.Game.Puzzle
             Shuffle(deckOrder, rng);
 
             return new JigsawBuildResult(rawBoard, pieces, seeds, deckOrder, seed);
+        }
+
+        // ── Solver ────────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Greedy solver: on each pass, places every slot-piece that currently has a
+        /// placed neighbour. Repeats until the board is complete or a full pass yields
+        /// no placements (deadlock → unsolvable with this deck order).
+        ///
+        /// Mirrors <see cref="PuzzleModel.TryPlace"/> logic without allocating a full
+        /// model or subscribing to events.
+        /// </summary>
+        private static bool IsSolvable(in JigsawBuildResult result, int slotCount)
+        {
+            // Build neighbour lookup: pieceId → neighbour IDs
+            var neighbours = new Dictionary<int, List<int>>(result.PieceList.Count);
+            foreach (var piece in result.PieceList)
+            {
+                var nbrs = new List<int>();
+                foreach (var nbr in piece.NeighborIds)
+                    nbrs.Add(nbr);
+                neighbours[piece.Id] = nbrs;
+            }
+
+            var placed = new HashSet<int>(result.SeedIds);
+            var deck   = new Queue<int>(result.DeckOrder);
+
+            var slots = new int?[slotCount];
+            for (int i = 0; i < slotCount && deck.Count > 0; i++)
+                slots[i] = deck.Dequeue();
+
+            int remaining = result.DeckOrder.Count;
+
+            while (remaining > 0)
+            {
+                bool progress = false;
+
+                for (int i = 0; i < slotCount; i++)
+                {
+                    if (!slots[i].HasValue) continue;
+
+                    int pid = slots[i].Value;
+
+                    bool canPlace = false;
+                    foreach (var nbr in neighbours[pid])
+                    {
+                        if (placed.Contains(nbr)) { canPlace = true; break; }
+                    }
+                    if (!canPlace) continue;
+
+                    placed.Add(pid);
+                    remaining--;
+                    slots[i] = deck.Count > 0 ? deck.Dequeue() : (int?)null;
+                    progress  = true;
+                }
+
+                if (!progress) return false; // deadlock — no slot can be placed
+            }
+
+            return true;
         }
 
         /// <summary>Fisher-Yates in-place shuffle.</summary>
