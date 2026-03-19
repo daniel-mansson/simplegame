@@ -443,9 +443,9 @@ namespace SimpleGame.Game.InGame
             float boardH       =  boardTop - boardBottom;
             float boardSize    =  Mathf.Min(orthoW * 0.72f, boardH);    // 72% wide — slightly smaller
 
-            // Scale PuzzleParent: [0,1]² → boardSize²
+            // Scale PuzzleParent: [0,1]² → boardSize², z=-2 so pieces render in front of UI canvas
             parent.localScale = Vector3.one * boardSize;
-            parent.position   = new Vector3(-boardSize * 0.5f, boardBottom, 0f);
+            parent.position   = new Vector3(-boardSize * 0.5f, boardBottom, -2f);
 
             // ── Build piece lookup + record solved positions ───────────────
             _pieceObjects         = new Dictionary<int, GameObject>(pieces.Count);
@@ -475,9 +475,9 @@ namespace SimpleGame.Game.InGame
             float       spacing       = orthoW * 0.28f;  // centre-to-centre gap
             // Centre positions of the 3 slots
             _traySlotPositions = new Vector3[kVisibleSlots];
-            _traySlotPositions[0] = new Vector3(-spacing,     trayY, 0f);
-            _traySlotPositions[1] = new Vector3(0f,           trayY, 0f);
-            _traySlotPositions[2] = new Vector3( spacing,     trayY, 0f);
+            _traySlotPositions[0] = new Vector3(-spacing, trayY, -2f);
+            _traySlotPositions[1] = new Vector3(0f,       trayY, -2f);
+            _traySlotPositions[2] = new Vector3( spacing, trayY, -2f);
             _traySlotScales = new Vector3[]
             {
                 Vector3.one * slotSize0,
@@ -486,7 +486,7 @@ namespace SimpleGame.Game.InGame
             };
 
             // Hidden off-screen position for pieces not yet in the visible window
-            var hiddenPos = new Vector3(orthoW * 2f, trayY, 0f);
+            var hiddenPos = new Vector3(orthoW * 2f, trayY, -2f);
 
             _traySlotData = new Dictionary<int, (Vector3 pos, Vector3 scale)>();
 
