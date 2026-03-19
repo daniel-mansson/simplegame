@@ -477,23 +477,21 @@ namespace SimpleGame.Game.InGame
                     go.AddComponent<PieceTapHandler>().Initialize(pid, _inGameView);
             }
 
-            // ── Tray: 3 slots — centre is active/front, left and right are previews ──
-            // Deck order: centre=front piece, left=next, right=one-after.
-            const int   kVisibleSlots  = 3;
-            float       slotSizeFront  = trayH * 0.80f;   // centre (active) — biggest
-            float       slotSizePreview = trayH * 0.58f;  // side previews — smaller
-            float       spacing        = orthoW * 0.22f;
+            // ── Tray: 3 slots — all equal size, evenly spaced ──
+            const int   kVisibleSlots = 3;
+            float       slotSize     = trayH * 0.70f;   // uniform size for all slots
+            float       spacing      = orthoW * 0.22f;
 
-            // Slot layout: index 0=left-preview, index 1=centre-active, index 2=right-preview
+            // Slot layout: index 0=left, index 1=centre, index 2=right
             _traySlotPositions = new Vector3[kVisibleSlots];
-            _traySlotPositions[0] = new Vector3(-spacing, trayY, -2f);  // left preview
-            _traySlotPositions[1] = new Vector3(0f,       trayY, -2f);  // centre — active
-            _traySlotPositions[2] = new Vector3( spacing, trayY, -2f);  // right preview
+            _traySlotPositions[0] = new Vector3(-spacing, trayY, -2f);
+            _traySlotPositions[1] = new Vector3(0f,       trayY, -2f);
+            _traySlotPositions[2] = new Vector3( spacing, trayY, -2f);
             _traySlotScales = new Vector3[]
             {
-                Vector3.one * slotSizePreview,
-                Vector3.one * slotSizeFront,
-                Vector3.one * slotSizePreview,
+                Vector3.one * slotSize,
+                Vector3.one * slotSize,
+                Vector3.one * slotSize,
             };
 
             // Hidden off-screen position for pieces not yet in the visible window
