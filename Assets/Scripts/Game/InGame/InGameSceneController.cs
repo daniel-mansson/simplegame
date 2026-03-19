@@ -264,7 +264,7 @@ namespace SimpleGame.Game.InGame
                     UnityEngine.Debug.Log($"[InGameSceneController] Level {_session.CurrentLevelId} seed={result.Seed} grid={gridSize.Rows}x{gridSize.Cols} slots={slotCount}");
                     if (_session.TotalPieces != result.PieceList.Count)
                         _session.ResetForNewGame(_session.CurrentLevelId, result.PieceList.Count);
-                    SpawnPieces(result.RawBoard, result.SeedIds[0], slotCount, result.DeckOrder);
+                    SpawnPieces(result.RawBoard, result.SeedIds[0], slotCount, result.DeckOrder, gridSize.Cols);
                     return new SimpleGame.Puzzle.PuzzleModel(result.PieceList, result.SeedIds, result.DeckOrder, slotCount);
                 };
             }
@@ -464,7 +464,7 @@ namespace SimpleGame.Game.InGame
         /// Spawns piece GameObjects using PieceObjectFactory and attaches PieceTapHandler to each.
         /// Called once at scene start when a GridLayoutConfig is assigned.
         /// </summary>
-        private void SpawnPieces(SimpleJigsaw.PuzzleBoard rawBoard, int seedPieceId, int slotCount, System.Collections.Generic.IReadOnlyList<int> deckOrder)
+        private void SpawnPieces(SimpleJigsaw.PuzzleBoard rawBoard, int seedPieceId, int slotCount, System.Collections.Generic.IReadOnlyList<int> deckOrder, int boardCols)
         {
             if (_inGameView == null) return;
 
@@ -534,19 +534,29 @@ namespace SimpleGame.Game.InGame
                     go.AddComponent<PieceTapHandler>().Initialize(pid, _inGameView);
             }
 
-            // ── Tray: slotCount slots — equal size, evenly spaced ──────────
-            // Slot size shrinks slightly as slot count increases.
-            float slotSize = trayH * Mathf.Lerp(0.70f, 0.48f, (slotCount - 3) / 2f);
-            float totalTrayWidth = slotSize * slotCount + trayH * 0.08f * (slotCount - 1);
-            float slotSpacing = slotCount > 1 ? (totalTrayWidth - slotSize) / (slotCount - 1) : 0f;
-            float trayStartX = -(totalTrayWidth * 0.5f) + slotSize * 0.5f;
+            // ── Tray: slotCount slots — sized to match board pieces, staggered layout ──
+            // Board piece world size = boardSize / cols (each piece occupies 1/cols of the board).
+            // Slot pieces target ~110% of that so they read slightly larger than on-board.
+            int boardCols  = gridSize.Cols;
+            float pieceWorldSize = boardSize / boardCols;
+            float slotSize = pieceWorldSize * 1.10f;
+
+            // Spacing: piece size + a small gap (8% of piece size) between adjacent slots.
+            float slotGap     = slotSize * 0.08f;
+            float slotSpacing = slotSize + slotGap;
+            float totalTrayWidth = slotSpacing * slotCount - slotGap;   // no trailing gap
+            float trayStartX  = -totalTrayWidth * 0.5f + slotSize * 0.5f;
+
+            // Stagger: every second slot drops slightly so pieces interleave visually.
+            float staggerY = slotSize * 0.28f;
 
             _traySlotPositions = new Vector3[slotCount];
             _traySlotScales    = new Vector3[slotCount];
             for (int i = 0; i < slotCount; i++)
             {
-                float x = slotCount > 1 ? trayStartX + i * slotSpacing : 0f;
-                _traySlotPositions[i] = new Vector3(x, trayY, -2f);
+                float x = trayStartX + i * slotSpacing;
+                float y = trayY + (i % 2 == 1 ? -staggerY : 0f);
+                _traySlotPositions[i] = new Vector3(x, y, -2f);
                 _traySlotScales[i]    = Vector3.one * slotSize;
             }
 
