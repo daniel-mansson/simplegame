@@ -72,6 +72,11 @@ namespace SimpleGame.Game.InGame
         /// </summary>
         private System.Func<SimpleGame.Puzzle.PuzzleModel> _modelFactory;
 
+        /// <summary>
+        /// Cancels any in-flight self-bootstrap RunAsync when GameBootstrapper takes over.
+        /// </summary>
+        private CancellationTokenSource _selfBootstrapCts;
+
         private IViewResolver _viewResolver;
         private IInGameView _viewOverride;
         private ILevelCompleteView _levelCompleteViewOverride;
@@ -119,6 +124,11 @@ namespace SimpleGame.Game.InGame
                                ICoinsService coins = null, IViewResolver viewResolver = null,
                                ICurrencyOverlay overlay = null)
         {
+            // Cancel any in-flight self-bootstrap RunAsync before GameBootstrapper takes over.
+            _selfBootstrapCts?.Cancel();
+            _selfBootstrapCts?.Dispose();
+            _selfBootstrapCts = null;
+
             _uiFactory = uiFactory;
             _progression = progression;
             _session = session;
@@ -159,9 +169,13 @@ namespace SimpleGame.Game.InGame
 
         private async UniTaskVoid WaitForBootOrSelfBootstrap()
         {
-            // Give BootInjector + GameBootstrapper time to initialize us (~2 frames is enough).
-            await UniTask.DelayFrame(3);
-            if (_uiFactory != null) return; // GameBootstrapper got here first — all good
+            // Give BootInjector + GameBootstrapper time to initialize us.
+            // Use a longer wait and re-check — the Boot scene loads additively and may take several frames.
+            for (int i = 0; i < 10; i++)
+            {
+                await UniTask.DelayFrame(1, cancellationToken: destroyCancellationToken);
+                if (_uiFactory != null) return; // GameBootstrapper got here first — all good
+            }
 
             Debug.Log("[InGameSceneController] Play-from-editor: bootstrapping with stub services.");
             var session         = new GameSessionService();
@@ -175,7 +189,10 @@ namespace SimpleGame.Game.InGame
             _hearts       = hearts;
             _popupManager = null;
 
-            RunAsync().Forget();
+            _selfBootstrapCts = new CancellationTokenSource();
+            var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                _selfBootstrapCts.Token, destroyCancellationToken);
+            RunAsync(linkedCts.Token).Forget();
         }
 
         /// <summary>No-op golden piece service for play-from-editor preview.</summary>
