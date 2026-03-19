@@ -536,18 +536,16 @@ namespace SimpleGame.Game.InGame
 
             // ── Tray: slotCount slots — sized to match board pieces, staggered layout ──
             // Board piece world size = boardSize / cols (each piece occupies 1/cols of the board).
-            // Slot pieces target ~110% of that so they read slightly larger than on-board.
             float pieceWorldSize = boardSize / boardCols;
-            float slotSize = pieceWorldSize * 2.0f;
+            float slotSize = pieceWorldSize * 2.8f;
 
-            // Spacing: piece size + a small gap (8% of piece size) between adjacent slots.
-            float slotGap     = slotSize * 0.08f;
-            float slotSpacing = slotSize + slotGap;
-            float totalTrayWidth = slotSpacing * slotCount - slotGap;   // no trailing gap
-            float trayStartX  = -totalTrayWidth * 0.5f + slotSize * 0.5f;
+            // Very tight packing — slots overlap slightly, held apart by a small fraction of piece size.
+            float slotSpacing    = slotSize * 0.45f;
+            float totalTrayWidth = slotSpacing * (slotCount - 1) + slotSize;
+            float trayStartX     = -totalTrayWidth * 0.5f + slotSize * 0.5f;
 
-            // Stagger: every second slot drops slightly so pieces interleave visually.
-            float staggerY = slotSize * 0.28f;
+            // Stagger: every second slot drops slightly so overlapping pieces read as distinct.
+            float staggerY = slotSize * 0.18f;
 
             _traySlotPositions = new Vector3[slotCount];
             _traySlotScales    = new Vector3[slotCount];
