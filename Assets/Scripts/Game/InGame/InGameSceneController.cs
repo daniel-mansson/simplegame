@@ -538,7 +538,7 @@ namespace SimpleGame.Game.InGame
             // Board piece world size = boardSize / cols (each piece occupies 1/cols of the board).
             // Slot pieces target ~110% of that so they read slightly larger than on-board.
             float pieceWorldSize = boardSize / boardCols;
-            float slotSize = pieceWorldSize * 1.10f;
+            float slotSize = pieceWorldSize * 2.0f;
 
             // Spacing: piece size + a small gap (8% of piece size) between adjacent slots.
             float slotGap     = slotSize * 0.08f;
