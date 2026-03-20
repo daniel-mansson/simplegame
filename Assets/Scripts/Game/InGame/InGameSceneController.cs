@@ -553,8 +553,8 @@ namespace SimpleGame.Game.InGame
 
             // ── Tray: slotCount slots — as large as tray height allows ──────
             // Target: pieces fill the tray height. Clamp so all slots fit screen width.
-            float slotSizeByHeight = trayH * 0.95f;
-            float slotSizeByWidth  = (orthoW * 0.96f) / slotCount;
+            float slotSizeByHeight = trayH * 1.615f;
+            float slotSizeByWidth  = (orthoW * 0.96f) / slotCount * 1.7f;
             float slotSize = Mathf.Min(slotSizeByHeight, slotSizeByWidth);
 
             // Each piece mesh is 1/cols wide in local [0,1]² space; parent is scaled to boardSize.
