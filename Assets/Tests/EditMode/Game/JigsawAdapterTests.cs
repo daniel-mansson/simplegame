@@ -41,14 +41,14 @@ namespace SimpleGame.Tests.Game
         [Test]
         public void Build_2x2Grid_ReturnsFourPieces()
         {
-            var result = JigsawLevelFactory.Build(_config2x2, seed: 42, seedPieceIds: new[] { 0 });
+            var result = JigsawLevelFactory.Build(_config2x2, slotCount: 1, seed: 42, seedPieceIds: new[] { 0 });
             Assert.That(result.PieceList.Count, Is.EqualTo(4));
         }
 
         [Test]
         public void Build_2x2Grid_RawBoardIsReturned()
         {
-            var result = JigsawLevelFactory.Build(_config2x2, seed: 42, seedPieceIds: new[] { 0 });
+            var result = JigsawLevelFactory.Build(_config2x2, slotCount: 1, seed: 42, seedPieceIds: new[] { 0 });
             Assert.That(result.RawBoard, Is.Not.Null);
             Assert.That(result.RawBoard.Pieces.Count, Is.EqualTo(4));
         }
@@ -56,7 +56,7 @@ namespace SimpleGame.Tests.Game
         [Test]
         public void Build_2x2Grid_EachPieceHasTwoNeighbors()
         {
-            var result = JigsawLevelFactory.Build(_config2x2, seed: 42, seedPieceIds: new[] { 0 });
+            var result = JigsawLevelFactory.Build(_config2x2, slotCount: 1, seed: 42, seedPieceIds: new[] { 0 });
             foreach (var piece in result.PieceList)
             {
                 Assert.That(piece.NeighborIds.Count, Is.EqualTo(2),
@@ -67,7 +67,7 @@ namespace SimpleGame.Tests.Game
         [Test]
         public void Build_2x2Grid_NeighborRelationshipsAreSymmetric()
         {
-            var result = JigsawLevelFactory.Build(_config2x2, seed: 42, seedPieceIds: new[] { 0 });
+            var result = JigsawLevelFactory.Build(_config2x2, slotCount: 1, seed: 42, seedPieceIds: new[] { 0 });
             var pieceById = result.PieceList.ToDictionary(p => p.Id);
 
             foreach (var piece in result.PieceList)
@@ -83,15 +83,15 @@ namespace SimpleGame.Tests.Game
         [Test]
         public void Build_SeedIdsArePreservedInResult()
         {
-            var result = JigsawLevelFactory.Build(_config2x2, seed: 42, seedPieceIds: new[] { 0 });
+            var result = JigsawLevelFactory.Build(_config2x2, slotCount: 1, seed: 42, seedPieceIds: new[] { 0 });
             Assert.That(result.SeedIds, Contains.Item(0));
         }
 
         [Test]
         public void Build_DefaultDeck_ContainsAllNonSeedPieces()
         {
-            // Deck must contain all non-seed pieces; seed not included; order is shuffled
-            var result = JigsawLevelFactory.Build(_config2x2, seed: 42, seedPieceIds: new[] { 0 });
+            // Deck must contain all non-seed pieces; seed not included; order is from SolvableShuffle
+            var result = JigsawLevelFactory.Build(_config2x2, slotCount: 1, seed: 42, seedPieceIds: new[] { 0 });
 
             Assert.That(result.DeckOrder, Has.No.Member(0), "Seed piece should not be in the deck.");
             Assert.That(result.DeckOrder.Count, Is.EqualTo(3), "Deck should contain the 3 non-seed pieces.");
@@ -102,32 +102,25 @@ namespace SimpleGame.Tests.Game
         [Test]
         public void Build_DeckOrder_ContainsAllNonSeedPieces_Unordered()
         {
-            // Deck is shuffled — assert containment, not order
-            var result = JigsawLevelFactory.Build(_config2x2, seed: 42, seedPieceIds: new[] { 0 });
+            // Deck order is topology-aware — assert containment, not specific order
+            var result = JigsawLevelFactory.Build(_config2x2, slotCount: 1, seed: 42, seedPieceIds: new[] { 0 });
             CollectionAssert.AreEquivalent(new[] { 1, 2, 3 }, result.DeckOrder);
         }
 
         [Test]
         public void Build_PuzzleModelCanCompleteLevelFromDefaultDeck()
         {
-            // Seed piece 0. Neighbors of 0 are 1 and 2. Neighbor of both 1 and 2 is 3.
-            // Valid placement via PuzzleModel (single slot): 1, 2, 3.
-            var result = JigsawLevelFactory.Build(_config2x2, seed: 42, seedPieceIds: new[] { 0 });
-            var model = new PuzzleModel(result.PieceList, result.SeedIds, result.DeckOrder, slotCount: 1);
+            // SolvableShuffle guarantees a solvable ordering — verify with greedy placement.
+            var result = JigsawLevelFactory.Build(_config2x2, slotCount: 1, seed: 42, seedPieceIds: new[] { 0 });
+            var model  = new PuzzleModel(result.PieceList, result.SeedIds, result.DeckOrder, slotCount: 1);
 
-            // Slot 0 = piece 1 (neighbours seed 0) — correct
-            var r1 = model.TryPlace(0);
-            Assert.That(r1, Is.EqualTo(SlotTapResult.Placed), "Piece 1 should be placeable (neighbors seed 0).");
+            // Greedy: try placing slot 0 until complete or stalled
+            int passes = 0;
+            while (!model.IsComplete && passes++ < 10)
+                model.TryPlace(0);
 
-            // Slot 0 now = piece 2 (neighbours seed 0) — correct
-            var r2 = model.TryPlace(0);
-            Assert.That(r2, Is.EqualTo(SlotTapResult.Placed), "Piece 2 should be placeable (neighbors seed 0).");
-
-            // Slot 0 now = piece 3 (neighbours 1 and 2) — correct
-            var r3 = model.TryPlace(0);
-            Assert.That(r3, Is.EqualTo(SlotTapResult.Placed), "Piece 3 should be placeable (neighbors 1 and 2).");
-
-            Assert.That(model.IsComplete, Is.True, "Model should be complete after all pieces placed.");
+            Assert.That(model.IsComplete, Is.True,
+                "SolvableShuffle deck must be completable from a single slot.");
         }
 
         [Test]
@@ -163,4 +156,3 @@ namespace SimpleGame.Tests.Game
         }
     }
 }
-

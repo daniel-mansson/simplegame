@@ -55,20 +55,22 @@ namespace SimpleGame.Game.Puzzle
         // ── Public API ────────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Builds a guaranteed-solvable puzzle by retrying with new random seeds until
-        /// the greedy solver confirms the layout is completable. Logs an error and returns
-        /// the last attempt if <paramref name="maxAttempts"/> is exhausted.
+        /// Builds a guaranteed-solvable puzzle. Uses <see cref="SolvableShuffle"/> to
+        /// produce a solvable deck ordering by construction, then validates with the
+        /// greedy solver as a safety net. Retries with new seeds if validation fails.
+        /// Logs an error and returns the last attempt if <paramref name="maxAttempts"/>
+        /// is exhausted.
         /// </summary>
         /// <param name="config">Grid layout — rows, columns, edge profile.</param>
-        /// <param name="slotCount">Number of player slots (affects solvability check).</param>
+        /// <param name="slotCount">Number of player slots (used by shuffle and solvability check).</param>
         /// <param name="initialSeed">Seed for the outer retry RNG. Each attempt draws the next seed from it.</param>
-        /// <param name="maxAttempts">Maximum seeds to try before giving up (default 100).</param>
+        /// <param name="maxAttempts">Maximum seeds to try before giving up (default 10).</param>
         /// <param name="seedPieceIds">Explicit start-piece override — useful in tests.</param>
         public static JigsawBuildResult BuildSolvable(
             SimpleJigsaw.GridLayoutConfig config,
             int   slotCount,
             int   initialSeed,
-            int   maxAttempts = 100,
+            int   maxAttempts = 10,
             int[] seedPieceIds = null)
         {
             var rng = new System.Random(initialSeed);
@@ -77,7 +79,7 @@ namespace SimpleGame.Game.Puzzle
             for (int attempt = 0; attempt < maxAttempts; attempt++)
             {
                 int seed = rng.Next();
-                result = Build(config, seed, seedPieceIds);
+                result = Build(config, slotCount, seed, seedPieceIds);
 
                 if (IsSolvable(result, slotCount))
                 {
@@ -95,9 +97,14 @@ namespace SimpleGame.Game.Puzzle
         }
 
         /// <summary>
-        /// Builds puzzle data from a grid layout configuration.
+        /// Builds puzzle data from a grid layout configuration using
+        /// <see cref="SolvableShuffle"/> to order the deck.
         /// </summary>
         /// <param name="config">Grid layout — rows, columns, edge profile.</param>
+        /// <param name="slotCount">
+        /// Number of player slots. Passed to <see cref="SolvableShuffle.Shuffle"/> to
+        /// guarantee the solvability window invariant for the given slot count.
+        /// </param>
         /// <param name="seed">
         /// RNG seed controlling board edge generation, seed-piece selection, and deck shuffle.
         /// Pass a random value each run for variety; pass a fixed value for deterministic replay.
@@ -109,6 +116,7 @@ namespace SimpleGame.Game.Puzzle
         /// </param>
         public static JigsawBuildResult Build(
             SimpleJigsaw.GridLayoutConfig config,
+            int   slotCount,
             int   seed,
             int[] seedPieceIds = null)
         {
@@ -141,15 +149,9 @@ namespace SimpleGame.Game.Puzzle
                 seeds = new[] { randomSeedId };
             }
 
-            // Build deck: all non-seed pieces, shuffled with Fisher-Yates
-            var seedSet = new HashSet<int>(seeds);
-            var deckOrder = new List<int>(pieces.Count);
-            foreach (var piece in pieces)
-            {
-                if (!seedSet.Contains(piece.Id))
-                    deckOrder.Add(piece.Id);
-            }
-            Shuffle(deckOrder, rng);
+            // Build deck using SolvableShuffle: guarantees at least one placeable piece
+            // per slotCount-wide window throughout the deck ordering.
+            var deckOrder = SolvableShuffle.Shuffle(seeds, pieces, slotCount, rng);
 
             return new JigsawBuildResult(rawBoard, pieces, seeds, deckOrder, seed);
         }
@@ -212,16 +214,6 @@ namespace SimpleGame.Game.Puzzle
             }
 
             return true;
-        }
-
-        /// <summary>Fisher-Yates in-place shuffle.</summary>
-        private static void Shuffle<T>(List<T> list, System.Random rng)
-        {
-            for (int i = list.Count - 1; i > 0; i--)
-            {
-                int j = rng.Next(i + 1);
-                (list[i], list[j]) = (list[j], list[i]);
-            }
         }
     }
 }

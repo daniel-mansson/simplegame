@@ -268,7 +268,7 @@ namespace SimpleGame.Game.InGame
                 modelFactory = () =>
                 {
                     int initialSeed = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
-                    var result = JigsawLevelFactory.BuildSolvable(_runtimeGridConfig, slotCount, initialSeed, maxAttempts: 1000);
+                    var result = JigsawLevelFactory.BuildSolvable(_runtimeGridConfig, slotCount, initialSeed);
                     UnityEngine.Debug.Log($"[InGameSceneController] Level {_session.CurrentLevelId} seed={result.Seed} grid={gridSize.Rows}x{gridSize.Cols} slots={slotCount}");
                     if (_session.TotalPieces != result.PieceList.Count)
                         _session.ResetForNewGame(_session.CurrentLevelId, result.PieceList.Count);
