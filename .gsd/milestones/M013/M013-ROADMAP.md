@@ -42,10 +42,10 @@
 
 ## Slices
 
-- [ ] **S01: SolvableShuffle algorithm** `risk:medium` `depends:[]`
+- [x] **S01: SolvableShuffle algorithm** `risk:medium` `depends:[]`
   > After this: unit tests demonstrate the algorithm produces solvable orderings, fires backtracking on constrained topologies, and never produces all-valid windows.
 
-- [ ] **S02: Wire into JigsawLevelFactory** `risk:low` `depends:[S01]`
+- [x] **S02: Wire into JigsawLevelFactory** `risk:low` `depends:[S01]`
   > After this: `JigsawLevelFactory.Build()` uses `SolvableShuffle`; retry cap is 10; all existing adapter tests pass.
 
 ## Boundary Map
