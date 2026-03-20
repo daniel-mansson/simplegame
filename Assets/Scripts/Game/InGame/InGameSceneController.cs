@@ -566,7 +566,7 @@ namespace SimpleGame.Game.InGame
             float slotSpacing    = slotCount > 1 ? (orthoW * 0.92f) / (slotCount - 1 + 1) : 0f;
             float totalTrayWidth = slotSpacing * (slotCount - 1) + slotSize;
             float trayStartX     = -slotSpacing * (slotCount - 1) * 0.5f;
-            float staggerY       = slotSize * 0.18f;
+            float staggerY       = 0f;
 
             _traySlotPositions = new Vector3[slotCount];
             _traySlotScales    = new Vector3[slotCount];
