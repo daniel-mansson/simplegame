@@ -124,7 +124,54 @@ namespace SimpleGame.Tests.Game
         }
 
         [Test]
-        public void BuildSolvable_2x2_ReturnsSolvableResult()
+        public void BuildSolvable_9x9_SlotCount3_AlwaysSolvableInOneAttempt()
+        {
+            // Regression: BuildSolvable must not log an error for a 9×9 puzzle with 3 slots.
+            // SolvableShuffle should produce a passing IsSolvable deck on the first attempt.
+            // We run 10 seeds and verify each result is completable with PuzzleModel.
+            var config9x9 = ScriptableObject.CreateInstance<SimpleJigsaw.GridLayoutConfig>();
+            config9x9.Rows    = 9;
+            config9x9.Columns = 9;
+            config9x9.EdgeProfile = null;
+
+            try
+            {
+                for (int seed = 0; seed < 10; seed++)
+                {
+                    var result = JigsawLevelFactory.BuildSolvable(
+                        config9x9, slotCount: 3, initialSeed: seed, maxAttempts: 1);
+
+                    Assert.That(result.PieceList.Count, Is.EqualTo(81),
+                        $"Seed {seed}: expected 81 pieces in a 9×9 grid.");
+                    Assert.That(result.DeckOrder.Count, Is.EqualTo(80),
+                        $"Seed {seed}: expected 80 non-seed pieces in deck.");
+
+                    // Verify completable with PuzzleModel greedy solver
+                    var model = new PuzzleModel(
+                        result.PieceList, result.SeedIds, result.DeckOrder, slotCount: 3);
+
+                    bool MakeProgress()
+                    {
+                        bool any = false;
+                        for (int s = 0; s < model.SlotCount; s++)
+                            if (model.TryPlace(s) == SlotTapResult.Placed) any = true;
+                        return any;
+                    }
+
+                    int passes = 0;
+                    while (!model.IsComplete && passes++ < 500)
+                        MakeProgress();
+
+                    Assert.That(model.IsComplete, Is.True,
+                        $"Seed {seed}: 9×9 puzzle must be completable with slotCount=3.");
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(config9x9);
+            }
+        }
+
         {
             // Any seed piece — let factory choose randomly
             var result = JigsawLevelFactory.BuildSolvable(_config2x2, slotCount: 1, initialSeed: 99);

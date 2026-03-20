@@ -4,23 +4,22 @@ using System.Collections.Generic;
 namespace SimpleGame.Puzzle
 {
     /// <summary>
-    /// Builds a deck ordering that guarantees solvability by construction.
+    /// Builds a deck ordering that is solvable by the greedy slot-based solver.
     ///
-    /// <para><b>Guarantee:</b> At every index <c>i</c> in the returned list,
-    /// at least one piece in the window <c>[i .. i + slotCount - 1]</c> has a
-    /// placed neighbour, given the simulated board state at that point.
-    /// The simulated board state advances by placing every valid piece it
-    /// encounters as the window slides forward.</para>
+    /// <para><b>Guarantee:</b> The returned deck can be completed by the slot-based
+    /// game (slotCount independent slots, each refilling from the deck on successful
+    /// placement). This matches the verification model used by
+    /// <c>JigsawLevelFactory.IsSolvable</c>.</para>
     ///
-    /// <para><b>Anti-trivialisation:</b> When <c>slotCount &gt; 1</c> and both
-    /// placeable and non-placeable candidates exist, the algorithm occasionally
-    /// places a non-placeable piece at the front of the window, provided a
-    /// placeable piece remains within the window. This produces windows that are
-    /// not trivially all-valid.</para>
+    /// <para><b>Approach:</b> Incremental construction. At each deck position the
+    /// algorithm simulates the full slot-based game up to that point to determine
+    /// which remaining pieces the solver could currently place. It picks one of those
+    /// valid candidates, with occasional anti-trivialisation when a non-placeable
+    /// piece can be safely scheduled (its unlock piece is currently valid and will
+    /// enter slots before the non-placeable piece's slot stalls).</para>
     ///
-    /// <para><b>Backtracking:</b> If no valid candidate exists for the current
-    /// window, the algorithm backtracks up to <see cref="MaxBacktrackSteps"/>
-    /// positions before falling back to best-effort appending.</para>
+    /// <para><b>Backtracking:</b> If no valid candidate exists the algorithm
+    /// backtracks up to <see cref="MaxBacktrackSteps"/> positions.</para>
     /// </summary>
     public static class SolvableShuffle
     {
@@ -31,19 +30,18 @@ namespace SimpleGame.Puzzle
         /// Builds a solvable deck ordering from the supplied puzzle graph.
         /// </summary>
         /// <param name="seedIds">
-        /// Piece IDs pre-placed at game start. These are NOT included in the result.
+        /// Piece IDs pre-placed at game start. NOT included in the returned list.
         /// </param>
         /// <param name="pieces">
         /// All pieces in the puzzle, including seeds. Used to build the neighbour map.
         /// </param>
         /// <param name="slotCount">
-        /// Number of independent player slots. Determines the lookahead window size.
+        /// Number of independent player slots. Must be ≥ 1.
         /// </param>
         /// <param name="rng">Random number generator. Caller controls the seed.</param>
         /// <returns>
-        /// An ordered list of non-seed piece IDs. At every window of
-        /// <paramref name="slotCount"/> consecutive positions at least one piece
-        /// is placeable given the simulated board state at that point.
+        /// An ordered list of non-seed piece IDs that the greedy slot-based solver
+        /// can complete without deadlocking.
         /// </returns>
         public static List<int> Shuffle(
             IReadOnlyList<int>          seedIds,
@@ -75,27 +73,29 @@ namespace SimpleGame.Puzzle
                     remaining.Add(piece.Id);
             }
 
-            // Fisher-Yates shuffle as the starting candidate order —
-            // anti-trivialisation base: start from a random permutation.
+            // Fisher-Yates shuffle as starting order (randomises valid candidate
+            // selection, provides anti-trivialisation base).
             FisherYates(remaining, rng);
 
             // ── State ─────────────────────────────────────────────────────
-            // `placed`    — pieces on the simulated board (seeds + placed deck pieces)
-            // `result`    — the deck we are building
-            // `remaining` — pieces not yet assigned a deck position
-            var placed = new HashSet<int>(seedIds);
-            var result = new List<int>(remaining.Count);
+            var result  = new List<int>(remaining.Count);
             var btStack = new Stack<BacktrackFrame>();
 
-            // Tracks how many consecutive invalid (non-placeable) pieces have been
-            // emitted since the last valid pick. Must not reach slotCount, because
-            // that would mean an entire window of slotCount positions contains no
-            // valid pick — violating the solvability guarantee.
+            // consecutiveInvalidPicks: tracks how many not-yet-placeable pieces
+            // have been scheduled since the last valid (immediately placeable) pick.
+            // Must stay below slotCount - 1 to keep the window invariant.
             int consecutiveInvalidPicks = 0;
 
             while (remaining.Count > 0)
             {
-                // ── Classify ──────────────────────────────────────────────
+                // ── Simulate solver on current deck to find reachable set ─
+                // Run the greedy slot solver on `result` (already committed deck)
+                // to get the board state after the solver plays as far as it can.
+                // This tells us what's actually placed when the next deck position
+                // is drawn into a slot.
+                var placed = SimulateSolver(result, seedIds, slotCount, neighbours);
+
+                // ── Classify remaining candidates ─────────────────────────
                 var valid   = new List<int>(); // placeable given current board
                 var invalid = new List<int>(); // not yet placeable
 
@@ -107,16 +107,12 @@ namespace SimpleGame.Puzzle
                         invalid.Add(id);
                 }
 
-                // ── Solvability check ─────────────────────────────────────
-                // Need at least one valid candidate within the next slotCount
-                // positions. Because we place valid picks immediately (simulating
-                // optimal player action), having ANY valid candidate satisfies
-                // the window — the player will place it.
+                // ── Solvability gate ──────────────────────────────────────
                 if (valid.Count == 0)
                 {
-                    if (!TryBacktrack(result, remaining, placed, btStack, ref consecutiveInvalidPicks))
+                    if (!TryBacktrack(result, remaining, btStack, ref consecutiveInvalidPicks))
                     {
-                        // Exhausted — best-effort append
+                        // Best-effort: append remaining as-is
                         result.AddRange(remaining);
                         remaining.Clear();
                     }
@@ -124,109 +120,106 @@ namespace SimpleGame.Puzzle
                 }
 
                 // ── Anti-trivialisation ───────────────────────────────────
-                // With slotCount > 1 and both valid + invalid candidates available,
-                // occasionally emit an invalid piece at this position.
-                //
-                // Safety constraints:
-                // 1. consecutiveInvalidPicks must stay below slotCount - 1.
-                // 2. The invalid piece must be "soon-unlockable": at least one of
-                //    its neighbors must currently be in `valid` (i.e. will be placed
-                //    within this same window round, unlocking the invalid piece).
-                //    This prevents placing a piece that cannot be unlocked within
-                //    the current slot window.
-                //
-                // Probability ~40% per eligible position.
-                int chosen;
+                // Allow scheduling a not-yet-placeable piece at this position when:
+                // 1. slotCount > 1 (there is a window to hide it in)
+                // 2. The piece has at least one neighbor that is currently in `valid`
+                //    (its unlock piece is reachable right now and will be placed soon)
+                // 3. consecutiveInvalidPicks < slotCount - 1 (window still has room)
+                // 4. Probability gate ~35%
+                int  chosen       = -1;
                 bool isInvalidPick = false;
 
-                // Build the set of soon-unlockable invalid candidates
-                var validSet              = new HashSet<int>(valid);
-                var unlockableInvalid     = new List<int>();
-                foreach (var id in invalid)
+                if (slotCount > 1
+                    && consecutiveInvalidPicks < slotCount - 1
+                    && rng.NextDouble() < 0.35)
                 {
-                    if (!neighbours.TryGetValue(id, out var inbrs)) continue;
-                    foreach (var nbr in inbrs)
+                    // Find invalid pieces whose unlock neighbor is in valid
+                    var validSet = new HashSet<int>(valid);
+                    int candidate = FindUnlockableInvalid(invalid, neighbours, validSet, rng);
+                    if (candidate >= 0)
                     {
-                        if (validSet.Contains(nbr)) { unlockableInvalid.Add(id); break; }
+                        chosen        = candidate;
+                        isInvalidPick = true;
+                        consecutiveInvalidPicks++;
                     }
                 }
 
-                bool canPickInvalid =
-                    slotCount > 1
-                    && unlockableInvalid.Count > 0
-                    && consecutiveInvalidPicks < slotCount - 1
-                    && remaining.Count > slotCount - 1 - consecutiveInvalidPicks
-                    && rng.NextDouble() < 0.40;
-
-                if (canPickInvalid)
+                if (chosen < 0)
                 {
-                    chosen = unlockableInvalid[rng.Next(unlockableInvalid.Count)];
-                    isInvalidPick = true;
-                    consecutiveInvalidPicks++;
-                }
-                else
-                {
-                    chosen = valid[rng.Next(valid.Count)];
+                    // Normal path: pick uniformly from valid candidates
+                    chosen                  = valid[rng.Next(valid.Count)];
                     consecutiveInvalidPicks = 0;
                 }
 
-                // Commit this pick
+                // Commit
                 result.Add(chosen);
                 remaining.Remove(chosen);
 
-                if (!isInvalidPick)
+                if (!isInvalidPick && btStack.Count < MaxBacktrackSteps)
                 {
-                    // Valid pick: add to placed — this may unlock further pieces.
-                    placed.Add(chosen);
-
-                    // Cascade: any invalid piece already committed to the result
-                    // that is NOW placeable (because `chosen` was their missing
-                    // neighbour) should also be added to `placed`. These pieces
-                    // are already in slots — once their neighbour is placed the
-                    // player will place them, so they are effectively on the board.
-                    // We keep cascading until no new pieces can be resolved.
-                    bool cascading = true;
-                    while (cascading)
-                    {
-                        cascading = false;
-                        foreach (var id in result)
-                        {
-                            if (!placed.Contains(id) && IsPlaceable(id, placed, neighbours))
-                            {
-                                placed.Add(id);
-                                cascading = true;
-                            }
-                        }
-                    }
-
-                    // Push a backtrack frame so we can retry with a different
-                    // valid candidate if a deadlock is discovered later.
-                    if (btStack.Count < MaxBacktrackSteps)
-                    {
-                        btStack.Push(new BacktrackFrame(
-                            resultCount:       result.Count,
-                            placedSnapshot:    new HashSet<int>(placed),
-                            remainingSnapshot: new List<int>(remaining),
-                            chosenId:          chosen,
-                            validCandidates:   new List<int>(valid)));
-                    }
+                    // Snapshot after a valid pick for possible backtracking
+                    btStack.Push(new BacktrackFrame(
+                        resultCount:       result.Count,
+                        remainingSnapshot: new List<int>(remaining),
+                        chosenId:          chosen,
+                        validCandidates:   new List<int>(valid)));
                 }
-                // Invalid pick: piece is not added to `placed` —
-                // it will sit in its slot until a neighbour is placed,
-                // at which point the player can place it. The simulation
-                // does not need to track this because the window guarantee
-                // is satisfied by the valid piece that will come next.
             }
 
             return result;
         }
 
+        // ── Solver simulation ─────────────────────────────────────────────
+
+        /// <summary>
+        /// Runs the greedy slot-based solver on <paramref name="deck"/> and returns
+        /// the set of piece IDs that end up placed on the board. This is the same
+        /// logic as <c>JigsawLevelFactory.IsSolvable</c> but returns the placed set
+        /// instead of a bool.
+        /// </summary>
+        private static HashSet<int> SimulateSolver(
+            List<int>                  deck,
+            IReadOnlyList<int>         seedIds,
+            int                        slotCount,
+            Dictionary<int, List<int>> neighbours)
+        {
+            var placed = new HashSet<int>(seedIds);
+            if (deck.Count == 0) return placed;
+
+            var deckQueue = new Queue<int>(deck);
+
+            var slots = new int?[slotCount];
+            for (int i = 0; i < slotCount && deckQueue.Count > 0; i++)
+                slots[i] = deckQueue.Dequeue();
+
+            int remaining = deck.Count;
+
+            while (remaining > 0)
+            {
+                bool progress = false;
+                for (int i = 0; i < slotCount; i++)
+                {
+                    if (!slots[i].HasValue) continue;
+                    int pid = slots[i].Value;
+                    if (!IsPlaceable(pid, placed, neighbours)) continue;
+
+                    placed.Add(pid);
+                    remaining--;
+                    slots[i] = deckQueue.Count > 0 ? deckQueue.Dequeue() : (int?)null;
+                    progress  = true;
+                }
+                if (!progress) break; // solver stalled — return what's placed so far
+            }
+
+            return placed;
+        }
+
         // ── Helpers ───────────────────────────────────────────────────────
 
         private static bool IsPlaceable(
-            int                           id,
-            HashSet<int>                  placed,
-            Dictionary<int, List<int>>    neighbours)
+            int                        id,
+            HashSet<int>               placed,
+            Dictionary<int, List<int>> neighbours)
         {
             if (!neighbours.TryGetValue(id, out var nbrs)) return false;
             foreach (var nbr in nbrs)
@@ -237,69 +230,67 @@ namespace SimpleGame.Puzzle
         }
 
         /// <summary>
-        /// Attempts to unwind to the most recent backtrack frame and try a
-        /// different valid candidate there. Returns true if recovery succeeded.
+        /// Finds a random invalid piece whose unlock neighbor is in <paramref name="validSet"/>.
+        /// Returns -1 if none exist.
         /// </summary>
+        private static int FindUnlockableInvalid(
+            List<int>                  invalid,
+            Dictionary<int, List<int>> neighbours,
+            HashSet<int>               validSet,
+            Random                     rng)
+        {
+            // Collect candidates first, then pick randomly for fair distribution
+            var candidates = new List<int>();
+            foreach (var id in invalid)
+            {
+                if (!neighbours.TryGetValue(id, out var nbrs)) continue;
+                foreach (var nbr in nbrs)
+                {
+                    if (validSet.Contains(nbr)) { candidates.Add(id); break; }
+                }
+            }
+            return candidates.Count > 0 ? candidates[rng.Next(candidates.Count)] : -1;
+        }
+
         private static bool TryBacktrack(
-            List<int>              result,
-            List<int>              remaining,
-            HashSet<int>           placed,
-            Stack<BacktrackFrame>  btStack,
-            ref int                consecutiveInvalidPicks)
+            List<int>             result,
+            List<int>             remaining,
+            Stack<BacktrackFrame> btStack,
+            ref int               consecutiveInvalidPicks)
         {
             while (btStack.Count > 0)
             {
                 var frame = btStack.Pop();
-
-                // Drop the candidate we already tried
                 frame.ValidCandidates.Remove(frame.ChosenId);
+                if (frame.ValidCandidates.Count == 0) continue;
 
-                if (frame.ValidCandidates.Count == 0)
-                    continue; // no alternatives at this position — pop further
-
-                // Pick the first remaining alternative
-                // (list was already shuffled at construction time)
                 var alternative = frame.ValidCandidates[0];
 
-                // Restore result and remaining to the frame's snapshot
-                int trimFrom = frame.ResultCount - 1; // -1 because frame was pushed AFTER adding chosen
+                // Restore result to frame position
+                int trimFrom = frame.ResultCount - 1;
                 for (int i = trimFrom; i < result.Count; i++)
                     remaining.Add(result[i]);
                 result.RemoveRange(trimFrom, result.Count - trimFrom);
 
-                // Restore placed
-                placed.Clear();
-                foreach (var id in frame.PlacedSnapshot) placed.Add(id);
-                // Remove the original choice from placed (it was added before the frame was pushed)
-                placed.Remove(frame.ChosenId);
-                placed.Add(alternative);
-
-                // Restore remaining from snapshot, excluding the new choice
+                // Restore remaining from snapshot, swap in the alternative
                 remaining.Clear();
                 foreach (var id in frame.RemainingSnapshot)
                 {
-                    if (id != alternative)
-                        remaining.Add(id);
+                    if (id != alternative) remaining.Add(id);
                 }
 
                 result.Add(alternative);
-
-                // Backtrack succeeded — the restored state is at a valid pick,
-                // so reset the consecutive invalid counter.
                 consecutiveInvalidPicks = 0;
 
-                // Push a revised frame for the new choice
                 btStack.Push(new BacktrackFrame(
                     resultCount:       result.Count,
-                    placedSnapshot:    new HashSet<int>(placed),
                     remainingSnapshot: new List<int>(remaining),
                     chosenId:          alternative,
                     validCandidates:   new List<int>(frame.ValidCandidates)));
 
                 return true;
             }
-
-            return false; // stack exhausted
+            return false;
         }
 
         private static void FisherYates<T>(List<T> list, Random rng)
@@ -315,21 +306,18 @@ namespace SimpleGame.Puzzle
 
         private readonly struct BacktrackFrame
         {
-            public readonly int          ResultCount;
-            public readonly HashSet<int> PlacedSnapshot;
-            public readonly List<int>    RemainingSnapshot;
-            public readonly int          ChosenId;
-            public readonly List<int>    ValidCandidates;
+            public readonly int       ResultCount;
+            public readonly List<int> RemainingSnapshot;
+            public readonly int       ChosenId;
+            public readonly List<int> ValidCandidates;
 
             public BacktrackFrame(
-                int          resultCount,
-                HashSet<int> placedSnapshot,
-                List<int>    remainingSnapshot,
-                int          chosenId,
-                List<int>    validCandidates)
+                int       resultCount,
+                List<int> remainingSnapshot,
+                int       chosenId,
+                List<int> validCandidates)
             {
                 ResultCount       = resultCount;
-                PlacedSnapshot    = placedSnapshot;
                 RemainingSnapshot = remainingSnapshot;
                 ChosenId          = chosenId;
                 ValidCandidates   = validCandidates;

@@ -288,6 +288,62 @@ namespace SimpleGame.Tests.Puzzle
                 "(non-trivial: piece 3 placed before piece 2 is available in the other slot).");
         }
 
+        // ── Large grid (regression for IsSolvable consistency) ──────────
+
+        /// <summary>
+        /// Builds a grid-topology graph matching a rows×cols jigsaw grid and
+        /// returns pieces with correct adjacency (up/down/left/right neighbors).
+        /// </summary>
+        private static IReadOnlyList<IPuzzlePiece> GridGraph(int rows, int cols)
+        {
+            var pieces = new List<IPuzzlePiece>(rows * cols);
+            for (int r = 0; r < rows; r++)
+            {
+                for (int c = 0; c < cols; c++)
+                {
+                    int id   = r * cols + c;
+                    var nbrs = new List<int>();
+                    if (r > 0)        nbrs.Add((r - 1) * cols + c); // up
+                    if (r < rows - 1) nbrs.Add((r + 1) * cols + c); // down
+                    if (c > 0)        nbrs.Add(r * cols + (c - 1)); // left
+                    if (c < cols - 1) nbrs.Add(r * cols + (c + 1)); // right
+                    pieces.Add(new PuzzlePiece(id, nbrs));
+                }
+            }
+            return pieces;
+        }
+
+        [Test]
+        public void GridGraph_9x9_SlotCount3_AlwaysSolvable_10Seeds()
+        {
+            // Regression: SolvableShuffle must produce decks that pass the same
+            // greedy slot-based solver used by JigsawLevelFactory.IsSolvable.
+            // Runs 10 different RNG seeds and asserts no deadlock on any of them.
+            for (int seed = 0; seed < 10; seed++)
+            {
+                var pieces = GridGraph(9, 9);       // 81 pieces
+                var result = SolvableShuffle.Shuffle(
+                    new[] { 0 }, pieces, slotCount: 3, new Random(seed));
+
+                Assert.AreEqual(80, result.Count, $"Seed {seed}: expected 80 non-seed pieces.");
+                AssertWindowInvariant(result, new[] { 0 }, pieces, slotCount: 3);
+            }
+        }
+
+        [Test]
+        public void GridGraph_4x4_SlotCount3_AlwaysSolvable_20Seeds()
+        {
+            for (int seed = 0; seed < 20; seed++)
+            {
+                var pieces = GridGraph(4, 4);       // 16 pieces
+                var result = SolvableShuffle.Shuffle(
+                    new[] { 0 }, pieces, slotCount: 3, new Random(seed));
+
+                Assert.AreEqual(15, result.Count, $"Seed {seed}: expected 15 non-seed pieces.");
+                AssertWindowInvariant(result, new[] { 0 }, pieces, slotCount: 3);
+            }
+        }
+
         // ── Edge cases ────────────────────────────────────────────────────
 
         [Test]
