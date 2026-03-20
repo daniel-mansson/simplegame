@@ -562,10 +562,10 @@ namespace SimpleGame.Game.InGame
             // To render at slotSize world units: localScale = slotSize * cols / boardSize.
             float normSlotScale = boardSize > 0.0001f ? slotSize * gridCols / boardSize : slotSize;
 
-            // Spacing: 55% of slotSize between centres (slight overlap).
-            float slotSpacing    = slotSize * 0.55f;
+            // Spacing: evenly distribute centres across 92% of screen width.
+            float slotSpacing    = slotCount > 1 ? (orthoW * 0.92f) / (slotCount - 1 + 1) : 0f;
             float totalTrayWidth = slotSpacing * (slotCount - 1) + slotSize;
-            float trayStartX     = -totalTrayWidth * 0.5f + slotSize * 0.5f;
+            float trayStartX     = -slotSpacing * (slotCount - 1) * 0.5f;
             float staggerY       = slotSize * 0.18f;
 
             _traySlotPositions = new Vector3[slotCount];
