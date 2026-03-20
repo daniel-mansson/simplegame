@@ -49,6 +49,8 @@ namespace SimpleGame.Game.Boot
 
         private async UniTaskVoid Start()
         {
+            Application.targetFrameRate = 60;
+            QualitySettings.vSyncCount = 0;
             Debug.Log("[GameBootstrapper] Boot sequence started.");
 
             // --- Build services ---
