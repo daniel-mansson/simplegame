@@ -548,7 +548,8 @@ namespace SimpleGame.Game.InGame
                 if (pid == seedPieceId)
                     box.enabled = false;
                 else
-                    go.AddComponent<PieceTapHandler>().Initialize(pid, _inGameView);
+                    go.AddComponent<PieceTapHandler>().Initialize(pid, _inGameView,
+                        isInputBlocked: () => _popupManager != null && _popupManager.HasActivePopup);
             }
 
             // ── Tray: slotCount slots — as large as tray height allows ──────
