@@ -260,10 +260,8 @@ namespace SimpleGame.Tests.Puzzle
         public void AntiTrivialisation_NotAllWindowsAllValid_DiamondSlotCount2()
         {
             // Diamond with slotCount=2: result = [x, y, z] where x,y,z are 1,2,3.
-            // If all windows were trivially all-valid (both slots always hold a valid piece),
-            // then result[0] and result[1] would always both be from {1,2}.
-            // Anti-trivialisation should sometimes place piece 3 early (at result[1])
-            // when piece 1 or 2 is at result[0]. Run many seeds to find this.
+            // Anti-trivialisation emits paired (invalid, valid): piece 3 first,
+            // then its unlock neighbor (piece 1 or 2). Run many seeds to find this.
             var pieces = DiamondGraph();
             bool foundNonTrivialWindow = false;
 
@@ -272,10 +270,10 @@ namespace SimpleGame.Tests.Puzzle
                 var result = SolvableShuffle.Shuffle(new[] { 0 }, pieces, slotCount: 2, new Random(seed));
                 if (result.Count >= 2)
                 {
-                    // result[0] is in {1,2}, result[1] is piece 3 → non-trivial
-                    bool firstIsValid   = result[0] == 1 || result[0] == 2;
-                    bool secondIsPiece3 = result[1] == 3;
-                    if (firstIsValid && secondIsPiece3)
+                    // Paired emission: result[0]=3 (invalid), result[1]=1or2 (unlock)
+                    bool firstIsPiece3   = result[0] == 3;
+                    bool secondIsUnlock  = result[1] == 1 || result[1] == 2;
+                    if (firstIsPiece3 && secondIsUnlock)
                     {
                         foundNonTrivialWindow = true;
                         break;
@@ -284,8 +282,7 @@ namespace SimpleGame.Tests.Puzzle
             }
 
             Assert.IsTrue(foundNonTrivialWindow,
-                "Expected at least one seed to produce a window where result[1]==3 " +
-                "(non-trivial: piece 3 placed before piece 2 is available in the other slot).");
+                "Expected at least one seed to produce a paired (invalid=3, valid=1or2) window.");
         }
 
         // ── Large grid (regression for IsSolvable consistency) ──────────

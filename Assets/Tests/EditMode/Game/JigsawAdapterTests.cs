@@ -172,6 +172,8 @@ namespace SimpleGame.Tests.Game
             }
         }
 
+        [Test]
+        public void BuildSolvable_2x2_ReturnsSolvableResult()
         {
             // Any seed piece — let factory choose randomly
             var result = JigsawLevelFactory.BuildSolvable(_config2x2, slotCount: 1, initialSeed: 99);
