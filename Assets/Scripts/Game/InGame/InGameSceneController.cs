@@ -272,7 +272,7 @@ namespace SimpleGame.Game.InGame
                     UnityEngine.Debug.Log($"[InGameSceneController] Level {_session.CurrentLevelId} seed={result.Seed} grid={gridSize.Rows}x{gridSize.Cols} slots={slotCount}");
                     if (_session.TotalPieces != result.PieceList.Count)
                         _session.ResetForNewGame(_session.CurrentLevelId, result.PieceList.Count);
-                    SpawnPieces(result.RawBoard, result.SeedIds[0], slotCount, result.DeckOrder);
+                    SpawnPieces(result.RawBoard, result.SeedIds[0], slotCount, result.DeckOrder, gridSize.Cols);
                     return new SimpleGame.Puzzle.PuzzleModel(result.PieceList, result.SeedIds, result.DeckOrder, slotCount);
                 };
             }
@@ -481,7 +481,7 @@ namespace SimpleGame.Game.InGame
         /// Spawns piece GameObjects using PieceObjectFactory and attaches PieceTapHandler to each.
         /// Called once at scene start when a GridLayoutConfig is assigned.
         /// </summary>
-        private void SpawnPieces(SimpleJigsaw.PuzzleBoard rawBoard, int seedPieceId, int slotCount, System.Collections.Generic.IReadOnlyList<int> deckOrder)
+        private void SpawnPieces(SimpleJigsaw.PuzzleBoard rawBoard, int seedPieceId, int slotCount, System.Collections.Generic.IReadOnlyList<int> deckOrder, int gridCols)
         {
             if (_inGameView == null) return;
 
@@ -557,23 +557,12 @@ namespace SimpleGame.Game.InGame
             float slotSizeByWidth  = (orthoW * 0.96f) / slotCount;
             float slotSize = Mathf.Min(slotSizeByHeight, slotSizeByWidth);
 
-            // Compute normalised scale: pieces from large grids have smaller meshes in [0,1]² space.
-            // Each piece mesh is roughly 1/cols × 1/rows in local units; parent is scaled to boardSize.
-            // Sample the first non-seed piece's mesh bounds to get the true world extent.
-            float normSlotScale = slotSize; // fallback
-            foreach (var kv in _pieceObjects)
-            {
-                if (kv.Key == seedPieceId) continue;
-                var sampleMesh = kv.Value.GetComponent<MeshFilter>()?.sharedMesh;
-                if (sampleMesh == null) continue;
-                // mesh.bounds.size is in local space (1/cols units); multiply by boardSize = world extent
-                float extent = Mathf.Max(sampleMesh.bounds.size.x, sampleMesh.bounds.size.y) * boardSize;
-                if (extent > 0.0001f) normSlotScale = slotSize / extent;
-                break;
-            }
+            // Each piece mesh is 1/cols wide in local [0,1]² space; parent is scaled to boardSize.
+            // After unparenting, localScale=1 → boardSize/cols world units wide.
+            // To render at slotSize world units: localScale = slotSize * cols / boardSize.
+            float normSlotScale = boardSize > 0.0001f ? slotSize * gridCols / boardSize : slotSize;
 
-            // Spacing: tight pack with 45% of rendered piece size between centres.
-            // staggerY in rendered units (slotSize), not scale units.
+            // Spacing: 55% of slotSize between centres (slight overlap).
             float slotSpacing    = slotSize * 0.55f;
             float totalTrayWidth = slotSpacing * (slotCount - 1) + slotSize;
             float trayStartX     = -totalTrayWidth * 0.5f + slotSize * 0.5f;
