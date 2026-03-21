@@ -781,25 +781,18 @@ namespace SimpleGame.Game.InGame
             }
             _slotButtons = null;
 
-            // Find or create the slot button canvas (Screen Space Overlay)
+            // Always create a dedicated overlay canvas for slot buttons.
+            // Never reuse an existing canvas — FindObjectOfType<Canvas>() is unreliable
+            // with multiple scenes loaded (Boot scene's InputBlocker canvas has a CanvasGroup
+            // whose blocksRaycasts=false causes Graphic.Raycast() to reject all child Graphics).
             if (_slotButtonCanvas == null)
             {
-                // Reuse the existing Canvas in the scene if it is Screen Space Overlay
-                var existingCanvas = FindObjectOfType<Canvas>();
-                if (existingCanvas != null && existingCanvas.renderMode == RenderMode.ScreenSpaceOverlay)
-                {
-                    _slotButtonCanvas = existingCanvas;
-                }
-                else
-                {
-                    // Create a dedicated overlay canvas for slot buttons
-                    var canvasGo = new GameObject("SlotButtonCanvas");
-                    _slotButtonCanvas = canvasGo.AddComponent<Canvas>();
-                    _slotButtonCanvas.renderMode  = RenderMode.ScreenSpaceOverlay;
-                    _slotButtonCanvas.sortingOrder = 1;
-                    canvasGo.AddComponent<UnityEngine.UI.CanvasScaler>();
-                    canvasGo.AddComponent<UnityEngine.UI.GraphicRaycaster>();
-                }
+                var canvasGo = new GameObject("SlotButtonCanvas");
+                _slotButtonCanvas = canvasGo.AddComponent<Canvas>();
+                _slotButtonCanvas.renderMode  = RenderMode.ScreenSpaceOverlay;
+                _slotButtonCanvas.sortingOrder = 10; // above InGame HUD (0), below InputBlocker (100)
+                canvasGo.AddComponent<UnityEngine.UI.CanvasScaler>();
+                canvasGo.AddComponent<UnityEngine.UI.GraphicRaycaster>();
             }
 
             _slotButtons = new UnityEngine.UI.Button[slotCount];
