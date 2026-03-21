@@ -1004,12 +1004,112 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Validation: unmapped
 - Notes: Factory output format may change from JigsawBuildResult{Level, RawBoard} to a richer struct that includes the flat piece list, seeds, and deck as PuzzleModel expects.
 
+### R110 — Piece sizing: longest edge = 1 unit
+- Class: core-capability
+- Status: active
+- Description: GridPlanner produces cells where the longest edge equals 1 world unit. For a 4×2 grid: cellW=0.5, cellH=1. Board extent = max(rows,cols) in each axis.
+- Why it matters: Eliminates complex downstream scaling math; gives all consumers a predictable coordinate contract.
+- Source: user
+- Primary owning slice: M014/S01
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Formula: longestNorm = Max(1/cols, 1/rows); unitScale = 1/longestNorm; cellW = unitScale/cols; cellH = unitScale/rows.
+
+### R111 — Board rendered in world space at natural scale
+- Class: core-capability
+- Status: active
+- Description: The puzzle board parent transform has localScale = (1,1,1). No scaling applied to fit screen — the camera frames the board instead.
+- Why it matters: Required for camera pan UX; eliminates scaling compensation in InGameSceneController.
+- Source: user
+- Primary owning slice: M014/S02
+- Supporting slices: M014/S01
+- Validation: unmapped
+- Notes: InGameSceneController.SpawnPieces boardSize scaling math is removed entirely.
+
+### R112 — Hint surface shown behind pieces on board
+- Class: primary-user-loop
+- Status: active
+- Description: HintSurfaceBuilder output is rendered as a world-space GameObject parented to the board, behind all pieces (z > 0).
+- Why it matters: Players need visual guides showing where pieces belong — standard jigsaw UX.
+- Source: user
+- Primary owning slice: M014/S02
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Thickness ~0.02f (unit-scale). Styling deferred to R116.
+
+### R113 — Camera pans over board by dragging
+- Class: primary-user-loop
+- Status: active
+- Description: An orthographic camera can be panned by pointer-drag on the board. Drag only fires when pointer-down hits no UGUI element.
+- Why it matters: Core mobile jigsaw navigation — board is larger than screen on higher levels.
+- Source: user
+- Primary owning slice: M014/S02
+- Supporting slices: M014/S03
+- Validation: unmapped
+- Notes: CameraController MonoBehaviour on Main Camera. No bounds clamping for now.
+
+### R114 — Tray slot pieces are 3D GameObjects with tweens intact
+- Class: primary-user-loop
+- Status: active
+- Description: Slot pieces remain 3D world-space GameObjects. SlideToSlot, PlaceOnBoard, and ShakePiece tweens are preserved and function correctly.
+- Why it matters: The tween animations are part of the game feel; removing them degrades the experience.
+- Source: user
+- Primary owning slice: M014/S03
+- Supporting slices: none
+- Validation: unmapped
+- Notes: PieceTapHandler removed from tray pieces (replaced by UGUI buttons); tween logic in PieceTweener unchanged.
+
+### R115 — Slot input via UGUI Buttons
+- Class: primary-user-loop
+- Status: active
+- Description: Each tray slot has a UGUI Button overlay. Pointer-up-inside fires OnTapPiece. Standard UGUI cancel-on-exit behaviour applies.
+- Why it matters: Cleanly separates slot tap from board drag gesture; UGUI naturally blocks board pan raycasts.
+- Source: user
+- Primary owning slice: M014/S03
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Screen Space Overlay Canvas. Buttons repositioned each frame to match 3D slot piece screen positions.
+
+### R116 — Tray pieces and buttons follow camera each frame
+- Class: primary-user-loop
+- Status: active
+- Description: In LateUpdate, tray 3D slot pieces are repositioned relative to camera bottom. UGUI slot buttons are repositioned via world-to-screen projection to match.
+- Why it matters: Tray must remain at screen bottom regardless of where the camera is panned on the board.
+- Source: user
+- Primary owning slice: M014/S03
+- Supporting slices: none
+- Validation: unmapped
+- Notes: none
+
+### R117 — Board drag and slot tap do not conflict
+- Class: quality-attribute
+- Status: active
+- Description: A drag starting on a slot button triggers piece placement (not camera pan). A drag starting on the board triggers camera pan (not slot placement).
+- Why it matters: Essential for usable mobile controls — conflated gestures break the UX.
+- Source: inferred
+- Primary owning slice: M014/S02
+- Supporting slices: M014/S03
+- Validation: unmapped
+- Notes: Achieved naturally by UGUI Screen Space Overlay blocking physics raycasts.
+
+## Deferred
+
+### R118 — Hint surface styling / material
+- Class: differentiator
+- Status: deferred
+- Description: Custom material, opacity, color, or shader for the hint surface overlay.
+- Why it matters: Visual polish — the default material is functional but not stylish.
+- Source: user
+- Primary owning slice: none
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Deferred by user. Default material sufficient for M014.
+
 ## Coverage Summary
 
-- Total requirements: 110
-- Active: 34
+- Total requirements: 118
+- Active: 42
 - Validated: 53
-- Deferred: 18
+- Deferred: 19
 - Out of scope: 4
-- Unmapped active requirements: 8 (R060, R091–R097 — all owned by M011) + 9 new M012 requirements mapped to slices
-- Note: R101–R109 added for M012 PuzzleModel refactor.
+- Note: R110–R118 added for M014 puzzle controls & layout redesign.
