@@ -175,8 +175,10 @@ namespace SimpleGame.Game.InGame
 
 
         /// <summary>
-        /// Each frame: reposition tray slot pieces and UGUI buttons to camera-bottom.
-        /// Slot pieces follow camera pan so the tray stays at the screen bottom.
+        /// Each frame: reposition tray slot pieces and UGUI buttons relative to camera-bottom.
+        /// Slot pieces are placed at localScale=1 (they are already 1 world unit).
+        /// Horizontal spacing shrinks to fit screen width if there are many slots.
+        /// Button anchoredPosition is in canvas units (screen pixels / canvas.scaleFactor).
         /// </summary>
         private void LateUpdate()
         {
@@ -195,32 +197,37 @@ namespace SimpleGame.Game.InGame
             float cellH     = _currentGridRows > 0 ? unitScale / _currentGridRows : 1f;
             float cellW     = _currentGridCols > 0 ? unitScale / _currentGridCols : 1f;
 
-            const float trayFraction = 0.28f;
-            float trayH     = orthoH * trayFraction;
-            float trayY     = camY - orthoH * 0.5f + trayH * 0.5f;
-            float slotScale = trayH / cellH;
-
+            // Pieces are 1 world unit at scale 1. Display them at natural size in the tray.
+            // Shrink only if they would not all fit across 92% of screen width.
+            float slotScale  = 1f;
             float slotWorldW = cellW * slotScale;
             float maxByWidth = slotCount > 0 ? (orthoW * 0.92f) / slotCount : orthoW;
             if (slotWorldW > maxByWidth) slotScale = maxByWidth / cellW;
 
-            float slotWorldWFinal = cellW * slotScale;
-            float slotSpacing     = slotCount > 1
-                ? (orthoW * 0.92f - slotWorldWFinal) / (slotCount - 1) + slotWorldWFinal
+            float slotWorldWFinal = cellW  * slotScale;
+            float slotWorldHFinal = cellH  * slotScale;
+            // Tray centre-Y: one half-piece height above the camera bottom edge
+            float trayY = camY - orthoH * 0.5f + slotWorldHFinal * 0.5f + 0.1f;
+
+            // Even spacing across 92% of screen width
+            float totalTrayW  = orthoW * 0.92f;
+            float slotSpacing = slotCount > 1
+                ? (totalTrayW - slotWorldWFinal) / (slotCount - 1)
                 : 0f;
-            float trayStartX      = camX - slotSpacing * (slotCount - 1) * 0.5f;
+            float trayStartX  = camX - (slotSpacing * (slotCount - 1)) * 0.5f;
+
+            // Fetch slot contents once per frame (avoid repeated calls inside loops)
+            var slotContents = _inGameView?.GetSlotContents();
 
             // Update 3D tray piece positions and scales each frame
             for (int i = 0; i < slotCount; i++)
             {
-                float x = trayStartX + i * slotSpacing;
+                float x      = trayStartX + i * slotSpacing;
                 var newPos   = new Vector3(x, trayY, -2f);
                 var newScale = Vector3.one * slotScale;
                 _traySlotPositions[i] = newPos;
                 _traySlotScales[i]    = newScale;
 
-                // Move the 3D piece currently in this slot
-                var slotContents = _inGameView?.GetSlotContents();
                 if (slotContents != null && i < slotContents.Length && slotContents[i].HasValue)
                 {
                     int pid = slotContents[i].Value;
@@ -233,31 +240,35 @@ namespace SimpleGame.Game.InGame
                 }
             }
 
-            // Reposition UGUI slot buttons to match 3D slot world positions
-            if (_slotButtons != null && cam != null)
+            // Reposition UGUI slot buttons to match 3D slot world positions.
+            // anchoredPosition must be in canvas units, not screen pixels.
+            // With ScreenSpaceOverlay + ScaleWithScreenSize, canvas units = screen pixels / scaleFactor.
+            if (_slotButtons == null) return;
+
+            float canvasScale = _slotButtonCanvas != null ? _slotButtonCanvas.scaleFactor : 1f;
+            if (canvasScale < 1e-4f) canvasScale = 1f;
+
+            for (int i = 0; i < _slotButtons.Length && i < slotCount; i++)
             {
-                float slotWorldH = cellH * slotScale;
-                float slotWorldWBtn = cellW * slotScale;
+                var btn = _slotButtons[i];
+                if (btn == null) continue;
 
-                for (int i = 0; i < _slotButtons.Length && i < slotCount; i++)
-                {
-                    var btn = _slotButtons[i];
-                    if (btn == null) continue;
+                var rt = btn.GetComponent<RectTransform>();
 
-                    // Convert 3D slot world position to screen position
-                    Vector3 screenPos = cam.WorldToScreenPoint(_traySlotPositions[i]);
+                // World → screen pixel → canvas unit
+                Vector3 screenPos = cam.WorldToScreenPoint(_traySlotPositions[i]);
+                rt.anchoredPosition = new Vector2(screenPos.x / canvasScale,
+                                                  screenPos.y / canvasScale);
 
-                    // Set button RectTransform position (screen space)
-                    var rt = btn.GetComponent<RectTransform>();
-                    rt.anchoredPosition = new Vector2(screenPos.x, screenPos.y);
+                // Size via projected pixel extents, then convert to canvas units
+                Vector3 rightEdge = cam.WorldToScreenPoint(_traySlotPositions[i] + Vector3.right * slotWorldWFinal * 0.5f);
+                Vector3 leftEdge  = cam.WorldToScreenPoint(_traySlotPositions[i] - Vector3.right * slotWorldWFinal * 0.5f);
+                Vector3 topEdge   = cam.WorldToScreenPoint(_traySlotPositions[i] + Vector3.up    * slotWorldHFinal * 0.5f);
+                Vector3 botEdge   = cam.WorldToScreenPoint(_traySlotPositions[i] - Vector3.up    * slotWorldHFinal * 0.5f);
 
-                    // Size button to match projected slot piece size
-                    float projW = cam.WorldToScreenPoint(_traySlotPositions[i] + Vector3.right   * slotWorldWBtn * 0.5f).x
-                               - cam.WorldToScreenPoint(_traySlotPositions[i] - Vector3.right   * slotWorldWBtn * 0.5f).x;
-                    float projH = cam.WorldToScreenPoint(_traySlotPositions[i] + Vector3.up     * slotWorldH   * 0.5f).y
-                               - cam.WorldToScreenPoint(_traySlotPositions[i] - Vector3.up     * slotWorldH   * 0.5f).y;
-                    rt.sizeDelta = new Vector2(Mathf.Abs(projW), Mathf.Abs(projH));
-                }
+                float pxW = Mathf.Abs(rightEdge.x - leftEdge.x);
+                float pxH = Mathf.Abs(topEdge.y   - botEdge.y);
+                rt.sizeDelta = new Vector2(pxW / canvasScale, pxH / canvasScale);
             }
         }
         /// <summary>
@@ -660,35 +671,31 @@ namespace SimpleGame.Game.InGame
                     Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
             }
 
-            // Tray slot positions -- camera-relative
-            // Slot pieces appear at the bottom of the camera view, following camera pan (S03).
-            // Interim: computed from current camera position at spawn time.
+            // Initial tray slot positions -- same formula as LateUpdate so the
+            // first frame matches subsequent frames without a pop.
             var cam = Camera.main;
             float orthoH = cam != null && cam.orthographic ? cam.orthographicSize * 2f : 10f;
             float orthoW = cam != null ? orthoH * cam.aspect : 18f;
             float camX   = cam != null ? cam.transform.position.x : 0f;
             float camY   = cam != null ? cam.transform.position.y : 0f;
 
-            const float trayFraction = 0.28f;
-            float trayH = orthoH * trayFraction;
-            float trayY = camY - orthoH * 0.5f + trayH * 0.5f;
-
-            // Slot scale: fit the taller cell dimension into trayH.
+            // Pieces are 1 world unit -- display at natural scale, shrink only if too wide.
             float unitScale = Mathf.Max(gridRows, gridCols);
             float cellH     = unitScale / gridRows;
             float cellW     = unitScale / gridCols;
-            float slotScale = trayH / cellH;
-
-            // Clamp so all slots fit screen width
+            float slotScale  = 1f;
             float slotWorldW = cellW * slotScale;
             float maxByWidth = slotCount > 0 ? (orthoW * 0.92f) / slotCount : orthoW;
             if (slotWorldW > maxByWidth) slotScale = maxByWidth / cellW;
 
             float slotWorldWFinal = cellW * slotScale;
-            float slotSpacing     = slotCount > 1
-                ? (orthoW * 0.92f - slotWorldWFinal) / (slotCount - 1) + slotWorldWFinal
+            float slotWorldHFinal = cellH * slotScale;
+            float trayY      = camY - orthoH * 0.5f + slotWorldHFinal * 0.5f + 0.1f;
+            float totalTrayW = orthoW * 0.92f;
+            float slotSpacing = slotCount > 1
+                ? (totalTrayW - slotWorldWFinal) / (slotCount - 1)
                 : 0f;
-            float trayStartX      = camX - slotSpacing * (slotCount - 1) * 0.5f;
+            float trayStartX  = camX - (slotSpacing * (slotCount - 1)) * 0.5f;
 
             _traySlotPositions = new Vector3[slotCount];
             _traySlotScales    = new Vector3[slotCount];
