@@ -1,0 +1,154 @@
+# tools/fastlane/Fastfile
+#
+# Higher-level orchestration lanes.
+# Designed to be extracted to a separate repo as a shared tooling layer.
+# Project-specific lanes in fastlane/Fastfile call into these.
+#
+# These lanes are loaded via `import` from fastlane/Fastfile.
+
+# Resolve the lib dir relative to this file
+TOOLS_LIB = File.expand_path("lib", __dir__)
+
+def load_tools_lib(filename)
+  require File.join(TOOLS_LIB, filename)
+end
+
+load_tools_lib("dry_run")
+load_tools_lib("build_number")
+load_tools_lib("config")
+
+# ---------------------------------------------------------------------------
+# bootstrap_ios
+#
+# Registers the app on App Store Connect via `produce`.
+# Reads config from fastlane/config/app.json.
+# Requires: ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_FILEPATH (for API key auth)
+# Also requires: APPLE_ID (Apple ID email — only needed for produce registration)
+#
+# Options:
+#   dry_run (Boolean) — log intent without calling APIs
+# ---------------------------------------------------------------------------
+lane :bootstrap_ios do |options|
+  dry = options[:dry_run] || false
+  project_root = File.expand_path("../../..", __dir__)
+
+  UI.header("iOS App Registration via produce")
+
+  app_config = Config.load_app(project_root: project_root)
+
+  DryRun.require_env_or_warn!(
+    %w[ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_FILEPATH],
+    context: "bootstrap_ios",
+    dry_run: dry
+  )
+
+  unless dry
+    DryRun.require_env!(%w[APPLE_ID], context: "bootstrap_ios (produce requires Apple ID)")
+  end
+
+  UI.message("App name:    #{app_config['app_name']}")
+  UI.message("Bundle ID:   #{app_config['ios_bundle_id']}")
+  UI.message("Language:    #{app_config['primary_language']}")
+  UI.message("SKU:         #{app_config['sku']}")
+  UI.message("Dry-run:     #{dry}")
+
+  DryRun.with_dry_run(
+    dry_run: dry,
+    name: "produce",
+    description: "Register '#{app_config['app_name']}' (#{app_config['ios_bundle_id']}) on App Store Connect"
+  ) do
+    api_key = app_store_connect_api_key(
+      key_id:       ENV["ASC_KEY_ID"],
+      issuer_id:    ENV["ASC_ISSUER_ID"],
+      key_filepath: ENV["ASC_KEY_FILEPATH"]
+    )
+
+    produce(
+      username:           ENV["APPLE_ID"],
+      app_identifier:     app_config["ios_bundle_id"],
+      app_name:           app_config["app_name"],
+      language:           app_config["primary_language"],
+      sku:                app_config["sku"],
+      team_id:            ENV["APPLE_TEAM_ID"],
+      api_key:            api_key
+    )
+  end
+
+  UI.success("iOS app registration #{'(dry-run) ' if dry}complete.")
+end
+
+# ---------------------------------------------------------------------------
+# bootstrap_android
+#
+# Guides the user through the one-time manual Play Console setup.
+# Google Play API cannot create apps programmatically — this is a hard
+# platform limitation.
+#
+# After the manual step, all uploads are fully automated via android_beta.
+#
+# Options:
+#   dry_run (Boolean) — log intent and skip the confirmation prompt
+# ---------------------------------------------------------------------------
+lane :bootstrap_android do |options|
+  dry = options[:dry_run] || false
+  project_root = File.expand_path("../../..", __dir__)
+
+  app_config = Config.load_app(project_root: project_root)
+  package_name = app_config["android_package_name"]
+
+  UI.header("Android App Bootstrap — Manual Setup Required")
+
+  UI.important("IMPORTANT: Google Play API cannot create new apps programmatically.")
+  UI.important("The following one-time manual steps are required before automation works.")
+  UI.message("")
+  UI.message("Step 1: Go to https://play.google.com/console")
+  UI.message("Step 2: Click 'Create app'")
+  UI.message("  • App name: #{app_config['app_name']}")
+  UI.message("  • Package name: #{package_name}")
+  UI.message("  • Default language: #{app_config['primary_language']}")
+  UI.message("  • App or game: Game")
+  UI.message("  • Free or paid: (your choice)")
+  UI.message("")
+  UI.message("Step 3: Build an APK locally:")
+  UI.message("  bundle exec fastlane android build dry_run:false")
+  UI.message("")
+  UI.message("Step 4: Upload the APK to the Internal Testing track manually.")
+  UI.message("  This is required ONCE to exit Draft status.")
+  UI.message("  Go to: Testing > Internal testing > Create new release")
+  UI.message("")
+  UI.message("Step 5: In the Play Console, go to Setup > API access")
+  UI.message("  • Link to a Google Cloud project")
+  UI.message("  • Create a service account with 'Release manager' permissions")
+  UI.message("  • Download the JSON key to a gitignored path")
+  UI.message("  • Set: export GOOGLE_PLAY_KEY_FILE=/path/to/key.json")
+  UI.message("")
+  UI.message("Step 6: Validate the connection:")
+  UI.message("  bundle exec fastlane run validate_play_store_json_key json_key:$GOOGLE_PLAY_KEY_FILE")
+  UI.message("")
+  UI.message("After these steps, all further uploads are fully automated:")
+  UI.message("  bundle exec fastlane android beta        # upload AAB to internal track")
+  UI.message("  bundle exec fastlane android metadata    # push store listing from files")
+  UI.message("  bundle exec fastlane status              # query current state")
+  UI.message("")
+
+  if dry
+    UI.message("[DRY RUN] Would prompt for confirmation — skipping in dry-run mode.")
+  else
+    confirmed = UI.confirm("Have you completed all manual steps above?")
+    unless confirmed
+      UI.important("Bootstrap paused. Complete the steps above and re-run when ready.")
+      next
+    end
+
+    UI.success("Android bootstrap confirmed. Testing Play Store connection...")
+
+    key_file = ENV["GOOGLE_PLAY_KEY_FILE"]
+    if key_file && File.exist?(key_file)
+      validate_play_store_json_key(json_key: key_file)
+      UI.success("Play Store connection validated successfully.")
+    else
+      UI.error("GOOGLE_PLAY_KEY_FILE is not set or file not found: #{key_file.inspect}")
+      UI.error("Set the env var and re-run: bundle exec fastlane android bootstrap")
+    end
+  end
+end

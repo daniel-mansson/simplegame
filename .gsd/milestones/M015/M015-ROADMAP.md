@@ -56,7 +56,7 @@ This milestone is complete only when all are true:
 
 ## Slices
 
-- [ ] **S01: Foundation & Bootstrap** `risk:high` `depends:[]`
+- [x] **S01: Foundation & Bootstrap** `risk:high` `depends:[]`
   > After this: `fastlane ios register dry_run:true` and `fastlane android bootstrap` run without error; folder structure, Gemfile, Appfile, config files, and tools/ scaffold all exist; dry-run helper wired
 
 - [ ] **S02: Cert & Provisioning** `risk:high` `depends:[S01]`

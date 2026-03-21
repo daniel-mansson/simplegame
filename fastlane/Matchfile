@@ -1,0 +1,25 @@
+# Matchfile — codesigning certificate and provisioning profile management
+# Uses App Store Connect API key auth — no 2FA required.
+# The match git repo stores encrypted certs. MATCH_PASSWORD decrypts them.
+#
+# Required environment variables:
+#   MATCH_GIT_URL       — URL to the private git repo holding certificates
+#   MATCH_PASSWORD      — passphrase for encrypting/decrypting the cert repo
+#   ASC_KEY_ID          — App Store Connect API key ID
+#   ASC_ISSUER_ID       — App Store Connect API issuer ID
+#   ASC_KEY_FILEPATH    — path to the .p8 API key file (gitignored)
+
+git_url(ENV["MATCH_GIT_URL"])
+
+storage_mode("git")
+
+type("development") # default type; override per lane: match(type: "appstore")
+
+app_identifier([
+  ENV["IOS_BUNDLE_ID"] || "com.simplemagicstudios.puzzletap"
+])
+
+username(ENV["APPLE_ID"]) if ENV["APPLE_ID"]
+
+# Use App Store Connect API key instead of Apple ID + 2FA
+api_key_path(ENV["ASC_KEY_FILEPATH"]) if ENV["ASC_KEY_FILEPATH"]

@@ -93,3 +93,38 @@ TestResults.xml
 .gsd/forensics/
 .gsd/parallel/
 .utmp/
+
+# ── Fastlane / Distribution ──
+# Apple API keys — never commit
+*.p8
+AuthKey_*.p8
+fastlane/AuthKey_*.p8
+
+# Android signing
+*.keystore
+*.jks
+
+# Google Play service account credentials
+play-store-credentials.json
+google-play-key.json
+fastlane/google-play-key.json
+
+# Match passphrase and git URL are in env vars — no local file needed
+# but exclude any accidentally created local config
+.match_password
+
+# Fastlane build artifacts and reports
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+
+# Unity export directories (build lane outputs)
+build/ios/
+build/android/
+
+# Local env overrides (never commit — use env vars or .env.local)
+.env.local
+
+# Gemfile.lock is intentionally committed (Fastlane convention)
+# Do NOT add Gemfile.lock to .gitignore

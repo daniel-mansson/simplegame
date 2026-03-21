@@ -1,0 +1,24 @@
+{
+  "_comment": "App configuration for Puzzle Tap. Secret values are env var NAMES, not values. Never put actual keys/IDs/tokens here.",
+
+  "app_name": "Puzzle Tap",
+  "sku": "puzzletap-2024",
+  "primary_language": "en-US",
+  "category": "GAMES",
+  "subcategory": "PUZZLE",
+
+  "ios_bundle_id": "com.simplemagicstudios.puzzletap",
+  "android_package_name": "com.SimpleMagicStudios.PuzzleTap",
+
+  "support_url": "https://simplemagicstudios.com/support",
+  "marketing_url": "https://simplemagicstudios.com",
+  "privacy_url": "https://simplemagicstudios.com/privacy",
+
+  "_secrets_comment": "The keys below are environment variable NAMES. Set the actual values in your shell or .env.local (gitignored).",
+  "apple_team_id_env": "APPLE_TEAM_ID",
+  "apple_id_env": "APPLE_ID",
+  "asc_key_id_env": "ASC_KEY_ID",
+  "asc_issuer_id_env": "ASC_ISSUER_ID",
+  "asc_key_filepath_env": "ASC_KEY_FILEPATH",
+  "google_play_key_file_env": "GOOGLE_PLAY_KEY_FILE"
+}

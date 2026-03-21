@@ -1,0 +1,22 @@
+{
+  "_comment": "Build environment configuration. Secret values are env var NAMES. Path values are relative to project root.",
+
+  "_unity_comment": "Set UNITY_PATH to the full path to the Unity executable. Example: /Applications/Unity/Hub/Editor/6000.0.30f1/Unity.app/Contents/MacOS/Unity",
+  "unity_path_env": "UNITY_PATH",
+  "unity_build_target_ios": "iOS",
+  "unity_build_target_android": "Android",
+
+  "ios_output_dir": "build/ios",
+  "ios_xcode_project": "build/ios/Unity-iPhone.xcodeproj",
+  "ios_ipa_path": "build/ios/PuzzleTap.ipa",
+
+  "android_output_dir": "build/android",
+  "android_aab_path": "build/android/PuzzleTap.aab",
+  "android_apk_path": "build/android/PuzzleTap.apk",
+
+  "_keystore_comment": "Android keystore — path and credentials are env vars, never committed.",
+  "android_keystore_path_env": "ANDROID_KEYSTORE_PATH",
+  "android_key_alias_env": "ANDROID_KEY_ALIAS",
+  "android_key_password_env": "ANDROID_KEY_PASSWORD",
+  "android_store_password_env": "ANDROID_STORE_PASSWORD"
+}

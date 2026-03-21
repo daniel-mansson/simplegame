@@ -1,0 +1,14 @@
+{
+  "_comment": "TestFlight external tester configuration. Add emails to groups before running `fastlane ios beta`.",
+
+  "groups": [
+    {
+      "name": "Internal Testers",
+      "emails": []
+    },
+    {
+      "name": "External Beta",
+      "emails": []
+    }
+  ]
+}

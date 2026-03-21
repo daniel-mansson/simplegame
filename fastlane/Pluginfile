@@ -1,0 +1,5 @@
+# Pluginfile — fastlane plugin dependencies
+# Add plugins here with: fastlane add_plugin <name>
+# Then run: bundle exec fastlane install_plugins
+
+source "https://rubygems.org"

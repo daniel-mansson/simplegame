@@ -1,0 +1,26 @@
+# Appfile — fastlane app identifier configuration
+# All secrets are read from environment variables — never hardcode values here.
+# Run `bundle exec fastlane <platform> <lane>` from the project root.
+
+# iOS
+app_identifier(ENV["IOS_BUNDLE_ID"] || "com.simplemagicstudios.puzzletap")
+
+# Android
+package_name(ENV["ANDROID_PACKAGE_NAME"] || "com.SimpleMagicStudios.PuzzleTap")
+
+# Apple Developer account — only needed for `produce` (app registration).
+# Not required for builds/uploads that use App Store Connect API key auth.
+apple_id(ENV["APPLE_ID"]) if ENV["APPLE_ID"]
+
+# App Store Connect team — numeric team ID
+team_id(ENV["APPLE_TEAM_ID"]) if ENV["APPLE_TEAM_ID"]
+
+# For platform-specific overrides:
+for_platform :ios do
+  app_identifier(ENV["IOS_BUNDLE_ID"] || "com.simplemagicstudios.puzzletap")
+  team_id(ENV["APPLE_TEAM_ID"]) if ENV["APPLE_TEAM_ID"]
+end
+
+for_platform :android do
+  package_name(ENV["ANDROID_PACKAGE_NAME"] || "com.SimpleMagicStudios.PuzzleTap")
+end

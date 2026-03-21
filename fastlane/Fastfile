@@ -1,0 +1,614 @@
+# fastlane/Fastfile
+#
+# Puzzle Tap — Fastlane distribution pipeline
+# Run from project root: bundle exec fastlane <platform> <lane> [options]
+#
+# Platforms:
+#   ios     — App Store Connect, TestFlight, iOS builds
+#   android — Google Play, Android builds
+#
+# Top-level lanes:
+#   status  — Query both platforms and return JSON
+#
+# All lanes accept dry_run:true to validate without mutating real state.
+
+# Load shared helpers from tools/fastlane/lib/
+TOOLS_LIB_DIR = File.expand_path("../tools/fastlane/lib", __dir__)
+
+def load_lib(filename)
+  require File.join(TOOLS_LIB_DIR, filename)
+end
+
+load_lib("dry_run")
+load_lib("build_number")
+load_lib("config")
+
+# Import bootstrap and orchestration lanes from tools/
+import File.expand_path("../tools/fastlane/Fastfile", __dir__)
+
+# ---------------------------------------------------------------------------
+# Shared helpers
+# ---------------------------------------------------------------------------
+
+def project_root
+  File.expand_path("..", __dir__)
+end
+
+def asc_api_key(dry_run: false)
+  DryRun.require_env_or_warn!(
+    %w[ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_FILEPATH],
+    context: "asc_api_key",
+    dry_run: dry_run
+  )
+  return nil if dry_run
+
+  app_store_connect_api_key(
+    key_id:       ENV["ASC_KEY_ID"],
+    issuer_id:    ENV["ASC_ISSUER_ID"],
+    key_filepath: ENV["ASC_KEY_FILEPATH"],
+    in_house:     false
+  )
+end
+
+def load_app_config
+  Config.load_app(project_root: project_root)
+end
+
+def load_build_config
+  Config.load_build(project_root: project_root)
+end
+
+# ---------------------------------------------------------------------------
+# Before all — validate config files exist
+# ---------------------------------------------------------------------------
+
+before_all do |lane, options|
+  # Verify config files are present — runs in all modes including dry-run
+  %w[app.json testers.json build.json].each do |filename|
+    path = File.join(project_root, "fastlane", "config", filename)
+    UI.user_error!("Missing config file: #{path}\nRun the bootstrap lane first.") unless File.exist?(path)
+  end
+end
+
+# ===========================================================================
+# iOS Platform
+# ===========================================================================
+
+platform :ios do
+
+  # -------------------------------------------------------------------------
+  # register — Register the app on App Store Connect via produce.
+  # Delegates to bootstrap_ios in tools/fastlane/Fastfile.
+  #
+  # Options:
+  #   dry_run (Boolean) — default false
+  # -------------------------------------------------------------------------
+  lane :register do |options|
+    bootstrap_ios(options)
+  end
+
+  # -------------------------------------------------------------------------
+  # certs — Fetch or create certificates and provisioning profiles via match.
+  #
+  # Options:
+  #   dry_run (Boolean) — default false
+  #   type (String)     — "development" | "appstore" | "adhoc" (default: "appstore")
+  # -------------------------------------------------------------------------
+  lane :certs do |options|
+    dry  = options[:dry_run] || false
+    type = options[:type] || "appstore"
+    app_config = load_app_config
+
+    UI.header("iOS Certs & Provisioning via match (type: #{type})")
+
+    api_key = asc_api_key(dry_run: dry)
+    DryRun.require_env_or_warn!(%w[MATCH_GIT_URL MATCH_PASSWORD], context: "ios certs", dry_run: dry)
+
+    DryRun.with_dry_run(
+      dry_run: dry,
+      name: "match",
+      description: "Fetch/create #{type} certificate and provisioning profile for #{app_config['ios_bundle_id']}"
+    ) do
+      match(
+        type:           type,
+        app_identifier: app_config["ios_bundle_id"],
+        git_url:        ENV["MATCH_GIT_URL"],
+        api_key:        api_key,
+        readonly:       false
+      )
+    end
+
+    UI.success("Certs lane #{'(dry-run) ' if dry}complete.")
+  end
+
+  # -------------------------------------------------------------------------
+  # build — Build Unity → Xcode project → signed .ipa via gym.
+  #
+  # Options:
+  #   dry_run (Boolean) — default false
+  # -------------------------------------------------------------------------
+  lane :build do |options|
+    dry = options[:dry_run] || false
+    build_config = load_build_config
+
+    UI.header("iOS Build (Unity → Xcode → .ipa)")
+
+    unity_path   = build_config["unity_path_env"]
+    unity_exe    = ENV[unity_path] || ""
+    ios_out_dir  = File.join(project_root, build_config["ios_output_dir"])
+    xcode_proj   = File.join(project_root, build_config["ios_xcode_project"])
+    ipa_path     = File.join(project_root, build_config["ios_ipa_path"])
+
+    DryRun.require_env_or_warn!([unity_path], context: "ios build", dry_run: dry)
+
+    # Step 1: Compute and write next build number
+    bn_summary = BuildNumber.summary(project_root: project_root)
+    next_bn    = bn_summary[:next_bundle_number]
+    UI.message("Current build number: #{bn_summary[:bundle_number]} (version #{bn_summary[:version]})")
+    UI.message("Next build number:    #{next_bn}")
+
+    DryRun.with_dry_run(
+      dry_run: dry,
+      name: "write_build_number",
+      description: "Write build number #{next_bn} to ProjectSettings.asset"
+    ) do
+      BuildNumber.write(project_root: project_root, bundle_number: next_bn)
+    end
+
+    # Step 2: Unity CLI — export Xcode project
+    DryRun.with_dry_run(
+      dry_run: dry,
+      name: "unity_export_ios",
+      description: "Run Unity CLI to export Xcode project to #{ios_out_dir}"
+    ) do
+      FileUtils.mkdir_p(ios_out_dir)
+      sh(
+        unity_exe,
+        "-quit", "-batchmode", "-nographics",
+        "-projectPath", project_root,
+        "-buildTarget", build_config["unity_build_target_ios"],
+        "-executeMethod", "BuildScript.BuildIOS",
+        "-outputPath", ios_out_dir,
+        "-logFile", File.join(project_root, "Logs", "fastlane-ios-build.log")
+      )
+    end
+
+    # Step 3: gym — build and sign the .ipa
+    DryRun.with_dry_run(
+      dry_run: dry,
+      name: "gym",
+      description: "Build and sign .ipa from #{xcode_proj} → #{ipa_path}"
+    ) do
+      gym(
+        project:              xcode_proj,
+        scheme:               "Unity-iPhone",
+        output_directory:     File.dirname(ipa_path),
+        output_name:          File.basename(ipa_path),
+        export_method:        "app-store",
+        clean:                true
+      )
+    end
+
+    UI.success("iOS build #{'(dry-run) ' if dry}complete. Output: #{ipa_path}")
+  end
+
+  # -------------------------------------------------------------------------
+  # beta — Upload .ipa to TestFlight and manage external testers.
+  #
+  # Options:
+  #   dry_run (Boolean) — default false
+  # -------------------------------------------------------------------------
+  lane :beta do |options|
+    dry        = options[:dry_run] || false
+    app_config = load_app_config
+    build_config = load_build_config
+    ipa_path   = File.join(project_root, build_config["ios_ipa_path"])
+
+    UI.header("iOS TestFlight Upload")
+
+    unless dry || File.exist?(ipa_path)
+      UI.user_error!("IPA not found at #{ipa_path}. Run `fastlane ios build` first.")
+    end
+
+    api_key = asc_api_key(dry_run: dry)
+
+    # Load tester groups
+    testers_config = Config.load_testers(project_root: project_root)
+    groups         = testers_config["groups"] || []
+
+    # Release notes from metadata
+    release_notes_path = File.join(project_root, "fastlane", "metadata", "default", "release_notes.txt")
+    changelog = File.exist?(release_notes_path) ? File.read(release_notes_path).strip : "New build"
+
+    UI.message("IPA:     #{ipa_path}")
+    UI.message("Groups:  #{groups.map { |g| g['name'] }.join(', ')}")
+    UI.message("Changelog: #{changelog[0..80]}...")
+
+    DryRun.with_dry_run(
+      dry_run: dry,
+      name: "pilot",
+      description: "Upload #{File.basename(ipa_path)} to TestFlight for #{app_config['ios_bundle_id']}"
+    ) do
+      pilot(
+        app_identifier: app_config["ios_bundle_id"],
+        api_key:        api_key,
+        ipa:            ipa_path,
+        changelog:      changelog,
+        distribute_external: false,
+        notify_external_testers: false,
+        skip_waiting_for_build_processing: true
+      )
+    end
+
+    # Add testers to groups
+    groups.each do |group|
+      next if (group["emails"] || []).empty?
+
+      DryRun.with_dry_run(
+        dry_run: dry,
+        name: "add_testers",
+        description: "Add #{group['emails'].length} tester(s) to group '#{group['name']}'"
+      ) do
+        group["emails"].each do |email|
+          pilot(
+            app_identifier: app_config["ios_bundle_id"],
+            api_key:        api_key,
+            add_email:      email,
+            groups:         [group["name"]]
+          )
+        end
+      end
+    end
+
+    UI.success("iOS beta lane #{'(dry-run) ' if dry}complete.")
+  end
+
+  # -------------------------------------------------------------------------
+  # metadata — Push store text from fastlane/metadata/ to App Store Connect.
+  #
+  # Options:
+  #   dry_run (Boolean) — default false
+  # -------------------------------------------------------------------------
+  lane :metadata do |options|
+    dry        = options[:dry_run] || false
+    app_config = load_app_config
+
+    UI.header("iOS Metadata Upload via deliver")
+
+    api_key = asc_api_key(dry_run: dry)
+
+    DryRun.with_dry_run(
+      dry_run: dry,
+      name: "deliver",
+      description: "Push metadata from fastlane/metadata/ to App Store Connect for #{app_config['ios_bundle_id']}"
+    ) do
+      deliver(
+        app_identifier:       app_config["ios_bundle_id"],
+        api_key:              api_key,
+        metadata_path:        File.join(project_root, "fastlane", "metadata"),
+        skip_binary_upload:   true,
+        skip_screenshots:     true,
+        skip_app_version_strings: false,
+        force:                true
+      )
+    end
+
+    UI.success("iOS metadata #{'(dry-run) ' if dry}complete.")
+  end
+
+end # platform :ios
+
+# ===========================================================================
+# Android Platform
+# ===========================================================================
+
+platform :android do
+
+  # -------------------------------------------------------------------------
+  # bootstrap — Guide through one-time manual Play Console setup.
+  # Delegates to bootstrap_android in tools/fastlane/Fastfile.
+  # -------------------------------------------------------------------------
+  lane :bootstrap do |options|
+    bootstrap_android(options)
+  end
+
+  # -------------------------------------------------------------------------
+  # build — Build Unity → signed .aab.
+  #
+  # Options:
+  #   dry_run (Boolean) — default false
+  # -------------------------------------------------------------------------
+  lane :build do |options|
+    dry          = options[:dry_run] || false
+    build_config = load_build_config
+
+    UI.header("Android Build (Unity → .aab)")
+
+    unity_path     = build_config["unity_path_env"]
+    unity_exe      = ENV[unity_path] || ""
+    android_out    = File.join(project_root, build_config["android_output_dir"])
+    aab_path       = File.join(project_root, build_config["android_aab_path"])
+    keystore_env   = build_config["android_keystore_path_env"]
+
+    DryRun.require_env_or_warn!(
+      [unity_path, keystore_env,
+       build_config["android_key_alias_env"],
+       build_config["android_key_password_env"],
+       build_config["android_store_password_env"]],
+      context: "android build",
+      dry_run: dry
+    )
+
+    # Step 1: Write next build number
+    bn_summary = BuildNumber.summary(project_root: project_root)
+    next_bn    = bn_summary[:next_bundle_number]
+    UI.message("Current build number: #{bn_summary[:bundle_number]}")
+    UI.message("Next build number:    #{next_bn}")
+
+    DryRun.with_dry_run(
+      dry_run: dry,
+      name: "write_build_number",
+      description: "Write build number #{next_bn} to ProjectSettings.asset"
+    ) do
+      BuildNumber.write(project_root: project_root, bundle_number: next_bn)
+    end
+
+    # Step 2: Unity CLI — export and build .aab
+    DryRun.with_dry_run(
+      dry_run: dry,
+      name: "unity_build_android",
+      description: "Run Unity CLI to build .aab to #{aab_path}"
+    ) do
+      FileUtils.mkdir_p(android_out)
+      sh(
+        unity_exe,
+        "-quit", "-batchmode", "-nographics",
+        "-projectPath", project_root,
+        "-buildTarget", build_config["unity_build_target_android"],
+        "-executeMethod", "BuildScript.BuildAndroid",
+        "-outputPath", aab_path,
+        "-keystoreName", ENV[keystore_env] || "",
+        "-keystorePass", ENV[build_config["android_store_password_env"]] || "",
+        "-keyaliasName", ENV[build_config["android_key_alias_env"]] || "",
+        "-keyaliasPass", ENV[build_config["android_key_password_env"]] || "",
+        "-logFile", File.join(project_root, "Logs", "fastlane-android-build.log")
+      )
+    end
+
+    UI.success("Android build #{'(dry-run) ' if dry}complete. Output: #{aab_path}")
+  end
+
+  # -------------------------------------------------------------------------
+  # beta — Upload .aab to Google Play internal track.
+  #
+  # Options:
+  #   dry_run (Boolean) — default false
+  #   track (String)    — "internal" | "alpha" | "beta" | "production" (default: "internal")
+  # -------------------------------------------------------------------------
+  lane :beta do |options|
+    dry          = options[:dry_run] || false
+    track        = options[:track] || "internal"
+    app_config   = load_app_config
+    build_config = load_build_config
+    aab_path     = File.join(project_root, build_config["android_aab_path"])
+
+    UI.header("Android Play Store Upload (track: #{track})")
+
+    unless dry || File.exist?(aab_path)
+      UI.user_error!("AAB not found at #{aab_path}. Run `fastlane android build` first.")
+    end
+
+    DryRun.require_env_or_warn!(
+      [app_config["google_play_key_file_env"]],
+      context: "android beta",
+      dry_run: dry
+    )
+
+    key_file = ENV[app_config["google_play_key_file_env"] || "GOOGLE_PLAY_KEY_FILE"]
+
+    release_notes_path = File.join(project_root, "fastlane", "metadata", "android", "en-US", "release_notes.txt")
+    changelog = File.exist?(release_notes_path) ? File.read(release_notes_path).strip : "New build"
+
+    UI.message("AAB:     #{aab_path}")
+    UI.message("Track:   #{track}")
+    UI.message("Package: #{app_config['android_package_name']}")
+
+    DryRun.with_dry_run(
+      dry_run: dry,
+      name: "upload_to_play_store",
+      description: "Upload #{File.basename(aab_path)} to Play Store #{track} track for #{app_config['android_package_name']}"
+    ) do
+      upload_to_play_store(
+        package_name:           app_config["android_package_name"],
+        track:                  track,
+        aab:                    aab_path,
+        json_key:               key_file,
+        release_status:         "completed",
+        rollout:                "1.0",
+        skip_upload_apk:        true,
+        skip_upload_metadata:   false,
+        skip_upload_images:     true,
+        skip_upload_screenshots: true,
+        version_codes_to_retain: [],
+        changes_not_sent_for_review: false,
+        release_notes:          { "en-US" => changelog }
+      )
+    end
+
+    UI.success("Android beta lane #{'(dry-run) ' if dry}complete.")
+  end
+
+  # -------------------------------------------------------------------------
+  # metadata — Push store text from fastlane/metadata/android/ to Play Console.
+  #
+  # Options:
+  #   dry_run (Boolean) — default false
+  # -------------------------------------------------------------------------
+  lane :metadata do |options|
+    dry        = options[:dry_run] || false
+    app_config = load_app_config
+
+    UI.header("Android Metadata Upload via supply")
+
+    DryRun.require_env_or_warn!(
+      [app_config["google_play_key_file_env"]],
+      context: "android metadata",
+      dry_run: dry
+    )
+
+    key_file = ENV[app_config["google_play_key_file_env"] || "GOOGLE_PLAY_KEY_FILE"]
+    metadata_path = File.join(project_root, "fastlane", "metadata", "android")
+
+    DryRun.with_dry_run(
+      dry_run: dry,
+      name: "upload_to_play_store (metadata)",
+      description: "Push store text from #{metadata_path} to Play Console for #{app_config['android_package_name']}"
+    ) do
+      upload_to_play_store(
+        package_name:              app_config["android_package_name"],
+        json_key:                  key_file,
+        skip_upload_apk:           true,
+        skip_upload_aab:           true,
+        skip_upload_metadata:      false,
+        skip_upload_images:        true,
+        skip_upload_screenshots:   true,
+        metadata_path:             metadata_path
+      )
+    end
+
+    UI.success("Android metadata #{'(dry-run) ' if dry}complete.")
+  end
+
+end # platform :android
+
+# ===========================================================================
+# Top-level lanes (no platform prefix)
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# status — Query both platforms and return JSON-structured state.
+#
+# Returns a JSON document to stdout covering:
+#   - Current build version and bundle number
+#   - iOS: latest TestFlight build, processing status
+#   - Android: track version codes for internal/alpha/beta/production
+#
+# This is intentionally query-only — never mutates state.
+# ---------------------------------------------------------------------------
+lane :status do |options|
+  UI.header("Distribution Status")
+
+  app_config   = load_app_config
+  build_config = load_build_config
+
+  # Build number info (always available — reads local ProjectSettings)
+  bn = BuildNumber.summary(project_root: project_root)
+
+  # iOS status (requires ASC API key)
+  ios_status = status_ios(app_config: app_config)
+
+  # Android status (requires Google Play key)
+  android_status = status_android(app_config: app_config)
+
+  result = {
+    queried_at:   Time.now.utc.iso8601,
+    app_name:     app_config["app_name"],
+    build: {
+      version:        bn[:version],
+      bundle_number:  bn[:bundle_number],
+      next_build:     bn[:next_bundle_number]
+    },
+    ios:     ios_status,
+    android: android_status
+  }
+
+  json_output = JSON.pretty_generate(result)
+  puts json_output
+  json_output
+end
+
+# Internal: iOS status query — returns Hash
+def status_ios(app_config:)
+  unless ENV["ASC_KEY_ID"] && ENV["ASC_ISSUER_ID"] && ENV["ASC_KEY_FILEPATH"]
+    return { error: "ASC API key env vars not set (ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_FILEPATH)" }
+  end
+
+  begin
+    require "spaceship"
+
+    api_key_hash = {
+      key_id:       ENV["ASC_KEY_ID"],
+      issuer_id:    ENV["ASC_ISSUER_ID"],
+      key_filepath: ENV["ASC_KEY_FILEPATH"]
+    }
+
+    Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.create(**api_key_hash)
+
+    app = Spaceship::ConnectAPI::App.find(app_config["ios_bundle_id"])
+    return { error: "App not found: #{app_config['ios_bundle_id']}" } unless app
+
+    builds = Spaceship::ConnectAPI::Build.all(
+      app_id: app.id,
+      sort:   "-uploadedDate",
+      limit:  5
+    )
+
+    latest = builds.first
+
+    {
+      bundle_id:    app_config["ios_bundle_id"],
+      app_id:       app.id,
+      latest_build: latest ? {
+        version:     latest.version,
+        build_number: latest.build_number,
+        status:       latest.processing_state,
+        uploaded_at:  latest.uploaded_date
+      } : nil,
+      recent_builds: builds.map { |b|
+        { version: b.version, build_number: b.build_number, status: b.processing_state }
+      }
+    }
+  rescue => e
+    { error: e.message }
+  end
+end
+
+# Internal: Android status query — returns Hash
+def status_android(app_config:)
+  key_file = ENV["GOOGLE_PLAY_KEY_FILE"]
+  unless key_file && File.exist?(key_file.to_s)
+    return { error: "GOOGLE_PLAY_KEY_FILE not set or file not found" }
+  end
+
+  begin
+    require "supply"
+    require "supply/client"
+
+    package = app_config["android_package_name"]
+
+    client = Supply::Client.make_from_config(
+      json_key: key_file,
+      package_name: package
+    )
+
+    tracks_data = {}
+    %w[internal alpha beta production].each do |track_name|
+      begin
+        track = client.tracks(track_name)
+        releases = track&.releases || []
+        latest   = releases.max_by { |r| r.version_codes&.max.to_i }
+        tracks_data[track_name] = latest ? {
+          version_codes: latest.version_codes,
+          status:        latest.status,
+          release_notes: latest.release_notes&.map { |n| { language: n.language, text: n.text&.first(80) } }
+        } : nil
+      rescue => e
+        tracks_data[track_name] = { error: e.message }
+      end
+    end
+
+    { package_name: package, tracks: tracks_data }
+  rescue => e
+    { error: e.message }
+  end
+end

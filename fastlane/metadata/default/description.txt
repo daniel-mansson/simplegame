@@ -1,0 +1,8 @@
+Puzzle Tap is a fresh take on jigsaw puzzles. Tap slots to draw pieces from your deck and place them on the board — but only if a neighbor is already placed. Plan ahead, manage your hand, and complete each puzzle one tap at a time.
+
+Features:
+• Slot-based piece drawing — manage your hand strategically
+• Neighbor-adjacency rules — every placement counts
+• Beautifully illustrated environments to restore
+• Relaxing gameplay with no time pressure
+• New puzzles added regularly
