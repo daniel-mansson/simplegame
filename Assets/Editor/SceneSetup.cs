@@ -539,6 +539,7 @@ public static class SceneSetup
         text.alignment = TextAnchor.MiddleCenter;
         text.fontSize = fontSize;
         text.color = Color.white;
+        text.raycastTarget = false; // display-only; no pointer events needed
         var rect = go.GetComponent<RectTransform>();
         rect.anchorMin = anchorMin;
         rect.anchorMax = anchorMax;
