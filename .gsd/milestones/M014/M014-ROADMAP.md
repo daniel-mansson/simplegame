@@ -55,13 +55,13 @@ This milestone is complete only when all are true:
 
 ## Slices
 
-- [ ] **S01: Package — Unit-Scale Pieces** `risk:medium` `depends:[]`
+- [x] **S01: Package — Unit-Scale Pieces** `risk:medium` `depends:[]`
   > After this: EditMode test asserts a 4×2 board has cells with longest edge = 1 unit and board extent = 2×2.
 
-- [ ] **S02: Board — World Space, Camera Pan, Hint Surface** `risk:high` `depends:[S01]`
+- [x] **S02: Board — World Space, Camera Pan, Hint Surface** `risk:high` `depends:[S01]`
   > After this: Play InGame from editor — board at natural scale, camera pans by dragging, hint surface visible behind pieces.
 
-- [ ] **S03: Tray — Camera-Following Slots + UGUI Buttons** `risk:medium` `depends:[S02]`
+- [x] **S03: Tray — Camera-Following Slots + UGUI Buttons** `risk:medium` `depends:[S02]`
   > After this: Play InGame — tray follows camera pan, slot buttons place pieces with full tween, no gesture conflict.
 
 ## Boundary Map

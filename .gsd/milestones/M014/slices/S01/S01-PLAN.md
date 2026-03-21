@@ -16,7 +16,7 @@
 
 ## Tasks
 
-- [ ] **T01: GridPlanner sizing + test update**
+- [x] **T01: GridPlanner sizing + test update**
   Change the sizing formula in GridPlanner.ComputeCells. Update GridPlannerTests to assert the new contract. Verify all other package tests still pass.
 
 ## Files Likely Touched
