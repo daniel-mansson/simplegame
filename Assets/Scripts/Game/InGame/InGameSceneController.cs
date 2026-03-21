@@ -80,6 +80,12 @@ namespace SimpleGame.Game.InGame
         private Canvas _slotButtonCanvas;
 
         /// <summary>
+        /// Piece IDs currently mid-shake. LateUpdate skips repositioning these so the
+        /// shake tween can animate position freely without being overwritten each frame.
+        /// </summary>
+        private readonly System.Collections.Generic.HashSet<int> _shakingPieces = new();
+
+        /// <summary>
         /// Optional model factory — overrides stub generation.
         /// Called at the start of each retry to produce a fresh PuzzleModel with reset deck state.
         /// </summary>
@@ -233,8 +239,12 @@ namespace SimpleGame.Game.InGame
                     int pid = slotContents[i].Value;
                     if (_pieceObjects != null && _pieceObjects.TryGetValue(pid, out var go))
                     {
-                        go.transform.position   = newPos;
-                        go.transform.localScale = newScale;
+                        // Skip repositioning pieces that are mid-shake so the tween can run freely
+                        if (!_shakingPieces.Contains(pid))
+                        {
+                            go.transform.position   = newPos;
+                            go.transform.localScale = newScale;
+                        }
                         if (_traySlotData != null) _traySlotData[pid] = (newPos, newScale);
                     }
                 }
@@ -858,13 +868,44 @@ namespace SimpleGame.Game.InGame
         private void ShakePieceInSlot(int slotIndex)
         {
             if (_traySlotPositions == null || slotIndex >= _traySlotPositions.Length) return;
-            // Resolve which piece ID is in this slot via the view's slot contents mirror
             var slotContents = _inGameView?.GetSlotContents();
             if (slotContents == null || slotIndex >= slotContents.Length) return;
             if (!slotContents[slotIndex].HasValue) return;
             int pieceId = slotContents[slotIndex].Value;
             if (!_pieceObjects.TryGetValue(pieceId, out var go)) return;
-            PieceTweener.ShakePiece(go, _traySlotPositions[slotIndex], destroyCancellationToken).Forget();
+
+            // Lock this piece so LateUpdate doesn't overwrite its position during the shake.
+            _shakingPieces.Add(pieceId);
+            ShakePieceAsync(go, pieceId, _traySlotPositions[slotIndex], destroyCancellationToken).Forget();
+        }
+
+        private async UniTaskVoid ShakePieceAsync(GameObject go, int pieceId, Vector3 restPos, System.Threading.CancellationToken ct)
+        {
+            try
+            {
+                await PieceTweener.ShakePiece(go, restPos, ct);
+            }
+            finally
+            {
+                _shakingPieces.Remove(pieceId);
+                // Snap back to current slot position in case it drifted while camera panned
+                if (go != null && _traySlotPositions != null)
+                {
+                    var contents = _inGameView?.GetSlotContents();
+                    if (contents != null)
+                    {
+                        for (int i = 0; i < contents.Length; i++)
+                        {
+                            if (contents[i] == pieceId && i < _traySlotPositions.Length)
+                            {
+                                go.transform.position   = _traySlotPositions[i];
+                                go.transform.localScale = _traySlotScales[i];
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         private void RevealPiece(int pieceId)
