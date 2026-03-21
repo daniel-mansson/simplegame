@@ -59,22 +59,22 @@ This milestone is complete only when all are true:
 - [x] **S01: Foundation & Bootstrap** `risk:high` `depends:[]`
   > After this: `fastlane ios register dry_run:true` and `fastlane android bootstrap` run without error; folder structure, Gemfile, Appfile, config files, and tools/ scaffold all exist; dry-run helper wired
 
-- [ ] **S02: Cert & Provisioning** `risk:high` `depends:[S01]`
+- [x] **S02: Cert & Provisioning** `risk:high` `depends:[S01]`
   > After this: `fastlane ios certs` fetches or creates development + appstore certs and provisioning profiles via match with API key auth; dry-run mode logs intent cleanly
 
-- [ ] **S03: Unity Build Pipeline** `risk:high` `depends:[S01]`
+- [x] **S03: Unity Build Pipeline** `risk:high` `depends:[S01]`
   > After this: `fastlane ios build` and `fastlane android build` produce real .ipa and .aab from the Unity project with correct build numbers written to ProjectSettings; dry-run logs full build intent
 
-- [ ] **S04: iOS Distribution** `risk:medium` `depends:[S02,S03]`
+- [x] **S04: iOS Distribution** `risk:medium` `depends:[S02,S03]`
   > After this: `fastlane ios beta` uploads a real .ipa to TestFlight and adds testers from fastlane/config/testers.json; build is visible in TestFlight
 
-- [ ] **S05: Android Distribution** `risk:medium` `depends:[S03]`
+- [x] **S05: Android Distribution** `risk:medium` `depends:[S03]`
   > After this: `fastlane android beta` uploads a real .aab to the Play internal track; build is visible in Play Console
 
-- [ ] **S06: Metadata Management** `risk:low` `depends:[S04,S05]`
+- [x] **S06: Metadata Management** `risk:low` `depends:[S04,S05]`
   > After this: `fastlane ios metadata` and `fastlane android metadata` push app name, description, keywords, and release notes from fastlane/metadata/ to both stores without portal interaction
 
-- [ ] **S07: Status & Query API** `risk:low` `depends:[S04,S05]`
+- [x] **S07: Status & Query API** `risk:low` `depends:[S04,S05]`
   > After this: `fastlane status` returns a JSON document with build version, latest TestFlight build + status, Play track versions, provisioning expiry — consumable by external scripts
 
 ## Boundary Map

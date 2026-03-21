@@ -167,7 +167,7 @@ platform :ios do
         "-quit", "-batchmode", "-nographics",
         "-projectPath", project_root,
         "-buildTarget", build_config["unity_build_target_ios"],
-        "-executeMethod", "BuildScript.BuildIOS",
+        "-executeMethod", "SimpleGame.Editor.BuildScript.BuildIOS",
         "-outputPath", ios_out_dir,
         "-logFile", File.join(project_root, "Logs", "fastlane-ios-build.log")
       )
@@ -365,7 +365,7 @@ platform :android do
         "-quit", "-batchmode", "-nographics",
         "-projectPath", project_root,
         "-buildTarget", build_config["unity_build_target_android"],
-        "-executeMethod", "BuildScript.BuildAndroid",
+        "-executeMethod", "SimpleGame.Editor.BuildScript.BuildAndroid",
         "-outputPath", aab_path,
         "-keystoreName", ENV[keystore_env] || "",
         "-keystorePass", ENV[build_config["android_store_password_env"]] || "",
