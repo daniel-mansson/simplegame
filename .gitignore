@@ -92,3 +92,4 @@ TestResults.xml
 # ── GSD baseline (auto-generated) ──
 .gsd/forensics/
 .gsd/parallel/
+.utmp/
