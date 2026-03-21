@@ -1113,3 +1113,208 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Deferred: 19
 - Out of scope: 4
 - Note: R110–R118 added for M014 puzzle controls & layout redesign.
+
+---
+
+## M015 Requirements — Fastlane Distribution Pipeline
+
+### R119 — iOS app registration via produce
+- Class: core-capability
+- Status: active
+- Description: A lane creates the app on App Store Connect via `produce`, setting bundle ID, app name, SKU, and primary language from config files. No manual portal interaction required.
+- Why it matters: Zero-click app registration is the foundation of data-driven distribution.
+- Source: user
+- Primary owning slice: M015/S01
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Requires App Store Connect API key. `produce` has limited API key support — may fall back to Apple ID for app creation step only.
+
+### R120 — Android app registration (documented manual first upload)
+- Class: core-capability
+- Status: active
+- Description: The bootstrap lane documents the required one-time manual Play Console step (app creation + first APK upload to exit Draft status). All subsequent lifecycle is fully automated.
+- Why it matters: Google Play API cannot create apps programmatically — this is a hard platform limit. Documenting it prevents confusion and sets correct expectations.
+- Source: inferred
+- Primary owning slice: M015/S01
+- Supporting slices: none
+- Validation: unmapped
+- Notes: After the first manual upload, all track management, metadata, and further uploads are automated.
+
+### R121 — Certificate and provisioning via match
+- Class: core-capability
+- Status: active
+- Description: `match` manages development, ad-hoc, and appstore certificates and provisioning profiles, backed by a private git repo. All cert lifecycle (create, renew, rotate) is lane-driven.
+- Why it matters: Eliminates cert management as a manual, machine-local, human-dependent process.
+- Source: user
+- Primary owning slice: M015/S02
+- Supporting slices: none
+- Validation: unmapped
+- Notes: match repo URL is config-file driven.
+
+### R122 — App Store Connect API key auth (no 2FA)
+- Class: constraint
+- Status: active
+- Description: All Apple interactions use App Store Connect API key (key_id, issuer_id, .p8 file) loaded from environment or config. No Apple ID password or 2FA code is ever required at runtime.
+- Why it matters: 2FA breaks CI and non-interactive runs. API key auth is the correct long-term path.
+- Source: inferred
+- Primary owning slice: M015/S02
+- Supporting slices: M015/S01, M015/S04
+- Validation: unmapped
+- Notes: API key stored as env var or gitignored local file, never committed.
+
+### R123 — Unity → iOS build pipeline
+- Class: core-capability
+- Status: active
+- Description: A lane drives Unity CLI to export an Xcode project, then invokes `gym` (xcodebuild) to produce a signed .ipa. Build number is computed from the existing convention in Docs/BUILD_NUMBERS.md and written to ProjectSettings before the build.
+- Why it matters: Reproducible, script-driven iOS builds replace manual Build > Archive.
+- Source: user
+- Primary owning slice: M015/S03
+- Supporting slices: M015/S02
+- Validation: unmapped
+- Notes: Unity executable path is config-driven. Xcode project output path is stable and gitignored.
+
+### R124 — Unity → Android build pipeline (AAB)
+- Class: core-capability
+- Status: active
+- Description: A lane drives Unity CLI to export a signed .aab. Keystore path, alias, and passwords are read from environment or config. Build number follows the same convention as iOS.
+- Why it matters: Reproducible Android builds replace manual Build Settings clicks.
+- Source: user
+- Primary owning slice: M015/S03
+- Supporting slices: none
+- Validation: unmapped
+- Notes: AAB preferred over APK for Play Store. APK supported for ad-hoc distribution.
+
+### R125 — Build number management using existing convention
+- Class: constraint
+- Status: active
+- Description: Lanes read, compute, and write the bundle number using the `aabbccdd` encoding scheme defined in Docs/BUILD_NUMBERS.md. The build counter increments automatically for each distribution build.
+- Why it matters: Build numbers must be strictly increasing — the stores reject anything else. Automation prevents human error.
+- Source: inferred
+- Primary owning slice: M015/S03
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Source of truth is ProjectSettings.asset. Lane reads current, increments counter, writes back before build.
+
+### R126 — TestFlight upload and external tester management
+- Class: core-capability
+- Status: active
+- Description: A lane uploads the .ipa to TestFlight via `pilot` and adds/updates external tester groups from a data file. Changelog comes from a version-controlled release notes file.
+- Why it matters: Automates the most common distribution step — getting a build into testers' hands.
+- Source: user
+- Primary owning slice: M015/S04
+- Supporting slices: M015/S03
+- Validation: unmapped
+- Notes: External tester group names and emails sourced from fastlane/config/testers.json.
+
+### R127 — Google Play track-based upload
+- Class: core-capability
+- Status: active
+- Description: A lane uploads the .aab to a specified Play track (internal/alpha/beta/production) via `upload_to_play_store`. Track is a parameter; default is internal. Release notes come from version-controlled files.
+- Why it matters: Automates Play Console uploads across all tracks.
+- Source: user
+- Primary owning slice: M015/S05
+- Supporting slices: M015/S03
+- Validation: unmapped
+- Notes: Google Play service account JSON is read from env var or gitignored local file.
+
+### R128 — Store metadata management from version-controlled files
+- Class: core-capability
+- Status: active
+- Description: App name, subtitle, description, keywords, support URL, and release notes live in fastlane/metadata/ (iOS) and fastlane/metadata/android/ (Android) as plain text files. A lane pushes metadata to both stores without touching store portals.
+- Why it matters: Data-driven distribution — metadata changes are code reviews, not portal sessions.
+- Source: user
+- Primary owning slice: M015/S06
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Screenshots deferred (R132). Localization structure present but single-locale content for now.
+
+### R129 — Status and query lanes (structured output)
+- Class: operability
+- Status: active
+- Description: A `status` lane queries both platforms and returns JSON-structured state: current build version, latest TestFlight build + status, Play Console track versions, provisioning expiry, and app review status.
+- Why it matters: Makes the tooling composable — external scripts, dashboards, or a future multi-project layer can consume this without parsing lane prose output.
+- Source: user
+- Primary owning slice: M015/S07
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Output to stdout as JSON. Platform-specific sub-lanes: `status_ios`, `status_android`. Structured even in dry-run mode.
+
+### R130 — Dry-run mode across all lanes
+- Class: quality-attribute
+- Status: active
+- Description: Every lane accepts a `dry_run: true` option. In dry-run mode, all API calls and file mutations are replaced with logged intent. No real state is changed. Exit code 0 on clean dry-run.
+- Why it matters: Validate the flow and configuration before committing to real API calls. Essential for onboarding and debugging.
+- Source: user
+- Primary owning slice: M015/S01
+- Supporting slices: M015/S02, M015/S03, M015/S04, M015/S05, M015/S06, M015/S07
+- Validation: unmapped
+- Notes: Dry-run implemented via a shared helper method in Fastfile. Dry-run output is clearly labeled.
+
+### R131 — Two-tier folder structure
+- Class: constraint
+- Status: active
+- Description: Project-specific lanes live in fastlane/ (standard location). Higher-level orchestration (bootstrap coordinator, multi-project plumbing) lives in tools/fastlane/. The tools/ layer has a clean internal interface and is designed to be extracted to a separate repo later.
+- Why it matters: Keeps project-specific config separate from reusable orchestration. The separation is the first step toward a shared tooling layer.
+- Source: user
+- Primary owning slice: M015/S01
+- Supporting slices: none
+- Validation: unmapped
+- Notes: tools/ is gitignore-safe to exclude from a package export.
+
+## Deferred (M015)
+
+### R132 — Automated screenshot upload
+- Class: quality-attribute
+- Status: deferred
+- Description: Fastlane deliver/supply screenshot upload to both stores from version-controlled image assets.
+- Why it matters: Completes the data-driven distribution picture.
+- Source: user
+- Primary owning slice: none
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Deferred by user. Metadata directory structure will include a screenshots/ placeholder.
+
+### R133 — GitHub Actions CI wiring
+- Class: integration
+- Status: deferred
+- Description: GitHub Actions workflow files that trigger lanes on push/tag.
+- Why it matters: Full CI/CD pipeline — lanes run automatically without developer intervention.
+- Source: user
+- Primary owning slice: none
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Deferred by user. Lanes are designed to be CI-callable.
+
+### R134 — Multi-project support
+- Class: differentiator
+- Status: deferred
+- Description: The tools/ layer supports N projects with per-project config, shared cert repo, and unified status dashboard.
+- Why it matters: Reuse the tooling across the studio's portfolio.
+- Source: user
+- Primary owning slice: none
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Single-project focus for M015. tools/ API designed with this in mind.
+
+## Out of Scope (M015)
+
+### R135 — App review submission automation
+- Class: anti-feature
+- Status: out-of-scope
+- Description: Lanes do not submit apps for review or approve releases to production.
+- Why it matters: Review submission is a deliberate human decision, not an automated step.
+- Source: inferred
+- Primary owning slice: none
+- Supporting slices: none
+- Validation: n/a
+- Notes: Promotion to production track is a separate lane requiring explicit invocation.
+
+### R136 — In-app purchase or subscription management
+- Class: anti-feature
+- Status: out-of-scope
+- Description: No IAP, subscription, or pricing management via lanes.
+- Why it matters: Out of scope for distribution automation.
+- Source: inferred
+- Primary owning slice: none
+- Supporting slices: none
+- Validation: n/a

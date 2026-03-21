@@ -40,3 +40,4 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 - [x] M011: Puzzle Domain Model & API
 - [x] M012: Stable Core Game — PuzzleModel Refactor
 - [ ] M013: Solvable Deck Shuffle — topology-aware deck generation guaranteeing solvability by construction
+- [ ] M015: Fastlane Distribution Pipeline — CLI build, provisioning, and app store distribution automation
