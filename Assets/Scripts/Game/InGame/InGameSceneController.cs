@@ -73,6 +73,12 @@ namespace SimpleGame.Game.InGame
         private int _currentGridRows;
         private int _currentGridCols;
 
+        /// <summary>UGUI Buttons for each tray slot — one per slot, repositioned each LateUpdate.</summary>
+        private UnityEngine.UI.Button[] _slotButtons;
+
+        /// <summary>Canvas that hosts the slot buttons (Screen Space Overlay).</summary>
+        private Canvas _slotButtonCanvas;
+
         /// <summary>
         /// Optional model factory — overrides stub generation.
         /// Called at the start of each retry to produce a fresh PuzzleModel with reset deck state.
@@ -167,6 +173,93 @@ namespace SimpleGame.Game.InGame
             _winPopupDelaySec = 0f;  // no delay in tests — UniTask.Delay(0) completes immediately
         }
 
+
+        /// <summary>
+        /// Each frame: reposition tray slot pieces and UGUI buttons to camera-bottom.
+        /// Slot pieces follow camera pan so the tray stays at the screen bottom.
+        /// </summary>
+        private void LateUpdate()
+        {
+            if (_traySlotPositions == null || _traySlotPositions.Length == 0) return;
+
+            var cam = Camera.main;
+            if (cam == null) return;
+
+            float orthoH = cam.orthographic ? cam.orthographicSize * 2f : 10f;
+            float orthoW = orthoH * cam.aspect;
+            float camX   = cam.transform.position.x;
+            float camY   = cam.transform.position.y;
+
+            int   slotCount = _traySlotPositions.Length;
+            float unitScale = Mathf.Max(_currentGridRows, _currentGridCols);
+            float cellH     = _currentGridRows > 0 ? unitScale / _currentGridRows : 1f;
+            float cellW     = _currentGridCols > 0 ? unitScale / _currentGridCols : 1f;
+
+            const float trayFraction = 0.28f;
+            float trayH     = orthoH * trayFraction;
+            float trayY     = camY - orthoH * 0.5f + trayH * 0.5f;
+            float slotScale = trayH / cellH;
+
+            float slotWorldW = cellW * slotScale;
+            float maxByWidth = slotCount > 0 ? (orthoW * 0.92f) / slotCount : orthoW;
+            if (slotWorldW > maxByWidth) slotScale = maxByWidth / cellW;
+
+            float slotWorldWFinal = cellW * slotScale;
+            float slotSpacing     = slotCount > 1
+                ? (orthoW * 0.92f - slotWorldWFinal) / (slotCount - 1) + slotWorldWFinal
+                : 0f;
+            float trayStartX      = camX - slotSpacing * (slotCount - 1) * 0.5f;
+
+            // Update 3D tray piece positions and scales each frame
+            for (int i = 0; i < slotCount; i++)
+            {
+                float x = trayStartX + i * slotSpacing;
+                var newPos   = new Vector3(x, trayY, -2f);
+                var newScale = Vector3.one * slotScale;
+                _traySlotPositions[i] = newPos;
+                _traySlotScales[i]    = newScale;
+
+                // Move the 3D piece currently in this slot
+                var slotContents = _inGameView?.GetSlotContents();
+                if (slotContents != null && i < slotContents.Length && slotContents[i].HasValue)
+                {
+                    int pid = slotContents[i].Value;
+                    if (_pieceObjects != null && _pieceObjects.TryGetValue(pid, out var go))
+                    {
+                        go.transform.position   = newPos;
+                        go.transform.localScale = newScale;
+                        if (_traySlotData != null) _traySlotData[pid] = (newPos, newScale);
+                    }
+                }
+            }
+
+            // Reposition UGUI slot buttons to match 3D slot world positions
+            if (_slotButtons != null && cam != null)
+            {
+                float slotWorldH = cellH * slotScale;
+                float slotWorldWBtn = cellW * slotScale;
+
+                for (int i = 0; i < _slotButtons.Length && i < slotCount; i++)
+                {
+                    var btn = _slotButtons[i];
+                    if (btn == null) continue;
+
+                    // Convert 3D slot world position to screen position
+                    Vector3 screenPos = cam.WorldToScreenPoint(_traySlotPositions[i]);
+
+                    // Set button RectTransform position (screen space)
+                    var rt = btn.GetComponent<RectTransform>();
+                    rt.anchoredPosition = new Vector2(screenPos.x, screenPos.y);
+
+                    // Size button to match projected slot piece size
+                    float projW = cam.WorldToScreenPoint(_traySlotPositions[i] + Vector3.right   * slotWorldWBtn * 0.5f).x
+                               - cam.WorldToScreenPoint(_traySlotPositions[i] - Vector3.right   * slotWorldWBtn * 0.5f).x;
+                    float projH = cam.WorldToScreenPoint(_traySlotPositions[i] + Vector3.up     * slotWorldH   * 0.5f).y
+                               - cam.WorldToScreenPoint(_traySlotPositions[i] - Vector3.up     * slotWorldH   * 0.5f).y;
+                    rt.sizeDelta = new Vector2(Mathf.Abs(projW), Mathf.Abs(projH));
+                }
+            }
+        }
         /// <summary>
         /// Play-from-editor bootstrap: called by Unity on Start when the InGame scene
         /// is entered directly (i.e. GameBootstrapper never ran). Creates stub services
@@ -650,7 +743,87 @@ namespace SimpleGame.Game.InGame
                 onShakePiece:      ShakePieceInSlot
             );
 
+            // Spawn UGUI slot buttons on the slot button canvas
+            SpawnSlotButtons(slotCount);
+
             Debug.Log($"[InGameSceneController] Spawned {pieces.Count} pieces -- 1 seed, {deckOrder.Count} in deck, {slotCount} visible slots. Board: {gridRows}x{gridCols} unitScale={unitScale}");
+        }
+
+        /// <summary>
+        /// Creates one UGUI Button per slot on the slot button canvas.
+        /// Buttons are invisible (no image) and positioned over the 3D slot pieces.
+        /// onClick fires OnTapPiece with the piece ID currently in that slot.
+        /// </summary>
+        private void SpawnSlotButtons(int slotCount)
+        {
+            // Destroy previous slot buttons
+            if (_slotButtons != null)
+            {
+                foreach (var b in _slotButtons)
+                    if (b != null) Destroy(b.gameObject);
+            }
+            _slotButtons = null;
+
+            // Find or create the slot button canvas (Screen Space Overlay)
+            if (_slotButtonCanvas == null)
+            {
+                // Reuse the existing Canvas in the scene if it is Screen Space Overlay
+                var existingCanvas = FindObjectOfType<Canvas>();
+                if (existingCanvas != null && existingCanvas.renderMode == RenderMode.ScreenSpaceOverlay)
+                {
+                    _slotButtonCanvas = existingCanvas;
+                }
+                else
+                {
+                    // Create a dedicated overlay canvas for slot buttons
+                    var canvasGo = new GameObject("SlotButtonCanvas");
+                    _slotButtonCanvas = canvasGo.AddComponent<Canvas>();
+                    _slotButtonCanvas.renderMode  = RenderMode.ScreenSpaceOverlay;
+                    _slotButtonCanvas.sortingOrder = 1;
+                    canvasGo.AddComponent<UnityEngine.UI.CanvasScaler>();
+                    canvasGo.AddComponent<UnityEngine.UI.GraphicRaycaster>();
+                }
+            }
+
+            _slotButtons = new UnityEngine.UI.Button[slotCount];
+
+            for (int i = 0; i < slotCount; i++)
+            {
+                int slotIdx = i; // capture for lambda
+
+                // Create button GameObject
+                var btnGo = new GameObject($"SlotButton_{i}");
+                btnGo.transform.SetParent(_slotButtonCanvas.transform, false);
+
+                // RectTransform: anchored to bottom-left (pixel coordinates)
+                var rt = btnGo.AddComponent<RectTransform>();
+                rt.anchorMin = Vector2.zero;
+                rt.anchorMax = Vector2.zero;
+                rt.pivot     = new Vector2(0.5f, 0.5f);
+                rt.sizeDelta = new Vector2(100f, 100f); // initial size; updated in LateUpdate
+
+                // Transparent Image required for Button to receive raycasts
+                var img = btnGo.AddComponent<UnityEngine.UI.Image>();
+                img.color = new Color(1f, 1f, 1f, 0f); // fully transparent
+
+                // Button component
+                var btn = btnGo.AddComponent<UnityEngine.UI.Button>();
+                btn.transition = UnityEngine.UI.Selectable.Transition.None;
+
+                // onClick: resolve current piece in slot and fire OnTapPiece
+                btn.onClick.AddListener(() =>
+                {
+                    if (_popupManager != null && _popupManager.HasActivePopup) return;
+                    var contents = _inGameView?.GetSlotContents();
+                    if (contents == null || slotIdx >= contents.Length) return;
+                    if (!contents[slotIdx].HasValue) return;
+                    int pid = contents[slotIdx].Value;
+                    Debug.Log($"[SlotButton] Slot {slotIdx} tapped, piece {pid}");
+                    (_inGameView as InGameView)?.NotifyPieceTapped(pid);
+                });
+
+                _slotButtons[i] = btn;
+            }
         }
 
         /// <summary>Move a piece from its tray world position to its solved board position.</summary>
