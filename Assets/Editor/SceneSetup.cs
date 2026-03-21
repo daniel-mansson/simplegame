@@ -378,18 +378,22 @@ public static class SceneSetup
         // PhysicsRaycaster on the camera lets OnMouseDown fire on 3D piece colliders
         cam.gameObject.AddComponent<PhysicsRaycaster>();
 
-        // Build InGame canvas manually — deliberately NO GraphicRaycaster so it
-        // does not intercept pointer events intended for the 3D jigsaw pieces.
+        // CameraController enables orthographic pan by dragging on the board.
+        // UGUI Screen Space Overlay elements block pointer-down before it reaches this,
+        // so slot buttons and board drag do not conflict.
+        cam.gameObject.AddComponent<CameraController>();
+
+        // Build InGame canvas -- Screen Space Overlay so UGUI raycasts are processed
+        // before physics, ensuring slot buttons (added in S03) block board pan drag.
         var canvasGO = new GameObject("Canvas");
         var canvas   = canvasGO.AddComponent<Canvas>();
-        canvas.renderMode   = RenderMode.ScreenSpaceCamera;
-        canvas.worldCamera  = cam;
-        canvas.planeDistance = 1f;
+        canvas.renderMode   = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder  = 0;
+        // Add GraphicRaycaster so UGUI buttons receive pointer events
+        canvasGO.AddComponent<GraphicRaycaster>();
         var scaler = canvasGO.AddComponent<CanvasScaler>();
         scaler.uiScaleMode        = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920, 1080);
-        // GraphicRaycaster intentionally omitted
 
         // ── HUD: top strip (y 88–97%) ─────────────────────────────────────
         var levelGO   = CreateText("LevelText",       "Level 1", canvas.transform,

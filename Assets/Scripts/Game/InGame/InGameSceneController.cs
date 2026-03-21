@@ -69,6 +69,10 @@ namespace SimpleGame.Game.InGame
         /// <summary>Scale for each of the 3 tray slots (front is largest).</summary>
         private Vector3[] _traySlotScales;
 
+        /// <summary>Grid dimensions of the current level — stored for camera framing and tray sizing.</summary>
+        private int _currentGridRows;
+        private int _currentGridCols;
+
         /// <summary>
         /// Optional model factory — overrides stub generation.
         /// Called at the start of each retry to produce a fresh PuzzleModel with reset deck state.
@@ -478,15 +482,15 @@ namespace SimpleGame.Game.InGame
         public void ClearDebugOverride() => _debugOverride = null;
 
         /// <summary>
-        /// Spawns piece GameObjects using PieceObjectFactory and attaches PieceTapHandler to each.
-        /// Called once at scene start when a GridLayoutConfig is assigned.
+        /// Spawns piece GameObjects using PieceObjectFactory. Board parent at natural scale,
+        /// hint surface behind pieces, tray slots at camera-relative positions.
+        /// Called once per level start when a GridLayoutConfig is assigned.
         /// </summary>
         private void SpawnPieces(SimpleJigsaw.PuzzleBoard rawBoard, int seedPieceId, int slotCount, System.Collections.Generic.IReadOnlyList<int> deckOrder, int gridCols)
         {
             if (_inGameView == null) return;
 
             // Destroy any pieces from a previous level before spawning new ones.
-            // The InGame scene stays loaded across levels, so this prevents accumulation.
             if (_spawnedPieces != null)
             {
                 foreach (var old in _spawnedPieces)
@@ -494,9 +498,27 @@ namespace SimpleGame.Game.InGame
                 _spawnedPieces = null;
             }
 
+            // Destroy previous hint surface if any
             var parent = _puzzleParent != null ? _puzzleParent : transform;
+            var oldHint = parent.Find("HintSurface");
+            if (oldHint != null) UnityEngine.Object.Destroy(oldHint.gameObject);
+
             var config = _pieceRenderConfig;
 
+            // Board parent at natural scale, world origin
+            // Pieces live in unit-scale space (longest piece edge = 1 world unit).
+            // Camera frames the board by panning; no scaling transform needed.
+            parent.localScale = Vector3.one;
+            parent.position   = Vector3.zero;
+
+            // Store grid dims for camera framing and tray sizing
+            int gridRows = rawBoard.Pieces.Count > 0
+                ? Mathf.Max(1, Mathf.RoundToInt(rawBoard.Pieces.Count / (float)gridCols))
+                : 1;
+            _currentGridRows = gridRows;
+            _currentGridCols = gridCols;
+
+            // Spawn piece GameObjects
             List<GameObject> pieces;
             if (config != null && config.PieceShader != null)
                 pieces = SimpleJigsaw.PieceObjectFactory.CreateAll(rawBoard, config, parent);
@@ -508,26 +530,7 @@ namespace SimpleGame.Game.InGame
 
             _spawnedPieces = pieces;
 
-            // ── Layout zones (world units, camera ortho size 5 → ±5 y) ─────
-            // Tray: bottom 32% of screen — 3 big visible pieces, no button
-            // Board: remaining space above tray, minus top 0.8u for HUD
-            var cam = Camera.main;
-            float orthoH = cam != null && cam.orthographic ? cam.orthographicSize * 2f : 10f;
-            float orthoW = cam != null ? orthoH * cam.aspect : 18f;
-
-            const float trayFraction = 0.32f;
-            float trayH        = orthoH * trayFraction;
-            float trayY        = -orthoH * 0.5f + trayH * 0.5f;
-            float boardBottom  = -orthoH * 0.5f + trayH + 0.15f;
-            float boardTop     =  orthoH * 0.5f - 0.8f;
-            float boardH       =  boardTop - boardBottom;
-            float boardSize    =  Mathf.Min(orthoW * 0.72f, boardH);    // 72% wide — slightly smaller
-
-            // Scale PuzzleParent: [0,1]² → boardSize², z=-2 so pieces render in front of UI canvas
-            parent.localScale = Vector3.one * boardSize;
-            parent.position   = new Vector3(-boardSize * 0.5f, boardBottom, -2f);
-
-            // ── Build piece lookup + record solved positions ───────────────
+            // Build piece lookup + record solved world positions
             _pieceObjects         = new Dictionary<int, GameObject>(pieces.Count);
             _solvedWorldPositions = new Dictionary<int, Vector3>(pieces.Count);
 
@@ -536,61 +539,79 @@ namespace SimpleGame.Game.InGame
                 var pid = rawBoard.Pieces[i].Id;
                 var go  = pieces[i];
                 _pieceObjects[pid]         = go;
-                _solvedWorldPositions[pid] = parent.TransformPoint(go.transform.localPosition);
+                // Board parent is identity -- world position == local position
+                _solvedWorldPositions[pid] = go.transform.position;
 
-                // BoxCollider sized to mesh bounds — reliable for OnMouseDown on any mesh shape
+                // BoxCollider sized to mesh bounds
                 var mesh = go.GetComponent<MeshFilter>()?.sharedMesh;
                 var box  = go.AddComponent<BoxCollider>();
                 if (mesh != null) { box.center = mesh.bounds.center; box.size = mesh.bounds.size; }
 
-                // Seed piece is already placed — disable its collider immediately so it
-                // never intercepts rays aimed at tray pieces.
+                // Seed piece: already placed, collider disabled
                 if (pid == seedPieceId)
                     box.enabled = false;
-                else
-                    go.AddComponent<PieceTapHandler>().Initialize(pid, _inGameView,
-                        isInputBlocked: () => _popupManager != null && _popupManager.HasActivePopup);
+                // Non-seed board pieces have no tap handler -- tray input via UGUI buttons (S03)
             }
 
-            // ── Tray: slotCount slots — as large as tray height allows ──────
-            // Target: pieces fill the tray height. Clamp so all slots fit screen width.
-            float slotSizeByHeight = trayH * 3.0f;
-            float slotSizeByWidth  = (orthoW * 0.96f) / slotCount * 3.0f;
-            float slotSize = Mathf.Min(slotSizeByHeight, slotSizeByWidth);
+            // Hint surface -- behind pieces at z = +0.1
+            var hintMesh = SimpleJigsaw.HintSurfaceBuilder.Build(rawBoard.Pieces, thickness: 0.02f, zDepth: 0.1f);
+            if (hintMesh != null)
+            {
+                var hintGo = new GameObject("HintSurface");
+                hintGo.transform.SetParent(parent, worldPositionStays: false);
+                hintGo.transform.localPosition = Vector3.zero;
+                hintGo.transform.localScale    = Vector3.one;
+                hintGo.AddComponent<MeshFilter>().sharedMesh = hintMesh;
+                var hintRenderer = hintGo.AddComponent<MeshRenderer>();
+                hintRenderer.sharedMaterial = new UnityEngine.Material(
+                    Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
+            }
 
-            // Each piece mesh is 1/cols wide in local [0,1]² space; parent is scaled to boardSize.
-            // After unparenting, localScale=1 → boardSize/cols world units wide.
-            // To render at slotSize world units: localScale = slotSize * cols / boardSize.
-            float normSlotScale = boardSize > 0.0001f ? slotSize * gridCols / boardSize : slotSize;
+            // Tray slot positions -- camera-relative
+            // Slot pieces appear at the bottom of the camera view, following camera pan (S03).
+            // Interim: computed from current camera position at spawn time.
+            var cam = Camera.main;
+            float orthoH = cam != null && cam.orthographic ? cam.orthographicSize * 2f : 10f;
+            float orthoW = cam != null ? orthoH * cam.aspect : 18f;
+            float camX   = cam != null ? cam.transform.position.x : 0f;
+            float camY   = cam != null ? cam.transform.position.y : 0f;
 
-            // Spacing: evenly distribute centres across 92% of screen width.
-            float slotSpacing    = slotCount > 1 ? (orthoW * 0.92f) / (slotCount - 1 + 1) : 0f;
-            float totalTrayWidth = slotSpacing * (slotCount - 1) + slotSize;
-            float trayStartX     = -slotSpacing * (slotCount - 1) * 0.5f;
-            float staggerY       = 0f;
+            const float trayFraction = 0.28f;
+            float trayH = orthoH * trayFraction;
+            float trayY = camY - orthoH * 0.5f + trayH * 0.5f;
+
+            // Slot scale: fit the taller cell dimension into trayH.
+            float unitScale = Mathf.Max(gridRows, gridCols);
+            float cellH     = unitScale / gridRows;
+            float cellW     = unitScale / gridCols;
+            float slotScale = trayH / cellH;
+
+            // Clamp so all slots fit screen width
+            float slotWorldW = cellW * slotScale;
+            float maxByWidth = slotCount > 0 ? (orthoW * 0.92f) / slotCount : orthoW;
+            if (slotWorldW > maxByWidth) slotScale = maxByWidth / cellW;
+
+            float slotWorldWFinal = cellW * slotScale;
+            float slotSpacing     = slotCount > 1
+                ? (orthoW * 0.92f - slotWorldWFinal) / (slotCount - 1) + slotWorldWFinal
+                : 0f;
+            float trayStartX      = camX - slotSpacing * (slotCount - 1) * 0.5f;
 
             _traySlotPositions = new Vector3[slotCount];
             _traySlotScales    = new Vector3[slotCount];
             for (int i = 0; i < slotCount; i++)
             {
                 float x = trayStartX + i * slotSpacing;
-                float y = trayY + (i % 2 == 1 ? -staggerY : 0f);
-                _traySlotPositions[i] = new Vector3(x, y, -2f);
-                _traySlotScales[i]    = Vector3.one * normSlotScale;
+                _traySlotPositions[i] = new Vector3(x, trayY, -2f);
+                _traySlotScales[i]    = Vector3.one * slotScale;
             }
 
             // Hidden off-screen position for pieces not yet drawn into a slot
-            var hiddenPos = new Vector3(orthoW * 2f, trayY, -2f);
+            var hiddenPos = new Vector3(camX + orthoW * 2f, trayY, -2f);
 
             _traySlotData = new Dictionary<int, (Vector3 pos, Vector3 scale)>();
 
-            // Build a set of the first slotCount deck pieces — these are the ones the model
-            // puts in visible slots 0..slotCount-1 at start. All others start hidden.
-            var initialSlotSet = new HashSet<int>();
-            for (int i = 0; i < slotCount && i < deckOrder.Count; i++)
-                initialSlotSet.Add(deckOrder[i]);
-
-            // Map deck order index → slot index for positioning
+            // Map deck order index to slot index for initial positioning
             var deckSlotIndex = new Dictionary<int, int>();
             for (int i = 0; i < slotCount && i < deckOrder.Count; i++)
                 deckSlotIndex[deckOrder[i]] = i;
@@ -619,17 +640,17 @@ namespace SimpleGame.Game.InGame
                 _traySlotData[desc.Id] = (pos, scale);
             }
 
-            // Snapshot initial positions for Retry reset (before any MovePieceToTraySlot calls)
+            // Snapshot initial positions for Retry reset
             _initialTrayData = new Dictionary<int, (Vector3, Vector3)>(_traySlotData);
 
-            // ── Wire piece-position callbacks onto InGameView ──────────────
+            // Wire piece-position callbacks onto InGameView
             _inGameView.RegisterPieceCallbacks(
                 onMovePieceToSlot: MovePieceToTraySlot,
                 onRevealPiece:     RevealPiece,
                 onShakePiece:      ShakePieceInSlot
             );
 
-            Debug.Log($"[InGameSceneController] Spawned {pieces.Count} pieces — 1 seed, {deckOrder.Count} in deck, {slotCount} visible slots.");
+            Debug.Log($"[InGameSceneController] Spawned {pieces.Count} pieces -- 1 seed, {deckOrder.Count} in deck, {slotCount} visible slots. Board: {gridRows}x{gridCols} unitScale={unitScale}");
         }
 
         /// <summary>Move a piece from its tray world position to its solved board position.</summary>
