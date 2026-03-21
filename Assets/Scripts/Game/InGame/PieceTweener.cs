@@ -159,7 +159,7 @@ namespace SimpleGame.Game.InGame
         /// Strong lateral shake — 5 oscillations with exponentially decaying amplitude.
         /// Returns the piece to <paramref name="restWorld"/> on completion.
         /// </summary>
-        public static async UniTaskVoid ShakePiece(
+        public static async UniTask ShakePiece(
             GameObject piece,
             Vector3    restWorld,
             CancellationToken ct)

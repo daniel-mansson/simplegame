@@ -15,7 +15,6 @@ namespace SimpleGame.Game.InGame
     {
         // ── State ─────────────────────────────────────────────────────────
         private InGameSceneController _ctrl;
-        private bool  _visible = false;
         private string _rowsStr  = "3";
         private string _colsStr  = "3";
         private string _slotsStr = "3";
@@ -43,15 +42,8 @@ namespace SimpleGame.Game.InGame
         {
             InitStyles();
 
-            // Toggle button — always visible in top-left corner
-            var toggleRect = new Rect(4, 4, 28, 22);
-            if (GUI.Button(toggleRect, _visible ? "▲" : "▼"))
-                _visible = !_visible;
-
-            if (!_visible) return;
-
             // Panel background
-            var panel = new Rect(4, 28, PanelW, PanelH);
+            var panel = new Rect(4, 4, PanelW, PanelH);
             GUI.Box(panel, GUIContent.none);
 
             float x = panel.x + Pad;

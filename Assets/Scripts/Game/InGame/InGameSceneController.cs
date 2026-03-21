@@ -69,6 +69,22 @@ namespace SimpleGame.Game.InGame
         /// <summary>Scale for each of the 3 tray slots (front is largest).</summary>
         private Vector3[] _traySlotScales;
 
+        /// <summary>Grid dimensions of the current level — stored for camera framing and tray sizing.</summary>
+        private int _currentGridRows;
+        private int _currentGridCols;
+
+        /// <summary>UGUI Buttons for each tray slot — one per slot, repositioned each LateUpdate.</summary>
+        private UnityEngine.UI.Button[] _slotButtons;
+
+        /// <summary>Canvas that hosts the slot buttons (Screen Space Overlay).</summary>
+        private Canvas _slotButtonCanvas;
+
+        /// <summary>
+        /// Piece IDs currently mid-shake. LateUpdate skips repositioning these so the
+        /// shake tween can animate position freely without being overwritten each frame.
+        /// </summary>
+        private readonly System.Collections.Generic.HashSet<int> _shakingPieces = new();
+
         /// <summary>
         /// Optional model factory — overrides stub generation.
         /// Called at the start of each retry to produce a fresh PuzzleModel with reset deck state.
@@ -163,6 +179,108 @@ namespace SimpleGame.Game.InGame
             _winPopupDelaySec = 0f;  // no delay in tests — UniTask.Delay(0) completes immediately
         }
 
+
+        /// <summary>
+        /// Each frame: reposition tray slot pieces and UGUI buttons relative to camera-bottom.
+        /// Slot pieces are placed at localScale=1 (they are already 1 world unit).
+        /// Horizontal spacing shrinks to fit screen width if there are many slots.
+        /// Button anchoredPosition is in canvas units (screen pixels / canvas.scaleFactor).
+        /// </summary>
+        private void LateUpdate()
+        {
+            if (_traySlotPositions == null || _traySlotPositions.Length == 0) return;
+
+            var cam = Camera.main;
+            if (cam == null) return;
+
+            float orthoH = cam.orthographic ? cam.orthographicSize * 2f : 10f;
+            float orthoW = orthoH * cam.aspect;
+            float camX   = cam.transform.position.x;
+            float camY   = cam.transform.position.y;
+
+            int   slotCount = _traySlotPositions.Length;
+            float unitScale = Mathf.Max(_currentGridRows, _currentGridCols);
+            float cellH     = _currentGridRows > 0 ? unitScale / _currentGridRows : 1f;
+            float cellW     = _currentGridCols > 0 ? unitScale / _currentGridCols : 1f;
+
+            // Pieces are 1 world unit at scale 1. Display them at natural size in the tray.
+            // Shrink only if they would not all fit across 92% of screen width.
+            float slotScale  = 1f;
+            float slotWorldW = cellW * slotScale;
+            float maxByWidth = slotCount > 0 ? (orthoW * 0.92f) / slotCount : orthoW;
+            if (slotWorldW > maxByWidth) slotScale = maxByWidth / cellW;
+
+            float slotWorldWFinal = cellW  * slotScale;
+            float slotWorldHFinal = cellH  * slotScale;
+            // Tray centre-Y: one half-piece height above the camera bottom edge
+            float trayY = camY - orthoH * 0.5f + slotWorldHFinal * 0.5f + 0.1f;
+
+            // Even spacing across 92% of screen width
+            float totalTrayW  = orthoW * 0.92f;
+            float slotSpacing = slotCount > 1
+                ? (totalTrayW - slotWorldWFinal) / (slotCount - 1)
+                : 0f;
+            float trayStartX  = camX - (slotSpacing * (slotCount - 1)) * 0.5f;
+
+            // Fetch slot contents once per frame (avoid repeated calls inside loops)
+            var slotContents = _inGameView?.GetSlotContents();
+
+            // Update 3D tray piece positions and scales each frame
+            for (int i = 0; i < slotCount; i++)
+            {
+                float x      = trayStartX + i * slotSpacing;
+                var newPos   = new Vector3(x, trayY, -2f);
+                var newScale = Vector3.one * slotScale;
+                _traySlotPositions[i] = newPos;
+                _traySlotScales[i]    = newScale;
+
+                if (slotContents != null && i < slotContents.Length && slotContents[i].HasValue)
+                {
+                    int pid = slotContents[i].Value;
+                    if (_pieceObjects != null && _pieceObjects.TryGetValue(pid, out var go))
+                    {
+                        // Skip repositioning pieces that are mid-shake so the tween can run freely
+                        if (!_shakingPieces.Contains(pid))
+                        {
+                            go.transform.position   = newPos;
+                            go.transform.localScale = newScale;
+                        }
+                        if (_traySlotData != null) _traySlotData[pid] = (newPos, newScale);
+                    }
+                }
+            }
+
+            // Reposition UGUI slot buttons to match 3D slot world positions.
+            // anchoredPosition must be in canvas units, not screen pixels.
+            // With ScreenSpaceOverlay + ScaleWithScreenSize, canvas units = screen pixels / scaleFactor.
+            if (_slotButtons == null) return;
+
+            float canvasScale = _slotButtonCanvas != null ? _slotButtonCanvas.scaleFactor : 1f;
+            if (canvasScale < 1e-4f) canvasScale = 1f;
+
+            for (int i = 0; i < _slotButtons.Length && i < slotCount; i++)
+            {
+                var btn = _slotButtons[i];
+                if (btn == null) continue;
+
+                var rt = btn.GetComponent<RectTransform>();
+
+                // World → screen pixel → canvas unit
+                Vector3 screenPos = cam.WorldToScreenPoint(_traySlotPositions[i]);
+                rt.anchoredPosition = new Vector2(screenPos.x / canvasScale,
+                                                  screenPos.y / canvasScale);
+
+                // Size via projected pixel extents, then convert to canvas units
+                Vector3 rightEdge = cam.WorldToScreenPoint(_traySlotPositions[i] + Vector3.right * slotWorldWFinal * 0.5f);
+                Vector3 leftEdge  = cam.WorldToScreenPoint(_traySlotPositions[i] - Vector3.right * slotWorldWFinal * 0.5f);
+                Vector3 topEdge   = cam.WorldToScreenPoint(_traySlotPositions[i] + Vector3.up    * slotWorldHFinal * 0.5f);
+                Vector3 botEdge   = cam.WorldToScreenPoint(_traySlotPositions[i] - Vector3.up    * slotWorldHFinal * 0.5f);
+
+                float pxW = Mathf.Abs(rightEdge.x - leftEdge.x);
+                float pxH = Mathf.Abs(topEdge.y   - botEdge.y);
+                rt.sizeDelta = new Vector2(pxW / canvasScale, pxH / canvasScale);
+            }
+        }
         /// <summary>
         /// Play-from-editor bootstrap: called by Unity on Start when the InGame scene
         /// is entered directly (i.e. GameBootstrapper never ran). Creates stub services
@@ -478,15 +596,15 @@ namespace SimpleGame.Game.InGame
         public void ClearDebugOverride() => _debugOverride = null;
 
         /// <summary>
-        /// Spawns piece GameObjects using PieceObjectFactory and attaches PieceTapHandler to each.
-        /// Called once at scene start when a GridLayoutConfig is assigned.
+        /// Spawns piece GameObjects using PieceObjectFactory. Board parent at natural scale,
+        /// hint surface behind pieces, tray slots at camera-relative positions.
+        /// Called once per level start when a GridLayoutConfig is assigned.
         /// </summary>
         private void SpawnPieces(SimpleJigsaw.PuzzleBoard rawBoard, int seedPieceId, int slotCount, System.Collections.Generic.IReadOnlyList<int> deckOrder, int gridCols)
         {
             if (_inGameView == null) return;
 
             // Destroy any pieces from a previous level before spawning new ones.
-            // The InGame scene stays loaded across levels, so this prevents accumulation.
             if (_spawnedPieces != null)
             {
                 foreach (var old in _spawnedPieces)
@@ -494,9 +612,27 @@ namespace SimpleGame.Game.InGame
                 _spawnedPieces = null;
             }
 
+            // Destroy previous hint surface if any
             var parent = _puzzleParent != null ? _puzzleParent : transform;
+            var oldHint = parent.Find("HintSurface");
+            if (oldHint != null) UnityEngine.Object.Destroy(oldHint.gameObject);
+
             var config = _pieceRenderConfig;
 
+            // Board parent at natural scale, world origin
+            // Pieces live in unit-scale space (longest piece edge = 1 world unit).
+            // Camera frames the board by panning; no scaling transform needed.
+            parent.localScale = Vector3.one;
+            parent.position   = Vector3.zero;
+
+            // Store grid dims for camera framing and tray sizing
+            int gridRows = rawBoard.Pieces.Count > 0
+                ? Mathf.Max(1, Mathf.RoundToInt(rawBoard.Pieces.Count / (float)gridCols))
+                : 1;
+            _currentGridRows = gridRows;
+            _currentGridCols = gridCols;
+
+            // Spawn piece GameObjects
             List<GameObject> pieces;
             if (config != null && config.PieceShader != null)
                 pieces = SimpleJigsaw.PieceObjectFactory.CreateAll(rawBoard, config, parent);
@@ -508,26 +644,7 @@ namespace SimpleGame.Game.InGame
 
             _spawnedPieces = pieces;
 
-            // ── Layout zones (world units, camera ortho size 5 → ±5 y) ─────
-            // Tray: bottom 32% of screen — 3 big visible pieces, no button
-            // Board: remaining space above tray, minus top 0.8u for HUD
-            var cam = Camera.main;
-            float orthoH = cam != null && cam.orthographic ? cam.orthographicSize * 2f : 10f;
-            float orthoW = cam != null ? orthoH * cam.aspect : 18f;
-
-            const float trayFraction = 0.32f;
-            float trayH        = orthoH * trayFraction;
-            float trayY        = -orthoH * 0.5f + trayH * 0.5f;
-            float boardBottom  = -orthoH * 0.5f + trayH + 0.15f;
-            float boardTop     =  orthoH * 0.5f - 0.8f;
-            float boardH       =  boardTop - boardBottom;
-            float boardSize    =  Mathf.Min(orthoW * 0.72f, boardH);    // 72% wide — slightly smaller
-
-            // Scale PuzzleParent: [0,1]² → boardSize², z=-2 so pieces render in front of UI canvas
-            parent.localScale = Vector3.one * boardSize;
-            parent.position   = new Vector3(-boardSize * 0.5f, boardBottom, -2f);
-
-            // ── Build piece lookup + record solved positions ───────────────
+            // Build piece lookup + record solved world positions
             _pieceObjects         = new Dictionary<int, GameObject>(pieces.Count);
             _solvedWorldPositions = new Dictionary<int, Vector3>(pieces.Count);
 
@@ -536,61 +653,75 @@ namespace SimpleGame.Game.InGame
                 var pid = rawBoard.Pieces[i].Id;
                 var go  = pieces[i];
                 _pieceObjects[pid]         = go;
-                _solvedWorldPositions[pid] = parent.TransformPoint(go.transform.localPosition);
+                // Board parent is identity -- world position == local position
+                _solvedWorldPositions[pid] = go.transform.position;
 
-                // BoxCollider sized to mesh bounds — reliable for OnMouseDown on any mesh shape
+                // BoxCollider sized to mesh bounds
                 var mesh = go.GetComponent<MeshFilter>()?.sharedMesh;
                 var box  = go.AddComponent<BoxCollider>();
                 if (mesh != null) { box.center = mesh.bounds.center; box.size = mesh.bounds.size; }
 
-                // Seed piece is already placed — disable its collider immediately so it
-                // never intercepts rays aimed at tray pieces.
+                // Seed piece: already placed, collider disabled
                 if (pid == seedPieceId)
                     box.enabled = false;
-                else
-                    go.AddComponent<PieceTapHandler>().Initialize(pid, _inGameView,
-                        isInputBlocked: () => _popupManager != null && _popupManager.HasActivePopup);
+                // Non-seed board pieces have no tap handler -- tray input via UGUI buttons (S03)
             }
 
-            // ── Tray: slotCount slots — as large as tray height allows ──────
-            // Target: pieces fill the tray height. Clamp so all slots fit screen width.
-            float slotSizeByHeight = trayH * 3.0f;
-            float slotSizeByWidth  = (orthoW * 0.96f) / slotCount * 3.0f;
-            float slotSize = Mathf.Min(slotSizeByHeight, slotSizeByWidth);
+            // Hint surface -- behind pieces at z = +0.1
+            var hintMesh = SimpleJigsaw.HintSurfaceBuilder.Build(rawBoard.Pieces, thickness: 0.02f, zDepth: 0.1f);
+            if (hintMesh != null)
+            {
+                var hintGo = new GameObject("HintSurface");
+                hintGo.transform.SetParent(parent, worldPositionStays: false);
+                hintGo.transform.localPosition = Vector3.zero;
+                hintGo.transform.localScale    = Vector3.one;
+                hintGo.AddComponent<MeshFilter>().sharedMesh = hintMesh;
+                var hintRenderer = hintGo.AddComponent<MeshRenderer>();
+                hintRenderer.sharedMaterial = new UnityEngine.Material(
+                    Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
+            }
 
-            // Each piece mesh is 1/cols wide in local [0,1]² space; parent is scaled to boardSize.
-            // After unparenting, localScale=1 → boardSize/cols world units wide.
-            // To render at slotSize world units: localScale = slotSize * cols / boardSize.
-            float normSlotScale = boardSize > 0.0001f ? slotSize * gridCols / boardSize : slotSize;
+            // Initial tray slot positions -- same formula as LateUpdate so the
+            // first frame matches subsequent frames without a pop.
+            var cam = Camera.main;
+            float orthoH = cam != null && cam.orthographic ? cam.orthographicSize * 2f : 10f;
+            float orthoW = cam != null ? orthoH * cam.aspect : 18f;
+            float camX   = cam != null ? cam.transform.position.x : 0f;
+            float camY   = cam != null ? cam.transform.position.y : 0f;
 
-            // Spacing: evenly distribute centres across 92% of screen width.
-            float slotSpacing    = slotCount > 1 ? (orthoW * 0.92f) / (slotCount - 1 + 1) : 0f;
-            float totalTrayWidth = slotSpacing * (slotCount - 1) + slotSize;
-            float trayStartX     = -slotSpacing * (slotCount - 1) * 0.5f;
-            float staggerY       = 0f;
+            // Pieces are 1 world unit -- display at natural scale, shrink only if too wide.
+            float unitScale = Mathf.Max(gridRows, gridCols);
+            float cellH     = unitScale / gridRows;
+            float cellW     = unitScale / gridCols;
+            float slotScale  = 1f;
+            float slotWorldW = cellW * slotScale;
+            float maxByWidth = slotCount > 0 ? (orthoW * 0.92f) / slotCount : orthoW;
+            if (slotWorldW > maxByWidth) slotScale = maxByWidth / cellW;
+
+            float slotWorldWFinal = cellW * slotScale;
+            float slotWorldHFinal = cellH * slotScale;
+            float trayY      = camY - orthoH * 0.5f + slotWorldHFinal * 0.5f + 0.1f;
+            float totalTrayW = orthoW * 0.92f;
+            float slotSpacing = slotCount > 1
+                ? (totalTrayW - slotWorldWFinal) / (slotCount - 1)
+                : 0f;
+            float trayStartX  = camX - (slotSpacing * (slotCount - 1)) * 0.5f;
 
             _traySlotPositions = new Vector3[slotCount];
             _traySlotScales    = new Vector3[slotCount];
             for (int i = 0; i < slotCount; i++)
             {
                 float x = trayStartX + i * slotSpacing;
-                float y = trayY + (i % 2 == 1 ? -staggerY : 0f);
-                _traySlotPositions[i] = new Vector3(x, y, -2f);
-                _traySlotScales[i]    = Vector3.one * normSlotScale;
+                _traySlotPositions[i] = new Vector3(x, trayY, -2f);
+                _traySlotScales[i]    = Vector3.one * slotScale;
             }
 
             // Hidden off-screen position for pieces not yet drawn into a slot
-            var hiddenPos = new Vector3(orthoW * 2f, trayY, -2f);
+            var hiddenPos = new Vector3(camX + orthoW * 2f, trayY, -2f);
 
             _traySlotData = new Dictionary<int, (Vector3 pos, Vector3 scale)>();
 
-            // Build a set of the first slotCount deck pieces — these are the ones the model
-            // puts in visible slots 0..slotCount-1 at start. All others start hidden.
-            var initialSlotSet = new HashSet<int>();
-            for (int i = 0; i < slotCount && i < deckOrder.Count; i++)
-                initialSlotSet.Add(deckOrder[i]);
-
-            // Map deck order index → slot index for positioning
+            // Map deck order index to slot index for initial positioning
             var deckSlotIndex = new Dictionary<int, int>();
             for (int i = 0; i < slotCount && i < deckOrder.Count; i++)
                 deckSlotIndex[deckOrder[i]] = i;
@@ -619,17 +750,97 @@ namespace SimpleGame.Game.InGame
                 _traySlotData[desc.Id] = (pos, scale);
             }
 
-            // Snapshot initial positions for Retry reset (before any MovePieceToTraySlot calls)
+            // Snapshot initial positions for Retry reset
             _initialTrayData = new Dictionary<int, (Vector3, Vector3)>(_traySlotData);
 
-            // ── Wire piece-position callbacks onto InGameView ──────────────
+            // Wire piece-position callbacks onto InGameView
             _inGameView.RegisterPieceCallbacks(
                 onMovePieceToSlot: MovePieceToTraySlot,
                 onRevealPiece:     RevealPiece,
                 onShakePiece:      ShakePieceInSlot
             );
 
-            Debug.Log($"[InGameSceneController] Spawned {pieces.Count} pieces — 1 seed, {deckOrder.Count} in deck, {slotCount} visible slots.");
+            // Spawn UGUI slot buttons on the slot button canvas
+            SpawnSlotButtons(slotCount);
+
+            Debug.Log($"[InGameSceneController] Spawned {pieces.Count} pieces -- 1 seed, {deckOrder.Count} in deck, {slotCount} visible slots. Board: {gridRows}x{gridCols} unitScale={unitScale}");
+        }
+
+        /// <summary>
+        /// Creates one UGUI Button per slot on the slot button canvas.
+        /// Buttons are invisible (no image) and positioned over the 3D slot pieces.
+        /// onClick fires OnTapPiece with the piece ID currently in that slot.
+        /// </summary>
+        private void SpawnSlotButtons(int slotCount)
+        {
+            // Destroy previous slot buttons
+            if (_slotButtons != null)
+            {
+                foreach (var b in _slotButtons)
+                    if (b != null) Destroy(b.gameObject);
+            }
+            _slotButtons = null;
+
+            // Find or create the slot button canvas (Screen Space Overlay)
+            if (_slotButtonCanvas == null)
+            {
+                // Reuse the existing Canvas in the scene if it is Screen Space Overlay
+                var existingCanvas = FindObjectOfType<Canvas>();
+                if (existingCanvas != null && existingCanvas.renderMode == RenderMode.ScreenSpaceOverlay)
+                {
+                    _slotButtonCanvas = existingCanvas;
+                }
+                else
+                {
+                    // Create a dedicated overlay canvas for slot buttons
+                    var canvasGo = new GameObject("SlotButtonCanvas");
+                    _slotButtonCanvas = canvasGo.AddComponent<Canvas>();
+                    _slotButtonCanvas.renderMode  = RenderMode.ScreenSpaceOverlay;
+                    _slotButtonCanvas.sortingOrder = 1;
+                    canvasGo.AddComponent<UnityEngine.UI.CanvasScaler>();
+                    canvasGo.AddComponent<UnityEngine.UI.GraphicRaycaster>();
+                }
+            }
+
+            _slotButtons = new UnityEngine.UI.Button[slotCount];
+
+            for (int i = 0; i < slotCount; i++)
+            {
+                int slotIdx = i; // capture for lambda
+
+                // Create button GameObject
+                var btnGo = new GameObject($"SlotButton_{i}");
+                btnGo.transform.SetParent(_slotButtonCanvas.transform, false);
+
+                // RectTransform: anchored to bottom-left (pixel coordinates)
+                var rt = btnGo.AddComponent<RectTransform>();
+                rt.anchorMin = Vector2.zero;
+                rt.anchorMax = Vector2.zero;
+                rt.pivot     = new Vector2(0.5f, 0.5f);
+                rt.sizeDelta = new Vector2(100f, 100f); // initial size; updated in LateUpdate
+
+                // Transparent Image required for Button to receive raycasts
+                var img = btnGo.AddComponent<UnityEngine.UI.Image>();
+                img.color = new Color(1f, 1f, 1f, 0f); // fully transparent
+
+                // Button component
+                var btn = btnGo.AddComponent<UnityEngine.UI.Button>();
+                btn.transition = UnityEngine.UI.Selectable.Transition.None;
+
+                // onClick: resolve current piece in slot and fire OnTapPiece
+                btn.onClick.AddListener(() =>
+                {
+                    if (_popupManager != null && _popupManager.HasActivePopup) return;
+                    var contents = _inGameView?.GetSlotContents();
+                    if (contents == null || slotIdx >= contents.Length) return;
+                    if (!contents[slotIdx].HasValue) return;
+                    int pid = contents[slotIdx].Value;
+                    Debug.Log($"[SlotButton] Slot {slotIdx} tapped, piece {pid}");
+                    (_inGameView as InGameView)?.NotifyPieceTapped(pid);
+                });
+
+                _slotButtons[i] = btn;
+            }
         }
 
         /// <summary>Move a piece from its tray world position to its solved board position.</summary>
@@ -657,13 +868,44 @@ namespace SimpleGame.Game.InGame
         private void ShakePieceInSlot(int slotIndex)
         {
             if (_traySlotPositions == null || slotIndex >= _traySlotPositions.Length) return;
-            // Resolve which piece ID is in this slot via the view's slot contents mirror
             var slotContents = _inGameView?.GetSlotContents();
             if (slotContents == null || slotIndex >= slotContents.Length) return;
             if (!slotContents[slotIndex].HasValue) return;
             int pieceId = slotContents[slotIndex].Value;
             if (!_pieceObjects.TryGetValue(pieceId, out var go)) return;
-            PieceTweener.ShakePiece(go, _traySlotPositions[slotIndex], destroyCancellationToken).Forget();
+
+            // Lock this piece so LateUpdate doesn't overwrite its position during the shake.
+            _shakingPieces.Add(pieceId);
+            ShakePieceAsync(go, pieceId, _traySlotPositions[slotIndex], destroyCancellationToken).Forget();
+        }
+
+        private async UniTaskVoid ShakePieceAsync(GameObject go, int pieceId, Vector3 restPos, System.Threading.CancellationToken ct)
+        {
+            try
+            {
+                await PieceTweener.ShakePiece(go, restPos, ct);
+            }
+            finally
+            {
+                _shakingPieces.Remove(pieceId);
+                // Snap back to current slot position in case it drifted while camera panned
+                if (go != null && _traySlotPositions != null)
+                {
+                    var contents = _inGameView?.GetSlotContents();
+                    if (contents != null)
+                    {
+                        for (int i = 0; i < contents.Length; i++)
+                        {
+                            if (contents[i] == pieceId && i < _traySlotPositions.Length)
+                            {
+                                go.transform.position   = _traySlotPositions[i];
+                                go.transform.localScale = _traySlotScales[i];
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         private void RevealPiece(int pieceId)
