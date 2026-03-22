@@ -21,6 +21,12 @@ namespace SimpleGame.Game.Services
         /// <summary>Coin balance (separate from golden pieces; used for Continue and shop).</summary>
         public int coins;
 
+        /// <summary>
+        /// UTC unix timestamp (seconds) of when this save was last written.
+        /// Used by cloud save merge to determine recency. Set by the save service on write.
+        /// </summary>
+        public long savedAt;
+
         /// <summary>Per-object restoration progress.</summary>
         public List<ObjectProgress> objectProgress = new List<ObjectProgress>();
 

@@ -51,7 +51,7 @@ This milestone is complete only when all are true:
 - [x] **S01: SDK + Anonymous Login** `risk:high` `depends:[]`
   > After this: Boot logs a valid PlayFab Player ID in Play mode; same Player ID returned on second launch (custom ID recovery proven).
 
-- [ ] **S02: Cloud Save Sync** `risk:medium` `depends:[S01]`
+- [x] **S02: Cloud Save Sync** `risk:medium` `depends:[S01]`
   > After this: Uninstall and reinstall (simulated via PlayerPrefs.DeleteAll + fresh Play mode) restores progress from PlayFab cloud with take-max merge applied.
 
 - [ ] **S03: Platform Linking & First-Launch Prompt** `risk:medium` `depends:[S01]`

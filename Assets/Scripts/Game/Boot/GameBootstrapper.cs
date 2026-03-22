@@ -23,11 +23,14 @@ namespace SimpleGame.Game.Boot
     ///
     /// Boot sequence:
     ///   1. PlayFab anonymous login (LoginWithCustomID — non-fatal if offline)
-    ///   2. Build infrastructure (managers, services, UIFactory)
-    ///   3. Load the initial screen (MainMenu)
-    ///   4. Find and initialize the active SceneController
-    ///   5. Await RunAsync() — only returns when navigation is decided
-    ///   6. Navigate to the returned screen; repeat
+    ///   2. Cloud save pull + take-max merge into local PlayerPrefs
+    ///   3. Build infrastructure (managers, services, UIFactory)
+    ///   4. Load the initial screen (MainMenu)
+    ///   5. Find and initialize the active SceneController
+    ///   6. Await RunAsync() — only returns when navigation is decided
+    ///   7. Navigate to the returned screen; repeat
+    ///
+    /// OnApplicationPause(true): pushes current MetaSaveData to cloud.
     /// </summary>
     public class GameBootstrapper : MonoBehaviour
     {
@@ -48,6 +51,7 @@ namespace SimpleGame.Game.Boot
         private GoldenPieceService _goldenPieceService;
         private CoinsService _coinsService;
         private IPlayFabAuthService _authService;
+        private ICloudSaveService _cloudSaveService;
 
         private async UniTaskVoid Start()
         {
@@ -67,12 +71,25 @@ namespace SimpleGame.Game.Boot
                 Debug.LogWarning($"[GameBootstrapper] PlayFab login failed — continuing offline. Reason: {ex.Message}");
             }
 
+            // --- Cloud save: pull and merge before loading local services ---
+            _metaSaveService = new PlayerPrefsMetaSaveService();
+            _cloudSaveService = new PlayFabCloudSaveService(_authService);
+
+            var cloudData = await _cloudSaveService.PullAsync();
+            if (cloudData != null)
+            {
+                var localData = _metaSaveService.Load();
+                var merged = MetaSaveMerge.TakeMax(localData, cloudData);
+                _metaSaveService.Save(merged);
+                Debug.Log("[GameBootstrapper] Cloud save merged into local data.");
+            }
+
             // --- Build services ---
             var gameService = new GameService();
             _progressionService = new ProgressionService();
             _sessionService = new GameSessionService();
             _heartService = new HeartService();
-            _metaSaveService = new PlayerPrefsMetaSaveService();
+            // _metaSaveService already initialized above (before cloud pull)
             _metaProgressionService = new MetaProgressionService(_worldData, _metaSaveService);
             _goldenPieceService = new GoldenPieceService(_metaSaveService);
             _coinsService = new CoinsService(_metaSaveService);
@@ -152,7 +169,12 @@ namespace SimpleGame.Game.Boot
                             return;
                         }
                         ctrl.Initialize(_uiFactory, _progressionService, _sessionService,
-                                       _popupManager, _goldenPieceService, _heartService, _coinsService, popupContainer, _currencyOverlay);
+                                       _popupManager, _goldenPieceService, _heartService, _coinsService, popupContainer, _currencyOverlay,
+                                       onSessionEnd: async () =>
+                                       {
+                                           var data = _metaSaveService.Load();
+                                           await _cloudSaveService.PushAsync(data);
+                                       });
                         var next = await ctrl.RunAsync();
                         await _screenManager.ShowScreenAsync(next);
                         break;
@@ -162,6 +184,15 @@ namespace SimpleGame.Game.Boot
                         return;
                 }
             }
+        }
+
+        private void OnApplicationPause(bool pause)
+        {
+            if (!pause) return;
+            // Push to cloud when app is backgrounded. Fire-and-forget — pause may be brief.
+            var data = _metaSaveService?.Load();
+            if (data != null)
+                _cloudSaveService?.PushAsync(data).Forget();
         }
 
         private static ScreenId? DetectAlreadyLoadedScreen()

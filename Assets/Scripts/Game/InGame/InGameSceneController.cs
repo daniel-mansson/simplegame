@@ -142,13 +142,15 @@ namespace SimpleGame.Game.InGame
         private ICoinsService _coins;
         private ICurrencyOverlay _overlay;
         private PopupManager<PopupId> _popupManager;
+        private System.Func<Cysharp.Threading.Tasks.UniTask> _onSessionEnd;
 
         /// <summary>Inject dependencies. Called by the boot loop before RunAsync.</summary>
         public void Initialize(UIFactory uiFactory, ProgressionService progression,
                                GameSessionService session, PopupManager<PopupId> popupManager,
                                IGoldenPieceService goldenPieces = null, IHeartService hearts = null,
                                ICoinsService coins = null, IViewResolver viewResolver = null,
-                               ICurrencyOverlay overlay = null)
+                               ICurrencyOverlay overlay = null,
+                               System.Func<Cysharp.Threading.Tasks.UniTask> onSessionEnd = null)
         {
             // Cancel any in-flight RunAsync before GameBootstrapper takes over.
             _runCts?.Cancel();
@@ -164,6 +166,7 @@ namespace SimpleGame.Game.InGame
             _coins = coins;
             _viewResolver = viewResolver;
             _overlay = overlay;
+            _onSessionEnd = onSessionEnd;
         }
 
         /// <summary>
@@ -425,6 +428,7 @@ namespace SimpleGame.Game.InGame
                             if (_winPopupDelaySec > 0f)
                                 await UniTask.Delay(System.TimeSpan.FromSeconds(_winPopupDelaySec), cancellationToken: ct);
                             await HandleLevelCompletePopupAsync(ct);
+                            if (_onSessionEnd != null) await _onSessionEnd();
                             return ScreenId.MainMenu;
                         }
 
@@ -434,7 +438,10 @@ namespace SimpleGame.Game.InGame
                             var choice = await HandleLevelFailedPopupAsync(ct);
 
                             if (choice == LevelFailedChoice.Quit)
+                            {
+                                if (_onSessionEnd != null) await _onSessionEnd();
                                 return ScreenId.MainMenu;
+                            }
 
                             if (choice == LevelFailedChoice.WatchAd)
                             {
