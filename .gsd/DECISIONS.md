@@ -99,3 +99,19 @@
 | D090 | M017 | pattern | Rewarded ad unavailable: deny with UI feedback (button gray + status text), not grant | When IsRewardedLoaded=false: SetWatchInteractable(false) + UpdateStatus message; WaitForResult stays pending until Skip | User explicitly requested deny-with-message over silent grant | No |
 | D091 | M017 | pattern | Interstitial unavailable: skip silently | AdResult.NotLoaded or Failed from ShowInterstitialAsync: log only, navigation continues | User requested silent skip; interstitial is supplemental revenue, not a gate | No |
 | D092 | M017 | pattern | Interstitial frequency is session-scoped counter | _levelsCompletedThisSession resets on app restart; no cross-session persistence | Out of scope per discussion; simple, no storage overhead | Yes — add cross-session persistence if frequency caps become a requirement |
+
+---
+
+### D093 — SDK: LevelPlay (com.unity.services.levelplay) replaces Advertisement Legacy
+**Date:** 2026-03-20
+**Scope:** library
+
+**Decision:** Which Unity ad SDK to use
+
+**Choice:** Unity LevelPlay (com.unity.services.levelplay) behind LEVELPLAY_ENABLED compile guard
+
+**Rationale:** com.unity.ads (Advertisement Legacy) failed to resolve from the registry and is deprecated (no further feature updates planned). Unity's current recommendation is LevelPlay (Ads Mediation package, backed by ironSource). UnityAdService is rewritten for the LevelPlay API but compiled out with `#if LEVELPLAY_ENABLED` until the package is installed and an App Key is available — project stays compilable in the interim. IAdService abstraction means no other game code changes.
+
+**To activate:** Install `com.unity.services.levelplay` via Package Manager, install Unity Ads adapter via Ads Mediation → Integration Manager, create LevelPlay app for App Key, add `LEVELPLAY_ENABLED` scripting define.
+
+**Revisable:** No
