@@ -109,11 +109,16 @@ namespace SimpleGame.Tests.Game
         public int CurrencyEarnedCount { get; private set; }
         public int CurrencySpentCount  { get; private set; }
         public int PlatformLinkedCount { get; private set; }
+        public int AdImpressionCount   { get; private set; }
+        public int AdCompletedCount    { get; private set; }
+        public int AdSkippedCount      { get; private set; }
+        public int AdFailedToLoadCount { get; private set; }
 
         public string LastLevelId        { get; private set; }
         public string LastCurrency       { get; private set; }
         public int    LastCurrencyAmount { get; private set; }
         public string LastPlatform       { get; private set; }
+        public string LastAdType         { get; private set; }
 
         public void TrackSessionStart()                          => SessionStartCount++;
         public void TrackSessionEnd()                            => SessionEndCount++;
@@ -121,6 +126,10 @@ namespace SimpleGame.Tests.Game
         public void TrackLevelCompleted(string levelId)          { LevelCompletedCount++; LastLevelId = levelId; }
         public void TrackLevelFailed(string levelId)             { LevelFailedCount++;    LastLevelId = levelId; }
         public void TrackPlatformLinked(string platform)         { PlatformLinkedCount++; LastPlatform = platform; }
+        public void TrackAdImpression(string adType)             { AdImpressionCount++;   LastAdType = adType; }
+        public void TrackAdCompleted(string adType)              { AdCompletedCount++;    LastAdType = adType; }
+        public void TrackAdSkipped(string adType)                { AdSkippedCount++;      LastAdType = adType; }
+        public void TrackAdFailedToLoad(string adType)           { AdFailedToLoadCount++; LastAdType = adType; }
 
         public void TrackCurrencyEarned(string currency, int amount)
         {

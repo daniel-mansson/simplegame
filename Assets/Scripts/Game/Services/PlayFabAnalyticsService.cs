@@ -53,6 +53,18 @@ namespace SimpleGame.Game.Services
         public void TrackPlatformLinked(string platform) =>
             Send("platform_account_linked", new Dictionary<string, object> { { "platform", platform } });
 
+        public void TrackAdImpression(string adType) =>
+            Send("ad_impression", new Dictionary<string, object> { { "ad_type", adType } });
+
+        public void TrackAdCompleted(string adType) =>
+            Send("ad_completed", new Dictionary<string, object> { { "ad_type", adType } });
+
+        public void TrackAdSkipped(string adType) =>
+            Send("ad_skipped", new Dictionary<string, object> { { "ad_type", adType } });
+
+        public void TrackAdFailedToLoad(string adType) =>
+            Send("ad_failed_to_load", new Dictionary<string, object> { { "ad_type", adType } });
+
         private void Send(string eventName, Dictionary<string, object> body)
         {
             if (!_auth.IsLoggedIn)
