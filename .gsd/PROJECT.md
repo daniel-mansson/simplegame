@@ -10,7 +10,7 @@ The puzzle placement mechanic — slot-based piece drawing with neighbour-adjace
 
 ## Current State
 
-Core game loop is complete and stable (M012). The jigsaw integration (SimpleJigsaw package), PuzzleModel, PuzzleBoard, Deck, and JigsawLevelFactory are all implemented and tested. M013 is adding a topology-aware shuffle to guarantee solvability by construction.
+Core game loop is complete and stable (M012–M014). Solvable deck shuffle (M013), puzzle controls and layout (M014), and Fastlane distribution pipeline (M015) are all complete. M016 adds PlayFab backend integration: anonymous accounts, cloud save, platform linking, and analytics.
 
 ## Architecture / Key Patterns
 
@@ -18,7 +18,9 @@ Core game loop is complete and stable (M012). The jigsaw integration (SimpleJigs
 - **Game layer** (`SimpleGame.Game`): `JigsawLevelFactory` bridges SimpleJigsaw ↔ domain model; `InGameSceneController` drives the game loop
 - **Core layer** (`SimpleGame.Core`): UI, popup management, scene transitions
 - **SimpleJigsaw package** (`Packages/simple-jigsaw`): board generation and rendering
+- **PlayFab SDK** (M016+): anonymous accounts, cloud save, platform linking, analytics — installed as unitypackage into `Assets/PlayFabSDK/`
 - Presenter pattern for UI; event-driven model (OnPiecePlaced, OnSlotChanged, OnCompleted, OnRejected)
+- `IMetaSaveService` stays synchronous; cloud sync is an explicit async layer in `GameBootstrapper` (pull at boot, push at session checkpoints)
 - GSD branch-per-slice git strategy
 
 ## Capability Contract
@@ -41,3 +43,4 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 - [x] M012: Stable Core Game — PuzzleModel Refactor
 - [ ] M013: Solvable Deck Shuffle — topology-aware deck generation guaranteeing solvability by construction
 - [ ] M015: Fastlane Distribution Pipeline — CLI build, provisioning, and app store distribution automation
+- [ ] M016: PlayFab Integration — anonymous accounts, cloud save with take-max merge, platform linking, analytics
