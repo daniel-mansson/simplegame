@@ -36,6 +36,7 @@ namespace SimpleGame.Game.Services
     public sealed class UnityAdService : IAdService
     {
         private IAnalyticsService _analytics;
+        private ISingularService _singular;
 
         // ── Loaded state ──────────────────────────────────────────────────────
 
@@ -49,6 +50,9 @@ namespace SimpleGame.Game.Services
 
         /// <summary>Inject analytics before calling Initialize.</summary>
         public void SetAnalytics(IAnalyticsService analytics) => _analytics = analytics;
+
+        /// <summary>Inject Singular MMP before calling Initialize.</summary>
+        public void SetSingular(ISingularService singular) => _singular = singular;
 
         // ── IAdService ────────────────────────────────────────────────────────
 
@@ -70,7 +74,7 @@ namespace SimpleGame.Game.Services
             var ad = new LevelPlayRewardedAd(LevelPlayAdUnitId.Rewarded);
             ad.OnAdLoaded        += (info) => { IsRewardedLoaded = true; _currentRewarded = ad; Debug.Log("[UnityAdService] Rewarded loaded."); };
             ad.OnAdFailedToLoad  += (error) => { Debug.LogWarning($"[UnityAdService] Rewarded failed to load: {error}"); _analytics?.TrackAdFailedToLoad("rewarded"); };
-            ad.OnAdDisplayed     += (info)  => { _analytics?.TrackAdImpression("rewarded"); };
+            ad.OnAdDisplayed     += (info)  => { _analytics?.TrackAdImpression("rewarded"); ReportAdRevenue(info); };
             ad.OnAdClosed        += (info)  => { IsRewardedLoaded = false; _rewardedTcs?.TrySetResult(AdResult.Completed); _analytics?.TrackAdCompleted("rewarded"); LoadRewarded(); };
             ad.OnAdDisplayFailed += (error, info) => { _rewardedTcs?.TrySetResult(AdResult.Failed); LoadRewarded(); };
             ad.Load();
@@ -85,7 +89,7 @@ namespace SimpleGame.Game.Services
             var ad = new LevelPlayInterstitialAd(LevelPlayAdUnitId.Interstitial);
             ad.OnAdLoaded        += (info) => { IsInterstitialLoaded = true; _currentInterstitial = ad; Debug.Log("[UnityAdService] Interstitial loaded."); };
             ad.OnAdFailedToLoad  += (error) => { Debug.LogWarning($"[UnityAdService] Interstitial failed to load: {error}"); _analytics?.TrackAdFailedToLoad("interstitial"); };
-            ad.OnAdDisplayed     += (info)  => { _analytics?.TrackAdImpression("interstitial"); };
+            ad.OnAdDisplayed     += (info)  => { _analytics?.TrackAdImpression("interstitial"); ReportAdRevenue(info); };
             ad.OnAdClosed        += (info)  => { IsInterstitialLoaded = false; _interstitialTcs?.TrySetResult(AdResult.Completed); _analytics?.TrackAdCompleted("interstitial"); LoadInterstitial(); };
             ad.OnAdDisplayFailed += (error, info) => { _interstitialTcs?.TrySetResult(AdResult.Failed); LoadInterstitial(); };
             ad.Load();
@@ -146,6 +150,15 @@ namespace SimpleGame.Game.Services
         private void OnInitFailed(LevelPlayInitError error)
         {
             Debug.LogWarning($"[UnityAdService] LevelPlay init failed: {error}. Ads unavailable this session.");
+        }
+
+        private void ReportAdRevenue(LevelPlayAdInfo info)
+        {
+            if (info == null) return;
+            var revenue  = info.Revenue ?? 0;
+            var currency = string.IsNullOrEmpty(info.Currency) ? "USD" : info.Currency;
+            var network  = string.IsNullOrEmpty(info.AdNetwork) ? "LevelPlay" : info.AdNetwork;
+            (_singular ?? new NullSingularService()).ReportAdRevenue(network, currency, revenue);
         }
 #endif
     }

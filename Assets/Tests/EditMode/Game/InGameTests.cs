@@ -434,10 +434,14 @@ namespace SimpleGame.Tests.Game
         {
             var go = new UnityEngine.GameObject("InGameCtrl");
             var ctrl = go.AddComponent<InGameSceneController>();
-            // 8 pieces (seed=0, deck=[1..7]). Initial slots: [1,2,3].
-            // After placing 1,2,3 → slots become [4,5,6]. Piece 5 (slot 1) needs piece 4 → rejected.
             _session.ResetForNewGame(1, totalPieces: 8);
-            ctrl.Initialize(_factory, _progression, _session, _popupManager, _goldenPieces, _hearts, null, null);
+
+            var rewardedAdView = new MockRewardedAdViewForInGame();
+            var viewResolver   = new MockViewResolverForInGame(rewardedAdView);
+            var adService      = new NullAdService { SimulateLoaded = true, SimulateResult = AdResult.Completed };
+
+            ctrl.Initialize(_factory, _progression, _session, _popupManager, _goldenPieces, _hearts,
+                            null, viewResolver, adService: adService);
 
             var view = new MockInGameView();
             var completeView = new MockLevelCompleteView();
@@ -447,25 +451,27 @@ namespace SimpleGame.Tests.Game
 
             var task = ctrl.RunAsync().AsTask();
 
-            // Place 3 correct pieces
-            view.SimulateTapPiece(1);  // 1/7
-            view.SimulateTapPiece(2);  // 2/7
-            view.SimulateTapPiece(3);  // 3/7
-            // Slots now: [4, 5, 6]. Piece 5 needs piece 4 → rejected → costs heart
+            // Place 3 correct pieces then lose all hearts
+            view.SimulateTapPiece(1);
+            view.SimulateTapPiece(2);
+            view.SimulateTapPiece(3);
             view.SimulateTapPiece(5);  // rejected → 2 hearts
             view.SimulateTapPiece(5);  // rejected → 1 heart
             view.SimulateTapPiece(5);  // rejected → 0 hearts → lose
 
-            // WatchAd → continue with hearts restored
+            // WatchAd: simulate the rewardedAdView Watch button being clicked
             failedView.SimulateWatchAdClicked();
+            // Yield to let HandleRewardedAdAsync advance to WaitForResult() before clicking Watch
+            await UniTask.Yield();
+            rewardedAdView.SimulateWatchClicked();
 
             Assert.AreEqual("3", view.LastHeartsText, "Hearts should be fully restored after WatchAd");
 
-            // Continue: place pieces 4..7 to win (placed so far: 1,2,3 = 3/7; need 4 more)
-            view.SimulateTapPiece(4);  // 4/7
-            view.SimulateTapPiece(5);  // 5/7 (piece 5 now has piece 4 placed)
-            view.SimulateTapPiece(6);  // 6/7
-            view.SimulateTapPiece(7);  // 7/7 → win
+            // Continue: place pieces 4..7 to win
+            view.SimulateTapPiece(4);
+            view.SimulateTapPiece(5);
+            view.SimulateTapPiece(6);
+            view.SimulateTapPiece(7);
             completeView.SimulateContinueClicked();
 
             var result = await task;
@@ -560,5 +566,26 @@ namespace SimpleGame.Tests.Game
 
         public void Save() => SaveCallCount++;
         public void ResetAll() => Balance = 0;
+    }
+
+    internal class MockViewResolverForInGame : IViewResolver
+    {
+        private readonly IRewardedAdView _rewardedAdView;
+        public MockViewResolverForInGame(IRewardedAdView rewardedAdView) => _rewardedAdView = rewardedAdView;
+        public T Get<T>() where T : class => _rewardedAdView as T;
+    }
+
+    internal class MockRewardedAdViewForInGame : IRewardedAdView
+    {
+        public event System.Action OnWatchClicked;
+        public event System.Action OnSkipClicked;
+        public string LastStatus { get; private set; }
+        public bool LastWatchInteractable { get; private set; } = true;
+        public void UpdateStatus(string text) => LastStatus = text;
+        public void SetWatchInteractable(bool interactable) => LastWatchInteractable = interactable;
+        public void SimulateWatchClicked() => OnWatchClicked?.Invoke();
+        public void SimulateSkipClicked() => OnSkipClicked?.Invoke();
+        public UniTask AnimateInAsync(CancellationToken ct = default)  => UniTask.CompletedTask;
+        public UniTask AnimateOutAsync(CancellationToken ct = default) => UniTask.CompletedTask;
     }
 }

@@ -56,6 +56,7 @@ namespace SimpleGame.Game.Boot
         private IAnalyticsService _analyticsService;
         private IRemoteConfigService _remoteConfigService;
         private IAdService _adService;
+        private ISingularService _singularService;
 
         private async UniTaskVoid Start()
         {
@@ -119,9 +120,11 @@ namespace SimpleGame.Game.Boot
             // --- Ads: initialize before navigation loop ---
             var unityAdService = new UnityAdService();
             unityAdService.SetAnalytics(_analyticsService);
+            _singularService = new SingularService();
+            unityAdService.SetSingular(_singularService);
             // TODO(M017): Replace with real App Key from LevelPlay dashboard once
             // com.unity.services.levelplay is installed and LEVELPLAY_ENABLED is set.
-            // Install guide in UnityAdService.cs header comment.
+            // Install guide in Docs/LEVELPLAY_SETUP.md
             unityAdService.Initialize(appKey: "YOUR_LEVELPLAY_APP_KEY");
             _adService = unityAdService;
 
