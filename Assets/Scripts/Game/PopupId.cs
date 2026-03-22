@@ -8,6 +8,7 @@ namespace SimpleGame.Game
         RewardedAd,
         IAPPurchase,
         ObjectRestored,
-        Shop
+        Shop,
+        PlatformLink
     }
 }

@@ -40,9 +40,9 @@ namespace SimpleGame.Game.Boot
                                          currentEnvironment, hasNextEnvironment);
         }
 
-        public SettingsPresenter CreateSettingsPresenter(ISettingsView view)
+        public SettingsPresenter CreateSettingsPresenter(ISettingsView view, IPlatformLinkService linkService = null)
         {
-            return new SettingsPresenter(view);
+            return new SettingsPresenter(view, linkService);
         }
 
         public ConfirmDialogPresenter CreateConfirmDialogPresenter(IConfirmDialogView view)
@@ -73,6 +73,11 @@ namespace SimpleGame.Game.Boot
         public ShopPresenter CreateShopPresenter(IShopView view)
         {
             return new ShopPresenter(view, _coins);
+        }
+
+        public PlatformLinkPresenter CreatePlatformLinkPresenter(IPlatformLinkView view, IPlatformLinkService linkService)
+        {
+            return new PlatformLinkPresenter(view, linkService);
         }
     }
 }

@@ -52,6 +52,7 @@ namespace SimpleGame.Game.Boot
         private CoinsService _coinsService;
         private IPlayFabAuthService _authService;
         private ICloudSaveService _cloudSaveService;
+        private IPlatformLinkService _platformLinkService;
 
         private async UniTaskVoid Start()
         {
@@ -84,6 +85,10 @@ namespace SimpleGame.Game.Boot
                 Debug.Log("[GameBootstrapper] Cloud save merged into local data.");
             }
 
+            // --- Platform link service: refresh status after login ---
+            _platformLinkService = new PlayFabPlatformLinkService(_authService);
+            await _platformLinkService.RefreshLinkStatusAsync();
+
             // --- Build services ---
             var gameService = new GameService();
             _progressionService = new ProgressionService();
@@ -108,6 +113,35 @@ namespace SimpleGame.Game.Boot
                                        _coinsService);
 
             Debug.Log("[GameBootstrapper] Infrastructure ready. Starting navigation loop.");
+
+            // --- First-launch platform link prompt ---
+            if (_authService.IsLoggedIn && PlatformLinkPresenter.ShouldShow(_platformLinkService))
+            {
+                // The PlatformLink popup view must be pre-instantiated in the Boot scene.
+                // If not found, the prompt is skipped silently.
+                var linkPopupView = FindFirstObjectInBootScene<IPlatformLinkView>();
+                if (linkPopupView != null)
+                {
+                    var linkPresenter = new PlatformLinkPresenter(linkPopupView, _platformLinkService);
+                    linkPresenter.Initialize();
+                    try
+                    {
+                        await _popupManager.ShowPopupAsync(PopupId.PlatformLink);
+                        await linkPresenter.WaitForResult();
+                    }
+                    finally
+                    {
+                        await _popupManager.DismissPopupAsync();
+                        linkPresenter.Dispose();
+                    }
+                }
+                else
+                {
+                    // No view in scene — mark as seen so we don't prompt again next session
+                    PlatformLinkPresenter.MarkSeen();
+                    Debug.Log("[GameBootstrapper] PlatformLink popup view not found in Boot scene — skipping first-launch prompt.");
+                }
+            }
 
             // Determine initial screen
             var initialScreen = DetectAlreadyLoadedScreen();
@@ -155,7 +189,7 @@ namespace SimpleGame.Game.Boot
                             Debug.LogError("[GameBootstrapper] SettingsSceneController not found in scene.");
                             return;
                         }
-                        ctrl.Initialize(_uiFactory);
+                        ctrl.Initialize(_uiFactory, _platformLinkService);
                         var next = await ctrl.RunAsync();
                         await _screenManager.ShowScreenAsync(next);
                         break;
@@ -216,6 +250,25 @@ namespace SimpleGame.Game.Boot
             {
                 var controller = root.GetComponent<T>();
                 if (controller != null) return controller;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Finds the first component implementing <typeparamref name="T"/> across all
+        /// loaded scenes. Used to locate the PlatformLink popup view in the Boot scene.
+        /// </summary>
+        private static T FindFirstObjectInBootScene<T>() where T : class
+        {
+            for (int s = 0; s < UnityEngine.SceneManagement.SceneManager.sceneCount; s++)
+            {
+                var scene = UnityEngine.SceneManagement.SceneManager.GetSceneAt(s);
+                if (!scene.isLoaded) continue;
+                foreach (var root in scene.GetRootGameObjects())
+                {
+                    var comp = root.GetComponentInChildren<T>(includeInactive: true);
+                    if (comp != null) return comp;
+                }
             }
             return null;
         }

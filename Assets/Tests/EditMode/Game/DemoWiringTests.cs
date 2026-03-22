@@ -62,9 +62,15 @@ namespace SimpleGame.Tests.Game
     internal class MockSettingsView : ISettingsView
     {
         public event Action OnBackClicked;
+        public event Action OnLinkGameCenterClicked;
+        public event Action OnLinkGooglePlayClicked;
+        public event Action OnUnlinkGameCenterClicked;
+        public event Action OnUnlinkGooglePlayClicked;
 
         public string LastTitleText { get; private set; }
         public int UpdateTitleCallCount { get; private set; }
+        public bool LastGameCenterLinked { get; private set; }
+        public bool LastGooglePlayLinked { get; private set; }
 
         public void UpdateTitle(string text)
         {
@@ -72,7 +78,17 @@ namespace SimpleGame.Tests.Game
             UpdateTitleCallCount++;
         }
 
+        public void UpdateLinkStatus(bool gameCenterLinked, bool googlePlayLinked)
+        {
+            LastGameCenterLinked = gameCenterLinked;
+            LastGooglePlayLinked = googlePlayLinked;
+        }
+
         public void SimulateBackClicked() => OnBackClicked?.Invoke();
+        public void SimulateLinkGameCenter() => OnLinkGameCenterClicked?.Invoke();
+        public void SimulateLinkGooglePlay() => OnLinkGooglePlayClicked?.Invoke();
+        public void SimulateUnlinkGameCenter() => OnUnlinkGameCenterClicked?.Invoke();
+        public void SimulateUnlinkGooglePlay() => OnUnlinkGooglePlayClicked?.Invoke();
     }
 
     // ---------------------------------------------------------------------------

@@ -1,6 +1,7 @@
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using SimpleGame.Game.Boot;
+using SimpleGame.Game.Services;
 using SimpleGame.Game.Settings;
 using UnityEngine;
 
@@ -21,11 +22,13 @@ namespace SimpleGame.Game.Settings
         private ISettingsView ActiveView => _viewOverride != null ? _viewOverride : _settingsView;
 
         private UIFactory _uiFactory;
+        private IPlatformLinkService _linkService;
 
         /// <summary>Inject dependencies. Called by the boot loop before RunAsync.</summary>
-        public void Initialize(UIFactory uiFactory)
+        public void Initialize(UIFactory uiFactory, IPlatformLinkService linkService = null)
         {
             _uiFactory = uiFactory;
+            _linkService = linkService;
         }
 
         /// <summary>
@@ -38,7 +41,11 @@ namespace SimpleGame.Game.Settings
 
         public async UniTask<ScreenId> RunAsync(CancellationToken ct = default)
         {
-            var presenter = _uiFactory.CreateSettingsPresenter(ActiveView);
+            // Refresh link status before showing the screen
+            if (_linkService != null)
+                await _linkService.RefreshLinkStatusAsync();
+
+            var presenter = _uiFactory.CreateSettingsPresenter(ActiveView, _linkService);
             presenter.Initialize();
             try
             {

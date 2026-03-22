@@ -54,7 +54,7 @@ This milestone is complete only when all are true:
 - [x] **S02: Cloud Save Sync** `risk:medium` `depends:[S01]`
   > After this: Uninstall and reinstall (simulated via PlayerPrefs.DeleteAll + fresh Play mode) restores progress from PlayFab cloud with take-max merge applied.
 
-- [ ] **S03: Platform Linking & First-Launch Prompt** `risk:medium` `depends:[S01]`
+- [x] **S03: Platform Linking & First-Launch Prompt** `risk:medium` `depends:[S01]`
   > After this: Settings screen shows link status; Game Center linking works on iOS device; first-launch prompt appears once and is permanently skippable.
 
 - [ ] **S04: Analytics Events** `risk:low` `depends:[S01]`
