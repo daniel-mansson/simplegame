@@ -22,11 +22,12 @@ namespace SimpleGame.Game.Boot
     /// control flow to SceneControllers.
     ///
     /// Boot sequence:
-    ///   1. Build infrastructure (managers, services, UIFactory)
-    ///   2. Load the initial screen (MainMenu)
-    ///   3. Find and initialize the active SceneController
-    ///   4. Await RunAsync() — only returns when navigation is decided
-    ///   5. Navigate to the returned screen; repeat
+    ///   1. PlayFab anonymous login (LoginWithCustomID — non-fatal if offline)
+    ///   2. Build infrastructure (managers, services, UIFactory)
+    ///   3. Load the initial screen (MainMenu)
+    ///   4. Find and initialize the active SceneController
+    ///   5. Await RunAsync() — only returns when navigation is decided
+    ///   6. Navigate to the returned screen; repeat
     /// </summary>
     public class GameBootstrapper : MonoBehaviour
     {
@@ -46,12 +47,25 @@ namespace SimpleGame.Game.Boot
         private MetaProgressionService _metaProgressionService;
         private GoldenPieceService _goldenPieceService;
         private CoinsService _coinsService;
+        private IPlayFabAuthService _authService;
 
         private async UniTaskVoid Start()
         {
             Application.targetFrameRate = 60;
             QualitySettings.vSyncCount = 0;
             Debug.Log("[GameBootstrapper] Boot sequence started.");
+
+            // --- PlayFab: authenticate before anything else ---
+            _authService = new PlayFabAuthService();
+            try
+            {
+                await _authService.LoginAsync();
+            }
+            catch (PlayFabLoginException ex)
+            {
+                // Non-fatal: game continues in offline mode without cloud features.
+                Debug.LogWarning($"[GameBootstrapper] PlayFab login failed — continuing offline. Reason: {ex.Message}");
+            }
 
             // --- Build services ---
             var gameService = new GameService();

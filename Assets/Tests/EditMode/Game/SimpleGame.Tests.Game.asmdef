@@ -7,6 +7,7 @@
     "SimpleGame.Puzzle",
     "SimpleJigsaw.Runtime",
     "UniTask",
+    "PlayFab",
     "UnityEngine.TestRunner",
     "UnityEditor.TestRunner"
   ],

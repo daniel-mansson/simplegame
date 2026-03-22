@@ -48,7 +48,7 @@ This milestone is complete only when all are true:
 
 ## Slices
 
-- [ ] **S01: SDK + Anonymous Login** `risk:high` `depends:[]`
+- [x] **S01: SDK + Anonymous Login** `risk:high` `depends:[]`
   > After this: Boot logs a valid PlayFab Player ID in Play mode; same Player ID returned on second launch (custom ID recovery proven).
 
 - [ ] **S02: Cloud Save Sync** `risk:medium` `depends:[S01]`
