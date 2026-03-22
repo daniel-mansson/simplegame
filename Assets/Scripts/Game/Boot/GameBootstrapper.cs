@@ -119,11 +119,10 @@ namespace SimpleGame.Game.Boot
             // --- Ads: initialize before navigation loop ---
             var unityAdService = new UnityAdService();
             unityAdService.SetAnalytics(_analyticsService);
-            // Test game IDs — replace with production IDs before release (D089)
-            unityAdService.Initialize(
-                gameIdIos:     "5314539",
-                gameIdAndroid: "5314538",
-                testMode:      true);
+            // TODO(M017): Replace with real App Key from LevelPlay dashboard once
+            // com.unity.services.levelplay is installed and LEVELPLAY_ENABLED is set.
+            // Install guide in UnityAdService.cs header comment.
+            unityAdService.Initialize(appKey: "YOUR_LEVELPLAY_APP_KEY");
             _adService = unityAdService;
 
             _popupManager = new PopupManager<PopupId>(popupContainer, inputBlocker);

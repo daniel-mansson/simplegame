@@ -4,7 +4,6 @@
     "com.coplaydev.unity-mcp": "https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity#main",
     "com.cysharp.unitask": "https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask",
     "com.simple-magic-studios.simple-jigsaw": "file:simple-jigsaw/Assets/SimpleJigsaw",
-    "com.unity.ads": "4.12.2",
     "com.unity.render-pipelines.universal": "17.3.0",
     "com.unity.ide.visualstudio": "2.0.27",
     "com.unity.multiplayer.center": "1.0.1",

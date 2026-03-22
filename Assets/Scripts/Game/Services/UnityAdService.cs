@@ -1,230 +1,152 @@
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.Advertisements;
 
 namespace SimpleGame.Game.Services
 {
     /// <summary>
-    /// Unity Ads Advertisement Legacy SDK implementation of <see cref="IAdService"/>.
+    /// Unity LevelPlay (Ads Mediation) implementation of <see cref="IAdService"/>.
     ///
-    /// Lifecycle:
-    ///   1. <see cref="Initialize"/> → SDK init → <see cref="OnInitializationComplete"/> fires
-    ///   2. <see cref="OnInitializationComplete"/> → pre-loads rewarded and interstitial
-    ///   3. On each successful show → automatically reloads for next time
+    /// ─── HOW TO ACTIVATE ────────────────────────────────────────────────────────
+    /// This class is a compile-safe stub. To wire real ads:
     ///
-    /// Callbacks bridge to UniTask via <see cref="UniTaskCompletionSource{T}"/>,
-    /// following the same pattern as PlayFab callbacks in M016.
+    ///   1. In Unity Editor: Window → Package Manager → Unity Registry
+    ///      Install "Ads Mediation" (com.unity.services.levelplay).
     ///
-    /// Test IDs (Unity documented test mode):
-    ///   iOS game ID:      "5314539"
-    ///   Android game ID:  "5314538"
-    ///   Rewarded unit:    "Rewarded_iOS" / "Rewarded_Android"
-    ///   Interstitial unit:"Interstitial_iOS" / "Interstitial_Android"
+    ///   2. In Unity Editor: Ads Mediation → Integration Manager
+    ///      Install the "Unity Ads" adapter. Run the Android/iOS resolver.
+    ///
+    ///   3. Sign up at https://platform.ironsource.io and create an app.
+    ///      Copy your App Key into GameBootstrapper where UnityAdService is constructed.
+    ///
+    ///   4. Add LEVELPLAY_ENABLED to Project Settings → Player → Scripting Define Symbols.
+    ///      This activates the real implementation below.
+    ///
+    ///   5. Add "Unity.Services.LevelPlay" to SimpleGame.Game.asmdef references.
+    ///
+    /// Lifecycle (when LEVELPLAY_ENABLED):
+    ///   Initialize(appKey) → OnInitSuccess → Load rewarded + interstitial
+    ///   After each show → auto-reload for next time
+    ///
+    /// Ad Unit IDs (LevelPlay defaults — confirm in your LevelPlay dashboard):
+    ///   Rewarded:      "DefaultRewardedVideoStoreId"  (or your custom placement)
+    ///   Interstitial:  "DefaultInterstitialStoreId"   (or your custom placement)
+    /// ────────────────────────────────────────────────────────────────────────────
     /// </summary>
-    public sealed class UnityAdService : IAdService,
-        IUnityAdsInitializationListener,
-        IUnityAdsLoadListener,
-        IUnityAdsShowListener
+    public sealed class UnityAdService : IAdService
     {
-        private string _rewardedAdUnitId;
-        private string _interstitialAdUnitId;
         private IAnalyticsService _analytics;
 
-        private bool _rewardedLoaded;
-        private bool _interstitialLoaded;
+        // ── Loaded state ──────────────────────────────────────────────────────
+
+        public bool IsRewardedLoaded     { get; private set; }
+        public bool IsInterstitialLoaded { get; private set; }
+
+        // ── Pending result tasks ──────────────────────────────────────────────
 
         private UniTaskCompletionSource<AdResult> _rewardedTcs;
         private UniTaskCompletionSource<AdResult> _interstitialTcs;
 
-        public bool IsRewardedLoaded     => _rewardedLoaded;
-        public bool IsInterstitialLoaded => _interstitialLoaded;
-
-        /// <summary>
-        /// Injects an optional analytics service for ad event tracking.
-        /// Call before <see cref="Initialize"/> or at any time before ads are shown.
-        /// </summary>
-        public void SetAnalytics(IAnalyticsService analytics)
-        {
-            _analytics = analytics;
-        }
+        /// <summary>Inject analytics before calling Initialize.</summary>
+        public void SetAnalytics(IAnalyticsService analytics) => _analytics = analytics;
 
         // ── IAdService ────────────────────────────────────────────────────────
 
-        public void Initialize(string gameIdIos, string gameIdAndroid, bool testMode)
+        public void Initialize(string appKey)
         {
-#if UNITY_IOS
-            var gameId = gameIdIos;
-            _rewardedAdUnitId     = "Rewarded_iOS";
-            _interstitialAdUnitId = "Interstitial_iOS";
-#elif UNITY_ANDROID
-            var gameId = gameIdAndroid;
-            _rewardedAdUnitId     = "Rewarded_Android";
-            _interstitialAdUnitId = "Interstitial_Android";
+#if LEVELPLAY_ENABLED
+            LevelPlay.OnInitSuccess  += OnInitSuccess;
+            LevelPlay.OnInitFailed   += OnInitFailed;
+            LevelPlay.Init(appKey);
+            Debug.Log($"[UnityAdService] LevelPlay.Init called — appKey={appKey}");
 #else
-            // Editor / unsupported platform: use iOS IDs as fallback for test mode
-            var gameId = gameIdIos;
-            _rewardedAdUnitId     = "Rewarded_iOS";
-            _interstitialAdUnitId = "Interstitial_iOS";
+            Debug.LogWarning("[UnityAdService] LevelPlay SDK not installed. Install com.unity.services.levelplay and add LEVELPLAY_ENABLED scripting symbol. Ads will be unavailable this session.");
 #endif
-            Debug.Log($"[UnityAdService] Initializing — gameId={gameId} testMode={testMode}");
-            Advertisement.Initialize(gameId, testMode, this);
         }
 
         public void LoadRewarded()
         {
-            _rewardedLoaded = false;
-            Debug.Log($"[UnityAdService] Loading rewarded: {_rewardedAdUnitId}");
-            Advertisement.Load(_rewardedAdUnitId, this);
+#if LEVELPLAY_ENABLED
+            var ad = new LevelPlayRewardedAd(LevelPlayAdUnitId.Rewarded);
+            ad.OnAdLoaded        += (info) => { IsRewardedLoaded = true; _currentRewarded = ad; Debug.Log("[UnityAdService] Rewarded loaded."); };
+            ad.OnAdFailedToLoad  += (error) => { Debug.LogWarning($"[UnityAdService] Rewarded failed to load: {error}"); _analytics?.TrackAdFailedToLoad("rewarded"); };
+            ad.OnAdDisplayed     += (info)  => { _analytics?.TrackAdImpression("rewarded"); };
+            ad.OnAdClosed        += (info)  => { IsRewardedLoaded = false; _rewardedTcs?.TrySetResult(AdResult.Completed); _analytics?.TrackAdCompleted("rewarded"); LoadRewarded(); };
+            ad.OnAdDisplayFailed += (error, info) => { _rewardedTcs?.TrySetResult(AdResult.Failed); LoadRewarded(); };
+            ad.Load();
+#else
+            IsRewardedLoaded = false;
+#endif
         }
 
         public void LoadInterstitial()
         {
-            _interstitialLoaded = false;
-            Debug.Log($"[UnityAdService] Loading interstitial: {_interstitialAdUnitId}");
-            Advertisement.Load(_interstitialAdUnitId, this);
+#if LEVELPLAY_ENABLED
+            var ad = new LevelPlayInterstitialAd(LevelPlayAdUnitId.Interstitial);
+            ad.OnAdLoaded        += (info) => { IsInterstitialLoaded = true; _currentInterstitial = ad; Debug.Log("[UnityAdService] Interstitial loaded."); };
+            ad.OnAdFailedToLoad  += (error) => { Debug.LogWarning($"[UnityAdService] Interstitial failed to load: {error}"); _analytics?.TrackAdFailedToLoad("interstitial"); };
+            ad.OnAdDisplayed     += (info)  => { _analytics?.TrackAdImpression("interstitial"); };
+            ad.OnAdClosed        += (info)  => { IsInterstitialLoaded = false; _interstitialTcs?.TrySetResult(AdResult.Completed); _analytics?.TrackAdCompleted("interstitial"); LoadInterstitial(); };
+            ad.OnAdDisplayFailed += (error, info) => { _interstitialTcs?.TrySetResult(AdResult.Failed); LoadInterstitial(); };
+            ad.Load();
+#else
+            IsInterstitialLoaded = false;
+#endif
         }
 
         public UniTask<AdResult> ShowRewardedAsync(CancellationToken ct = default)
         {
-            if (!_rewardedLoaded)
+#if LEVELPLAY_ENABLED
+            if (!IsRewardedLoaded || _currentRewarded == null)
             {
-                Debug.LogWarning("[UnityAdService] ShowRewardedAsync called but rewarded ad not loaded.");
+                Debug.LogWarning("[UnityAdService] ShowRewardedAsync — rewarded not loaded.");
                 return UniTask.FromResult(AdResult.NotLoaded);
             }
-
             _rewardedTcs?.TrySetCanceled();
             _rewardedTcs = new UniTaskCompletionSource<AdResult>();
-
-            Debug.Log($"[UnityAdService] Showing rewarded: {_rewardedAdUnitId}");
-            Advertisement.Show(_rewardedAdUnitId, this);
-
+            _currentRewarded.ShowAd();
             return _rewardedTcs.Task;
+#else
+            Debug.LogWarning("[UnityAdService] ShowRewardedAsync — LevelPlay not installed.");
+            return UniTask.FromResult(AdResult.NotLoaded);
+#endif
         }
 
         public UniTask<AdResult> ShowInterstitialAsync(CancellationToken ct = default)
         {
-            if (!_interstitialLoaded)
+#if LEVELPLAY_ENABLED
+            if (!IsInterstitialLoaded || _currentInterstitial == null)
             {
-                Debug.LogWarning("[UnityAdService] ShowInterstitialAsync called but interstitial not loaded.");
+                Debug.LogWarning("[UnityAdService] ShowInterstitialAsync — interstitial not loaded.");
                 return UniTask.FromResult(AdResult.NotLoaded);
             }
-
             _interstitialTcs?.TrySetCanceled();
             _interstitialTcs = new UniTaskCompletionSource<AdResult>();
-
-            Debug.Log($"[UnityAdService] Showing interstitial: {_interstitialAdUnitId}");
-            Advertisement.Show(_interstitialAdUnitId, this);
-
+            _currentInterstitial.ShowAd();
             return _interstitialTcs.Task;
+#else
+            Debug.LogWarning("[UnityAdService] ShowInterstitialAsync — LevelPlay not installed.");
+            return UniTask.FromResult(AdResult.NotLoaded);
+#endif
         }
 
-        // ── IUnityAdsInitializationListener ───────────────────────────────────
+        // ── LevelPlay init callbacks (compiled only with LEVELPLAY_ENABLED) ───
 
-        public void OnInitializationComplete()
+#if LEVELPLAY_ENABLED
+        private LevelPlayRewardedAd     _currentRewarded;
+        private LevelPlayInterstitialAd _currentInterstitial;
+
+        private void OnInitSuccess(LevelPlayConfiguration config)
         {
-            Debug.Log("[UnityAdService] SDK initialized — pre-loading ads.");
+            Debug.Log("[UnityAdService] LevelPlay initialized — loading ads.");
             LoadRewarded();
             LoadInterstitial();
         }
 
-        public void OnInitializationFailed(UnityAdsInitializationError error, string message)
+        private void OnInitFailed(LevelPlayInitError error)
         {
-            Debug.LogWarning($"[UnityAdService] Initialization failed: {error} — {message}. Ads unavailable this session.");
+            Debug.LogWarning($"[UnityAdService] LevelPlay init failed: {error}. Ads unavailable this session.");
         }
-
-        // ── IUnityAdsLoadListener ─────────────────────────────────────────────
-
-        public void OnUnityAdsAdLoaded(string adUnitId)
-        {
-            if (adUnitId == _rewardedAdUnitId)
-            {
-                _rewardedLoaded = true;
-                Debug.Log($"[UnityAdService] Rewarded loaded: {adUnitId}");
-            }
-            else if (adUnitId == _interstitialAdUnitId)
-            {
-                _interstitialLoaded = true;
-                Debug.Log($"[UnityAdService] Interstitial loaded: {adUnitId}");
-            }
-        }
-
-        public void OnUnityAdsFailedToLoad(string adUnitId, UnityAdsLoadError error, string message)
-        {
-            Debug.LogWarning($"[UnityAdService] Failed to load {adUnitId}: {error} — {message}");
-            _analytics?.TrackAdFailedToLoad(AdTypeFrom(adUnitId));
-
-            // Leave loaded flag false — IsXxxLoaded will return false, callers handle gracefully
-        }
-
-        // ── IUnityAdsShowListener ─────────────────────────────────────────────
-
-        public void OnUnityAdsShowStart(string adUnitId)
-        {
-            Debug.Log($"[UnityAdService] Ad started: {adUnitId}");
-            _analytics?.TrackAdImpression(AdTypeFrom(adUnitId));
-        }
-
-        public void OnUnityAdsShowClick(string adUnitId)
-        {
-            // No action needed for click tracking at this scope
-        }
-
-        public void OnUnityAdsShowComplete(string adUnitId, UnityAdsShowCompletionState completionState)
-        {
-            var adType = AdTypeFrom(adUnitId);
-            AdResult result;
-
-            if (completionState == UnityAdsShowCompletionState.COMPLETED)
-            {
-                result = AdResult.Completed;
-                _analytics?.TrackAdCompleted(adType);
-            }
-            else if (completionState == UnityAdsShowCompletionState.SKIPPED)
-            {
-                result = AdResult.Skipped;
-                _analytics?.TrackAdSkipped(adType);
-            }
-            else
-            {
-                result = AdResult.Failed;
-                Debug.LogWarning($"[UnityAdService] Ad show unknown completion state: {completionState}");
-            }
-
-            Debug.Log($"[UnityAdService] Ad complete: {adUnitId} → {result}");
-
-            // Resolve the waiting task
-            if (adUnitId == _rewardedAdUnitId)
-                _rewardedTcs?.TrySetResult(result);
-            else if (adUnitId == _interstitialAdUnitId)
-                _interstitialTcs?.TrySetResult(result);
-
-            // Reload for next time
-            if (adUnitId == _rewardedAdUnitId)
-                LoadRewarded();
-            else if (adUnitId == _interstitialAdUnitId)
-                LoadInterstitial();
-        }
-
-        public void OnUnityAdsShowFailure(string adUnitId, UnityAdsShowError error, string message)
-        {
-            Debug.LogWarning($"[UnityAdService] Show failure: {adUnitId} — {error}: {message}");
-
-            if (adUnitId == _rewardedAdUnitId)
-                _rewardedTcs?.TrySetResult(AdResult.Failed);
-            else if (adUnitId == _interstitialAdUnitId)
-                _interstitialTcs?.TrySetResult(AdResult.Failed);
-
-            // Attempt reload after failure
-            if (adUnitId == _rewardedAdUnitId)
-                LoadRewarded();
-            else if (adUnitId == _interstitialAdUnitId)
-                LoadInterstitial();
-        }
-
-        // ── Helpers ───────────────────────────────────────────────────────────
-
-        private string AdTypeFrom(string adUnitId)
-            => adUnitId == _rewardedAdUnitId ? "rewarded" : "interstitial";
+#endif
     }
 }
