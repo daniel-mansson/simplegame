@@ -139,7 +139,7 @@ namespace SimpleGame.Tests.Game
         public void Initialize_DoesNotThrow()
         {
             var svc = new NullAdService();
-            Assert.DoesNotThrow(() => svc.Initialize("ios-id", "android-id", testMode: true));
+            Assert.DoesNotThrow(() => svc.Initialize("test-app-key"));
         }
 
         [Test]

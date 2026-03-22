@@ -14,21 +14,17 @@ namespace SimpleGame.Game.Services
     ///   5. The implementation reloads automatically after each successful show.
     ///
     /// Implementations:
-    ///   <see cref="UnityAdService"/> — wraps the Unity Ads Advertisement Legacy SDK.
+    ///   <see cref="UnityAdService"/> — wraps the Unity LevelPlay (Ads Mediation) SDK.
     ///   <see cref="NullAdService"/>  — deterministic test double, no SDK dependency.
     /// </summary>
     public interface IAdService
     {
         /// <summary>
-        /// Initializes the ad SDK with platform-specific game IDs.
+        /// Initializes the ad SDK with the LevelPlay App Key.
         /// Must be called once before any Load or Show operations.
         /// </summary>
-        /// <param name="gameIdIos">Unity Ads game ID for iOS.</param>
-        /// <param name="gameIdAndroid">Unity Ads game ID for Android.</param>
-        /// <param name="testMode">
-        /// When true, shows test ads. Set to false for production builds.
-        /// </param>
-        void Initialize(string gameIdIos, string gameIdAndroid, bool testMode);
+        /// <param name="appKey">LevelPlay App Key from the ironSource/LevelPlay dashboard.</param>
+        void Initialize(string appKey);
 
         /// <summary>
         /// Manually triggers a load of the rewarded ad unit.
