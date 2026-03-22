@@ -41,6 +41,7 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 - [x] M010: Simple Jigsaw Package Integration
 - [x] M011: Puzzle Domain Model & API
 - [x] M012: Stable Core Game — PuzzleModel Refactor
-- [ ] M013: Solvable Deck Shuffle — topology-aware deck generation guaranteeing solvability by construction
-- [ ] M015: Fastlane Distribution Pipeline — CLI build, provisioning, and app store distribution automation
-- [ ] M016: PlayFab Integration — anonymous accounts, cloud save with take-max merge, platform linking, analytics
+- [x] M013: Solvable Deck Shuffle — topology-aware deck generation guaranteeing solvability by construction
+- [x] M015: Fastlane Distribution Pipeline — CLI build, provisioning, and app store distribution automation
+- [x] M016: PlayFab Integration — anonymous accounts, cloud save with take-max merge, platform linking, analytics
+- [ ] M017: Unity Ads Integration — rewarded and interstitial ads with graceful failure handling

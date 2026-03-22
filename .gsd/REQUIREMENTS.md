@@ -1491,3 +1491,73 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Supporting slices: none
 - Validation: n/a
 - Notes: None.
+
+---
+
+## M017 Requirements — Unity Ads Integration
+
+### R152 — Rewarded ad flow
+- Class: primary-user-loop
+- Status: active
+- Description: When the player loses a level and taps "Watch Ad", a real Unity Ads rewarded video plays. Hearts are restored only if the ad completes. If the ad fails to load, the Watch button grays out and a message is shown — no crash, no silent grant.
+- Why it matters: Core monetisation mechanic; replaces the stub that always granted rewards.
+- Source: user
+- Primary owning slice: M017/S02
+- Supporting slices: M017/S01
+- Validation: mapped
+- Notes: Unavailable state: SetWatchInteractable(false) + UpdateStatus message. Player can still Skip.
+
+### R153 — Interstitial ad flow
+- Class: primary-user-loop
+- Status: active
+- Description: After every N level completions (N from remote config, default 3), a fullscreen interstitial ad shows before returning to main menu. If the ad fails to load, navigation proceeds silently.
+- Why it matters: Passive monetisation revenue between levels.
+- Source: user
+- Primary owning slice: M017/S03
+- Supporting slices: M017/S01
+- Validation: mapped
+- Notes: Session-scoped counter. N is configurable via PlayFab Title Data key "interstitial_every_n_levels".
+
+### R154 — IAdService abstraction
+- Class: core-capability
+- Status: active
+- Description: All game code interacts with ads through IAdService. UnityAdService wraps the SDK. NullAdService is used in all edit-mode tests. No SDK types leak into game logic.
+- Why it matters: Keeps game layer testable; follows established interface-first pattern.
+- Source: inferred
+- Primary owning slice: M017/S01
+- Supporting slices: none
+- Validation: mapped
+- Notes: Consistent with IAnalyticsService, ICloudSaveService pattern from M016.
+
+### R155 — Ad analytics events
+- Class: failure-visibility
+- Status: active
+- Description: Ad impression, completion, skip, and failed-to-load events fire through IAnalyticsService for both rewarded and interstitial ad types.
+- Why it matters: Revenue attribution and failure rate visibility.
+- Source: inferred
+- Primary owning slice: M017/S04
+- Supporting slices: M017/S01, M017/S02, M017/S03
+- Validation: mapped
+- Notes: Event names: ad_impression, ad_completed, ad_skipped, ad_failed_to_load. adType: "rewarded" or "interstitial".
+
+### R156 — Banner ads
+- Class: anti-feature
+- Status: out-of-scope
+- Description: No banner ad format.
+- Why it matters: Scope clarity — only rewarded and interstitial in M017.
+- Source: user
+- Primary owning slice: none
+- Supporting slices: none
+- Validation: n/a
+- Notes: None.
+
+### R157 — Ad mediation
+- Class: anti-feature
+- Status: out-of-scope
+- Description: No mediation layer (Unity LevelPlay, IronSource, AdMob). Direct Unity Ads only.
+- Why it matters: Scope clarity.
+- Source: user
+- Primary owning slice: none
+- Supporting slices: none
+- Validation: n/a
+- Notes: None.
