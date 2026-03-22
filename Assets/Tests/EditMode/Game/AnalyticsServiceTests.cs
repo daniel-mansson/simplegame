@@ -94,6 +94,17 @@ namespace SimpleGame.Tests.Game
             Assert.DoesNotThrow(() => analytics.TrackLevelStarted("1"));
             Assert.DoesNotThrow(() => analytics.TrackCurrencyEarned("coins", 100));
         }
+
+        [Test]
+        public void PlayFabAnalytics_AdEvents_WhenNotLoggedIn_DoNotThrow()
+        {
+            var auth = new MockPlayFabAuthService { ShouldSucceed = false };
+            var analytics = new PlayFabAnalyticsService(auth);
+            Assert.DoesNotThrow(() => analytics.TrackAdImpression("rewarded"));
+            Assert.DoesNotThrow(() => analytics.TrackAdCompleted("rewarded"));
+            Assert.DoesNotThrow(() => analytics.TrackAdSkipped("interstitial"));
+            Assert.DoesNotThrow(() => analytics.TrackAdFailedToLoad("rewarded"));
+        }
     }
 
     /// <summary>
