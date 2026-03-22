@@ -18,12 +18,15 @@ namespace SimpleGame.Game.Popup
         public const string HasSeenLinkPromptKey = "PlayFab_HasSeenLinkPrompt";
 
         private readonly IPlatformLinkService _linkService;
+        private readonly IAnalyticsService _analytics;
         private UniTaskCompletionSource<bool> _completionTcs;
 
-        public PlatformLinkPresenter(IPlatformLinkView view, IPlatformLinkService linkService)
+        public PlatformLinkPresenter(IPlatformLinkView view, IPlatformLinkService linkService,
+                                      IAnalyticsService analytics = null)
             : base(view)
         {
             _linkService = linkService;
+            _analytics = analytics;
         }
 
         public override void Initialize()
@@ -78,6 +81,7 @@ namespace SimpleGame.Game.Popup
             RefreshView();
             if (success)
             {
+                _analytics?.TrackPlatformLinked("GameCenter");
                 MarkSeen();
                 _completionTcs?.TrySetResult(true);
             }
@@ -93,6 +97,7 @@ namespace SimpleGame.Game.Popup
             RefreshView();
             if (success)
             {
+                _analytics?.TrackPlatformLinked("GooglePlayGames");
                 MarkSeen();
                 _completionTcs?.TrySetResult(true);
             }

@@ -143,6 +143,7 @@ namespace SimpleGame.Game.InGame
         private ICurrencyOverlay _overlay;
         private PopupManager<PopupId> _popupManager;
         private System.Func<Cysharp.Threading.Tasks.UniTask> _onSessionEnd;
+        private IAnalyticsService _analytics;
 
         /// <summary>Inject dependencies. Called by the boot loop before RunAsync.</summary>
         public void Initialize(UIFactory uiFactory, ProgressionService progression,
@@ -150,7 +151,8 @@ namespace SimpleGame.Game.InGame
                                IGoldenPieceService goldenPieces = null, IHeartService hearts = null,
                                ICoinsService coins = null, IViewResolver viewResolver = null,
                                ICurrencyOverlay overlay = null,
-                               System.Func<Cysharp.Threading.Tasks.UniTask> onSessionEnd = null)
+                               System.Func<Cysharp.Threading.Tasks.UniTask> onSessionEnd = null,
+                               IAnalyticsService analytics = null)
         {
             // Cancel any in-flight RunAsync before GameBootstrapper takes over.
             _runCts?.Cancel();
@@ -167,6 +169,7 @@ namespace SimpleGame.Game.InGame
             _viewResolver = viewResolver;
             _overlay = overlay;
             _onSessionEnd = onSessionEnd;
+            _analytics = analytics;
         }
 
         /// <summary>
@@ -408,6 +411,7 @@ namespace SimpleGame.Game.InGame
                 var model     = modelFactory();
                 var presenter = _uiFactory.CreateInGamePresenter(ActiveView, model);
                 presenter.Initialize();
+                _analytics?.TrackLevelStarted(_session.CurrentLevelId.ToString());
                 try
                 {
                     // Inner loop: handles WatchAd continuation without restarting
@@ -424,6 +428,7 @@ namespace SimpleGame.Game.InGame
 
                             _progression.RegisterWin(_session.CurrentScore);
                             _session.Outcome = GameOutcome.Win;
+                            _analytics?.TrackLevelCompleted(_session.CurrentLevelId.ToString());
                             // Brief pause so the player sees the last piece land before the popup
                             if (_winPopupDelaySec > 0f)
                                 await UniTask.Delay(System.TimeSpan.FromSeconds(_winPopupDelaySec), cancellationToken: ct);
@@ -435,6 +440,7 @@ namespace SimpleGame.Game.InGame
                         if (action == InGameAction.Lose)
                         {
                             _session.Outcome = GameOutcome.Lose;
+                            _analytics?.TrackLevelFailed(_session.CurrentLevelId.ToString());
                             var choice = await HandleLevelFailedPopupAsync(ct);
 
                             if (choice == LevelFailedChoice.Quit)

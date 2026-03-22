@@ -57,7 +57,7 @@ This milestone is complete only when all are true:
 - [x] **S03: Platform Linking & First-Launch Prompt** `risk:medium` `depends:[S01]`
   > After this: Settings screen shows link status; Game Center linking works on iOS device; first-launch prompt appears once and is permanently skippable.
 
-- [ ] **S04: Analytics Events** `risk:low` `depends:[S01]`
+- [x] **S04: Analytics Events** `risk:low` `depends:[S01]`
   > After this: PlayFab Game Manager Event History shows session_start, level_started, level_completed, currency_earned events from a Play mode session.
 
 ## Boundary Map

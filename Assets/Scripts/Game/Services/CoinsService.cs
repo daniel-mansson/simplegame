@@ -12,11 +12,13 @@ namespace SimpleGame.Game.Services
     public class CoinsService : ICoinsService
     {
         private readonly IMetaSaveService _saveService;
+        private readonly IAnalyticsService _analytics;
         private MetaSaveData _saveData;
 
-        public CoinsService(IMetaSaveService saveService)
+        public CoinsService(IMetaSaveService saveService, IAnalyticsService analytics = null)
         {
             _saveService = saveService;
+            _analytics = analytics;
             _saveData = _saveService.Load();
         }
 
@@ -33,6 +35,7 @@ namespace SimpleGame.Game.Services
             }
 
             _saveData.coins += amount;
+            _analytics?.TrackCurrencyEarned("coins", amount);
             Debug.Log($"[CoinsService] Earned {amount} coins. Balance: {_saveData.coins}");
         }
 
@@ -52,6 +55,7 @@ namespace SimpleGame.Game.Services
             }
 
             _saveData.coins -= amount;
+            _analytics?.TrackCurrencySpent("coins", amount);
             Debug.Log($"[CoinsService] Spent {amount} coins. Balance: {_saveData.coins}");
             return true;
         }

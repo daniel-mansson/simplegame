@@ -53,6 +53,7 @@ namespace SimpleGame.Game.Boot
         private IPlayFabAuthService _authService;
         private ICloudSaveService _cloudSaveService;
         private IPlatformLinkService _platformLinkService;
+        private IAnalyticsService _analyticsService;
 
         private async UniTaskVoid Start()
         {
@@ -89,6 +90,10 @@ namespace SimpleGame.Game.Boot
             _platformLinkService = new PlayFabPlatformLinkService(_authService);
             await _platformLinkService.RefreshLinkStatusAsync();
 
+            // --- Analytics: session start ---
+            _analyticsService = new PlayFabAnalyticsService(_authService);
+            _analyticsService.TrackSessionStart();
+
             // --- Build services ---
             var gameService = new GameService();
             _progressionService = new ProgressionService();
@@ -96,8 +101,8 @@ namespace SimpleGame.Game.Boot
             _heartService = new HeartService();
             // _metaSaveService already initialized above (before cloud pull)
             _metaProgressionService = new MetaProgressionService(_worldData, _metaSaveService);
-            _goldenPieceService = new GoldenPieceService(_metaSaveService);
-            _coinsService = new CoinsService(_metaSaveService);
+            _goldenPieceService = new GoldenPieceService(_metaSaveService, _analyticsService);
+            _coinsService = new CoinsService(_metaSaveService, _analyticsService);
 
             // --- Build infrastructure ---
             var inputBlocker = _inputBlocker;
@@ -208,7 +213,8 @@ namespace SimpleGame.Game.Boot
                                        {
                                            var data = _metaSaveService.Load();
                                            await _cloudSaveService.PushAsync(data);
-                                       });
+                                       },
+                                       analytics: _analyticsService);
                         var next = await ctrl.RunAsync();
                         await _screenManager.ShowScreenAsync(next);
                         break;
@@ -223,10 +229,16 @@ namespace SimpleGame.Game.Boot
         private void OnApplicationPause(bool pause)
         {
             if (!pause) return;
+            _analyticsService?.TrackSessionEnd();
             // Push to cloud when app is backgrounded. Fire-and-forget — pause may be brief.
             var data = _metaSaveService?.Load();
             if (data != null)
                 _cloudSaveService?.PushAsync(data).Forget();
+        }
+
+        private void OnApplicationQuit()
+        {
+            _analyticsService?.TrackSessionEnd();
         }
 
         private static ScreenId? DetectAlreadyLoadedScreen()

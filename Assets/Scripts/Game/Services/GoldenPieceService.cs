@@ -10,11 +10,13 @@ namespace SimpleGame.Game.Services
     public class GoldenPieceService : IGoldenPieceService
     {
         private readonly IMetaSaveService _saveService;
+        private readonly IAnalyticsService _analytics;
         private MetaSaveData _saveData;
 
-        public GoldenPieceService(IMetaSaveService saveService)
+        public GoldenPieceService(IMetaSaveService saveService, IAnalyticsService analytics = null)
         {
             _saveService = saveService;
+            _analytics = analytics;
             _saveData = _saveService.Load();
         }
 
@@ -31,6 +33,7 @@ namespace SimpleGame.Game.Services
             }
 
             _saveData.goldenPieces += amount;
+            _analytics?.TrackCurrencyEarned("golden_pieces", amount);
             Debug.Log($"[GoldenPieceService] Earned {amount} golden pieces. Balance: {_saveData.goldenPieces}");
         }
 
@@ -50,6 +53,7 @@ namespace SimpleGame.Game.Services
             }
 
             _saveData.goldenPieces -= amount;
+            _analytics?.TrackCurrencySpent("golden_pieces", amount);
             Debug.Log($"[GoldenPieceService] Spent {amount} golden pieces. Balance: {_saveData.goldenPieces}");
             return true;
         }

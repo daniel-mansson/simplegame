@@ -75,9 +75,9 @@ namespace SimpleGame.Game.Boot
             return new ShopPresenter(view, _coins);
         }
 
-        public PlatformLinkPresenter CreatePlatformLinkPresenter(IPlatformLinkView view, IPlatformLinkService linkService)
+        public PlatformLinkPresenter CreatePlatformLinkPresenter(IPlatformLinkView view, IPlatformLinkService linkService, IAnalyticsService analytics = null)
         {
-            return new PlatformLinkPresenter(view, linkService);
+            return new PlatformLinkPresenter(view, linkService, analytics);
         }
     }
 }
