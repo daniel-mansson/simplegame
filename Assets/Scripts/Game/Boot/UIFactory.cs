@@ -14,6 +14,7 @@ namespace SimpleGame.Game.Boot
         private readonly ProgressionService _progression;
         private readonly GameSessionService _session;
         private readonly IHeartService _hearts;
+        private int _initialHearts = 3;
         private readonly MetaProgressionService _metaProgression;
         private readonly IGoldenPieceService _goldenPieces;
         private readonly ICoinsService _coins;
@@ -52,8 +53,11 @@ namespace SimpleGame.Game.Boot
 
         public InGamePresenter CreateInGamePresenter(IInGameView view, PuzzleModel model)
         {
-            return new InGamePresenter(view, _session, _hearts, model);
+            return new InGamePresenter(view, _session, _hearts, model, _initialHearts);
         }
+
+        /// <summary>Override initial heart count from remote config.</summary>
+        public void SetInitialHearts(int count) => _initialHearts = count > 0 ? count : _initialHearts;
 
         public LevelCompletePresenter CreateLevelCompletePresenter(ILevelCompleteView view)
         {

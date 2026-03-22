@@ -54,6 +54,7 @@ namespace SimpleGame.Game.Boot
         private ICloudSaveService _cloudSaveService;
         private IPlatformLinkService _platformLinkService;
         private IAnalyticsService _analyticsService;
+        private IRemoteConfigService _remoteConfigService;
 
         private async UniTaskVoid Start()
         {
@@ -93,6 +94,10 @@ namespace SimpleGame.Game.Boot
             // --- Analytics: session start ---
             _analyticsService = new PlayFabAnalyticsService(_authService);
             _analyticsService.TrackSessionStart();
+
+            // --- Remote config: fetch before constructing gameplay services ---
+            _remoteConfigService = new PlayFabRemoteConfigService(_authService);
+            await _remoteConfigService.FetchAsync();
 
             // --- Build services ---
             var gameService = new GameService();
@@ -214,7 +219,8 @@ namespace SimpleGame.Game.Boot
                                            var data = _metaSaveService.Load();
                                            await _cloudSaveService.PushAsync(data);
                                        },
-                                       analytics: _analyticsService);
+                                       analytics: _analyticsService,
+                                       remoteConfig: _remoteConfigService.Config);
                         var next = await ctrl.RunAsync();
                         await _screenManager.ShowScreenAsync(next);
                         break;

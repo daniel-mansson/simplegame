@@ -41,6 +41,7 @@ namespace SimpleGame.Game.InGame
 
         /// <summary>Delay before win popup appears. Set to 0 in tests via SetWinPopupDelay().</summary>
         private float _winPopupDelaySec = 1.0f;
+        private int _continueCostCoins = 100;
 
         [Header("Puzzle Model")]
         [SerializeField] private PuzzleModelConfig _puzzleModelConfig;
@@ -152,7 +153,8 @@ namespace SimpleGame.Game.InGame
                                ICoinsService coins = null, IViewResolver viewResolver = null,
                                ICurrencyOverlay overlay = null,
                                System.Func<Cysharp.Threading.Tasks.UniTask> onSessionEnd = null,
-                               IAnalyticsService analytics = null)
+                               IAnalyticsService analytics = null,
+                               GameRemoteConfig? remoteConfig = null)
         {
             // Cancel any in-flight RunAsync before GameBootstrapper takes over.
             _runCts?.Cancel();
@@ -170,6 +172,14 @@ namespace SimpleGame.Game.InGame
             _overlay = overlay;
             _onSessionEnd = onSessionEnd;
             _analytics = analytics;
+
+            // Remote config overrides SerializeField defaults when provided
+            if (remoteConfig.HasValue)
+            {
+                _goldenPiecesPerWin = remoteConfig.Value.GoldenPiecesPerWin;
+                _continueCostCoins  = remoteConfig.Value.ContinueCostCoins;
+                _uiFactory.SetInitialHearts(remoteConfig.Value.InitialHearts);
+            }
         }
 
         /// <summary>
@@ -527,8 +537,7 @@ namespace SimpleGame.Game.InGame
 
                     if (choice == LevelFailedChoice.Continue)
                     {
-                        const int continueCost = 100;
-                        if (_coins != null && _coins.TrySpend(continueCost))
+                        if (_coins != null && _coins.TrySpend(_continueCostCoins))
                         {
                             _coins.Save();
                             _overlay?.UpdateBalance($"Coins: {_coins.Balance}");
