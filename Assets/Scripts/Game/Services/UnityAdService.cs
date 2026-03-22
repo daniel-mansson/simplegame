@@ -1,6 +1,9 @@
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
+#if LEVELPLAY_ENABLED
+using Unity.Services.LevelPlay;
+#endif
 
 namespace SimpleGame.Game.Services
 {
@@ -71,13 +74,13 @@ namespace SimpleGame.Game.Services
         public void LoadRewarded()
         {
 #if LEVELPLAY_ENABLED
-            var ad = new LevelPlayRewardedAd(LevelPlayAdUnitId.Rewarded);
+            var ad = new LevelPlayRewardedAd("DefaultRewardedVideoStoreId");
             ad.OnAdLoaded        += (info) => { IsRewardedLoaded = true; _currentRewarded = ad; Debug.Log("[UnityAdService] Rewarded loaded."); };
-            ad.OnAdFailedToLoad  += (error) => { Debug.LogWarning($"[UnityAdService] Rewarded failed to load: {error}"); _analytics?.TrackAdFailedToLoad("rewarded"); };
+            ad.OnAdLoadFailed    += (error) => { Debug.LogWarning($"[UnityAdService] Rewarded failed to load: {error}"); _analytics?.TrackAdFailedToLoad("rewarded"); };
             ad.OnAdDisplayed     += (info)  => { _analytics?.TrackAdImpression("rewarded"); ReportAdRevenue(info); };
             ad.OnAdClosed        += (info)  => { IsRewardedLoaded = false; _rewardedTcs?.TrySetResult(AdResult.Completed); _analytics?.TrackAdCompleted("rewarded"); LoadRewarded(); };
-            ad.OnAdDisplayFailed += (error, info) => { _rewardedTcs?.TrySetResult(AdResult.Failed); LoadRewarded(); };
-            ad.Load();
+            ad.OnAdDisplayFailed += (info, error) => { _rewardedTcs?.TrySetResult(AdResult.Failed); LoadRewarded(); };
+            ad.LoadAd();
 #else
             IsRewardedLoaded = false;
 #endif
@@ -86,13 +89,13 @@ namespace SimpleGame.Game.Services
         public void LoadInterstitial()
         {
 #if LEVELPLAY_ENABLED
-            var ad = new LevelPlayInterstitialAd(LevelPlayAdUnitId.Interstitial);
+            var ad = new LevelPlayInterstitialAd("DefaultInterstitialStoreId");
             ad.OnAdLoaded        += (info) => { IsInterstitialLoaded = true; _currentInterstitial = ad; Debug.Log("[UnityAdService] Interstitial loaded."); };
-            ad.OnAdFailedToLoad  += (error) => { Debug.LogWarning($"[UnityAdService] Interstitial failed to load: {error}"); _analytics?.TrackAdFailedToLoad("interstitial"); };
+            ad.OnAdLoadFailed    += (error) => { Debug.LogWarning($"[UnityAdService] Interstitial failed to load: {error}"); _analytics?.TrackAdFailedToLoad("interstitial"); };
             ad.OnAdDisplayed     += (info)  => { _analytics?.TrackAdImpression("interstitial"); ReportAdRevenue(info); };
             ad.OnAdClosed        += (info)  => { IsInterstitialLoaded = false; _interstitialTcs?.TrySetResult(AdResult.Completed); _analytics?.TrackAdCompleted("interstitial"); LoadInterstitial(); };
-            ad.OnAdDisplayFailed += (error, info) => { _interstitialTcs?.TrySetResult(AdResult.Failed); LoadInterstitial(); };
-            ad.Load();
+            ad.OnAdDisplayFailed += (info, error) => { _interstitialTcs?.TrySetResult(AdResult.Failed); LoadInterstitial(); };
+            ad.LoadAd();
 #else
             IsInterstitialLoaded = false;
 #endif
@@ -156,9 +159,8 @@ namespace SimpleGame.Game.Services
         {
             if (info == null) return;
             var revenue  = info.Revenue ?? 0;
-            var currency = string.IsNullOrEmpty(info.Currency) ? "USD" : info.Currency;
             var network  = string.IsNullOrEmpty(info.AdNetwork) ? "LevelPlay" : info.AdNetwork;
-            (_singular ?? new NullSingularService()).ReportAdRevenue(network, currency, revenue);
+            (_singular ?? new NullSingularService()).ReportAdRevenue(network, "USD", revenue);
         }
 #endif
     }

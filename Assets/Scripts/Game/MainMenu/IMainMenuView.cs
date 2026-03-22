@@ -11,6 +11,9 @@ namespace SimpleGame.Game.MainMenu
         event Action OnNextEnvironmentClicked;
         event Action OnShopClicked;
         event Action OnShopBackClicked;
+        event Action OnDebugRewardedClicked;
+        event Action OnDebugInterstitialClicked;
+        event Action OnDebugBannerClicked;
 
         /// <summary>
         /// Fired when an object is tapped. The int is the object index
@@ -25,5 +28,11 @@ namespace SimpleGame.Game.MainMenu
 
         /// <summary>Show or hide the Next Environment button.</summary>
         void SetNextEnvironmentVisible(bool visible);
+
+        /// <summary>Show or hide the debug ad buttons panel.</summary>
+        void SetDebugAdsVisible(bool visible);
+
+        /// <summary>Update the debug status label (e.g. ad result feedback).</summary>
+        void UpdateDebugStatus(string text);
     }
 }

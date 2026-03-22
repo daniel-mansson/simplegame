@@ -125,7 +125,7 @@ namespace SimpleGame.Game.Boot
             // TODO(M017): Replace with real App Key from LevelPlay dashboard once
             // com.unity.services.levelplay is installed and LEVELPLAY_ENABLED is set.
             // Install guide in Docs/LEVELPLAY_SETUP.md
-            unityAdService.Initialize(appKey: "YOUR_LEVELPLAY_APP_KEY");
+            unityAdService.Initialize(appKey: "25aaee6dd");
             _adService = unityAdService;
 
             _popupManager = new PopupManager<PopupId>(popupContainer, inputBlocker);
@@ -199,7 +199,8 @@ namespace SimpleGame.Game.Boot
                             return;
                         }
                         ctrl.Initialize(_uiFactory, _popupManager, _metaProgressionService,
-                                       _progressionService, _goldenPieceService, _coinsService, popupContainer);
+                                       _progressionService, _goldenPieceService, _coinsService, popupContainer,
+                                       adService: _adService);
                         var next = await ctrl.RunAsync();
                         await _screenManager.ShowScreenAsync(next);
                         break;

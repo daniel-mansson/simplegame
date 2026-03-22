@@ -11,6 +11,9 @@ namespace SimpleGame.Game.MainMenu
         ResetProgress,
         NextEnvironment,
         OpenShop,
-        CloseShop
+        CloseShop,
+        DebugShowRewarded,
+        DebugShowInterstitial,
+        DebugShowBanner
     }
 }

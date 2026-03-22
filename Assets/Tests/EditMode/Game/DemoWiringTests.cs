@@ -27,6 +27,9 @@ namespace SimpleGame.Tests.Game
         public event Action OnNextEnvironmentClicked;
         public event Action OnShopClicked;
         public event Action OnShopBackClicked;
+        public event Action OnDebugRewardedClicked;
+        public event Action OnDebugInterstitialClicked;
+        public event Action OnDebugBannerClicked;
         public event Action<int> OnObjectTapped;
 
         public string LastEnvironmentNameText { get; private set; }
@@ -35,11 +38,15 @@ namespace SimpleGame.Tests.Game
         public ObjectDisplayData[] LastObjects { get; private set; }
         public int UpdateObjectsCallCount { get; private set; }
         public bool NextEnvironmentVisible { get; private set; }
+        public bool DebugAdsVisible { get; private set; }
+        public string LastDebugStatus { get; private set; }
 
         public void UpdateEnvironmentName(string text) => LastEnvironmentNameText = text;
         public void UpdateBalance(string text) => LastBalanceText = text;
         public void UpdateLevelDisplay(string text) => LastLevelDisplayText = text;
         public void SetNextEnvironmentVisible(bool visible) => NextEnvironmentVisible = visible;
+        public void SetDebugAdsVisible(bool visible) => DebugAdsVisible = visible;
+        public void UpdateDebugStatus(string text) => LastDebugStatus = text;
 
         public void UpdateObjects(ObjectDisplayData[] objects)
         {
@@ -54,6 +61,9 @@ namespace SimpleGame.Tests.Game
         public void SimulateNextEnvironmentClicked() => OnNextEnvironmentClicked?.Invoke();
         public void SimulateShopClicked() => OnShopClicked?.Invoke();
         public void SimulateShopBackClicked() => OnShopBackClicked?.Invoke();
+        public void SimulateDebugRewardedClicked() => OnDebugRewardedClicked?.Invoke();
+        public void SimulateDebugInterstitialClicked() => OnDebugInterstitialClicked?.Invoke();
+        public void SimulateDebugBannerClicked() => OnDebugBannerClicked?.Invoke();
     }
 
     // ---------------------------------------------------------------------------

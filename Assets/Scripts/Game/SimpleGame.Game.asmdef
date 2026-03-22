@@ -1,7 +1,7 @@
 {
   "name": "SimpleGame.Game",
   "rootNamespace": "SimpleGame.Game",
-  "references": ["SimpleGame.Core", "SimpleGame.Puzzle", "SimpleJigsaw.Runtime", "UniTask", "UnityEngine.UI", "Unity.TextMeshPro", "PlayFab"],
+  "references": ["SimpleGame.Core", "SimpleGame.Puzzle", "SimpleJigsaw.Runtime", "UniTask", "UnityEngine.UI", "Unity.TextMeshPro", "PlayFab", "Unity.LevelPlay"],
   "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,

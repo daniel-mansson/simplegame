@@ -54,6 +54,9 @@ namespace SimpleGame.Game.MainMenu
             View.OnNextEnvironmentClicked += HandleNextEnvironmentClicked;
             View.OnShopClicked += HandleShopClicked;
             View.OnShopBackClicked += HandleShopBackClicked;
+            View.OnDebugRewardedClicked += HandleDebugRewarded;
+            View.OnDebugInterstitialClicked += HandleDebugInterstitial;
+            View.OnDebugBannerClicked += HandleDebugBanner;
 
             RefreshView();
         }
@@ -67,6 +70,9 @@ namespace SimpleGame.Game.MainMenu
             View.OnNextEnvironmentClicked -= HandleNextEnvironmentClicked;
             View.OnShopClicked -= HandleShopClicked;
             View.OnShopBackClicked -= HandleShopBackClicked;
+            View.OnDebugRewardedClicked -= HandleDebugRewarded;
+            View.OnDebugInterstitialClicked -= HandleDebugInterstitial;
+            View.OnDebugBannerClicked -= HandleDebugBanner;
             _actionTcs?.TrySetCanceled();
             _actionTcs = null;
             _closeShopTcs?.TrySetCanceled();
@@ -191,5 +197,8 @@ namespace SimpleGame.Game.MainMenu
                 _actionTcs?.TrySetResult(MainMenuAction.ObjectRestored);
             }
         }
+        private void HandleDebugRewarded()     => _actionTcs?.TrySetResult(MainMenuAction.DebugShowRewarded);
+        private void HandleDebugInterstitial() => _actionTcs?.TrySetResult(MainMenuAction.DebugShowInterstitial);
+        private void HandleDebugBanner()       => _actionTcs?.TrySetResult(MainMenuAction.DebugShowBanner);
     }
 }

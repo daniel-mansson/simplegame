@@ -71,6 +71,7 @@ namespace SimpleGame.Game.MainMenu
         private ProgressionService _progression;
         private IGoldenPieceService _goldenPieces;
         private ICoinsService _coins;
+        private IAdService _adService;
 
         /// <summary>Inject dependencies. Called by the boot loop before RunAsync.</summary>
         public void Initialize(UIFactory uiFactory, PopupManager<PopupId> popupManager,
@@ -78,7 +79,8 @@ namespace SimpleGame.Game.MainMenu
                                ProgressionService progression = null,
                                IGoldenPieceService goldenPieces = null,
                                ICoinsService coins = null,
-                               IViewResolver viewResolver = null)
+                               IViewResolver viewResolver = null,
+                               IAdService adService = null)
         {
             _uiFactory = uiFactory;
             _popupManager = popupManager;
@@ -87,6 +89,7 @@ namespace SimpleGame.Game.MainMenu
             _goldenPieces = goldenPieces;
             _coins = coins;
             _viewResolver = viewResolver;
+            _adService = adService;
 
             // Build InSceneScreenManager if panels are wired
             if (_homePanel != null && _shopPanel != null)
@@ -138,6 +141,11 @@ namespace SimpleGame.Game.MainMenu
 
                 var presenter = _uiFactory.CreateMainMenuPresenter(ActiveMainMenuView, currentEnv, hasNext);
                 presenter.Initialize();
+
+                // Show debug ad buttons when an ad service is available
+                if (_adService != null)
+                    ActiveMainMenuView.SetDebugAdsVisible(true);
+
                 try
                 {
                     while (true)
@@ -184,6 +192,21 @@ namespace SimpleGame.Game.MainMenu
                             await HandleShopScreenAsync(presenter, ct);
                             if (_useInSceneScreenManager)
                                 _screenManager.GoBack();
+                        }
+
+                        if (action == MainMenuAction.DebugShowRewarded)
+                        {
+                            await HandleDebugRewardedAsync(ct);
+                        }
+
+                        if (action == MainMenuAction.DebugShowInterstitial)
+                        {
+                            await HandleDebugInterstitialAsync(ct);
+                        }
+
+                        if (action == MainMenuAction.DebugShowBanner)
+                        {
+                            HandleDebugBanner();
                         }
                     }
                 }
@@ -291,6 +314,78 @@ namespace SimpleGame.Game.MainMenu
             {
                 presenter.Dispose();
             }
+        }
+
+        private async UniTask HandleDebugRewardedAsync(CancellationToken ct)
+        {
+            if (_adService == null)
+            {
+                ActiveMainMenuView.UpdateDebugStatus("No ad service");
+                return;
+            }
+
+            ActiveMainMenuView.UpdateDebugStatus("Loading rewarded…");
+            Debug.Log("[MainMenuSceneController] Debug: showing rewarded ad.");
+
+            if (!_adService.IsRewardedLoaded)
+            {
+                _adService.LoadRewarded();
+                // Give a brief moment for the null/test service to respond
+                await UniTask.Yield(ct);
+            }
+
+            if (!_adService.IsRewardedLoaded)
+            {
+                ActiveMainMenuView.UpdateDebugStatus("Rewarded: not loaded");
+                Debug.Log("[MainMenuSceneController] Debug: rewarded ad not loaded.");
+                return;
+            }
+
+            ActiveMainMenuView.UpdateDebugStatus("Showing rewarded…");
+            var result = await _adService.ShowRewardedAsync(ct);
+            var msg = $"Rewarded: {result}";
+            ActiveMainMenuView.UpdateDebugStatus(msg);
+            Debug.Log($"[MainMenuSceneController] Debug: {msg}");
+        }
+
+        private async UniTask HandleDebugInterstitialAsync(CancellationToken ct)
+        {
+            if (_adService == null)
+            {
+                ActiveMainMenuView.UpdateDebugStatus("No ad service");
+                return;
+            }
+
+            ActiveMainMenuView.UpdateDebugStatus("Loading interstitial…");
+            Debug.Log("[MainMenuSceneController] Debug: showing interstitial ad.");
+
+            if (!_adService.IsInterstitialLoaded)
+            {
+                _adService.LoadInterstitial();
+                await UniTask.Yield(ct);
+            }
+
+            if (!_adService.IsInterstitialLoaded)
+            {
+                ActiveMainMenuView.UpdateDebugStatus("Interstitial: not loaded");
+                Debug.Log("[MainMenuSceneController] Debug: interstitial ad not loaded.");
+                return;
+            }
+
+            ActiveMainMenuView.UpdateDebugStatus("Showing interstitial…");
+            var result = await _adService.ShowInterstitialAsync(ct);
+            var msg = $"Interstitial: {result}";
+            ActiveMainMenuView.UpdateDebugStatus(msg);
+            Debug.Log($"[MainMenuSceneController] Debug: {msg}");
+        }
+
+        private void HandleDebugBanner()
+        {
+            // Banner ads are typically persistent — toggle visibility.
+            // The current IAdService doesn't have banner support yet,
+            // so this is a placeholder that logs the intent.
+            ActiveMainMenuView.UpdateDebugStatus("Banner: not implemented");
+            Debug.Log("[MainMenuSceneController] Debug: banner ad requested — IAdService has no banner API yet.");
         }
     }
 }
