@@ -1,6 +1,6 @@
 # PlayFab & Platform Account Setup
 
-Setup guide for PlayFab anonymous login, cloud save, Game Center (iOS), and Google Play Games (Android).
+Setup guide for PlayFab anonymous login, cloud save, Game Center (iOS), Google Play Games (Android), and remote config for A/B testing.
 
 ---
 
@@ -142,3 +142,57 @@ PlayGamesPlatform.Activate();
 **`[PlatformLink] Game Center link failed`** — User is not signed into Game Center on device, or the App ID does not have Game Center enabled in App Store Connect.
 
 **Cloud save not syncing** — Login must succeed first. Check `[PlayFabAuth]` log lines. If offline, local save is used and sync resumes on next successful login.
+
+---
+
+## 4. Remote Config & A/B Testing
+
+Game economy values are fetched from **PlayFab Title Data** at boot. Missing keys fall back to in-code defaults so the game always works.
+
+### Configurable Keys
+
+Set these in **PlayFab Game Manager → Title Data** (not Player Data):
+
+| Key | Type | Default | Effect |
+|---|---|---|---|
+| `initial_hearts` | int | `3` | Mistakes allowed per level attempt |
+| `golden_pieces_per_win` | int | `5` | Golden pieces awarded on level completion |
+| `continue_cost_coins` | int | `100` | Coins spent to retry after losing |
+
+### Setting a Value
+
+1. Open PlayFab Game Manager → your title
+2. Go to **Content → Title Data**
+3. Click **New item**
+4. Enter the key (e.g. `initial_hearts`) and value (e.g. `5`)
+5. Save — the next game boot will pick up the new value
+
+Values are strings in PlayFab; the SDK parses them as integers. Non-integer or missing values fall back to defaults silently.
+
+### A/B Testing with Player Segments
+
+To run an A/B test (e.g. test 5 hearts vs 3 hearts):
+
+1. In PlayFab Game Manager, go to **Players → Segments** and create two segments (e.g. "HeartsTest_A", "HeartsTest_B") with bucket rules
+2. Go to **Content → Title Data** and create segment-overrides for `initial_hearts` per segment
+3. `PlayFabRemoteConfigService` calls `GetTitleData` — PlayFab automatically returns the segment-appropriate value for the authenticated player
+
+No code changes are needed for segmented A/B tests; PlayFab handles the value selection server-side.
+
+### Boot Log
+
+When remote config loads successfully you'll see:
+
+```
+[RemoteConfig] Loaded — hearts:5 golden:10 continue:50
+```
+
+If the player is offline or fetch fails:
+
+```
+[RemoteConfig] Not logged in — using default config.
+```
+or
+```
+[RemoteConfig] Fetch failed: <reason> — using defaults.
+```
