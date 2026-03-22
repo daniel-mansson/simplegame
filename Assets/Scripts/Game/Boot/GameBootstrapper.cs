@@ -55,6 +55,7 @@ namespace SimpleGame.Game.Boot
         private IPlatformLinkService _platformLinkService;
         private IAnalyticsService _analyticsService;
         private IRemoteConfigService _remoteConfigService;
+        private IAdService _adService;
 
         private async UniTaskVoid Start()
         {
@@ -114,6 +115,16 @@ namespace SimpleGame.Game.Boot
             var transitionPlayer = _transitionPlayer;
             var popupContainer = _viewContainer;
             var sceneLoader = new UnitySceneLoader();
+
+            // --- Ads: initialize before navigation loop ---
+            var unityAdService = new UnityAdService();
+            unityAdService.SetAnalytics(_analyticsService);
+            // Test game IDs — replace with production IDs before release (D089)
+            unityAdService.Initialize(
+                gameIdIos:     "5314539",
+                gameIdAndroid: "5314538",
+                testMode:      true);
+            _adService = unityAdService;
 
             _popupManager = new PopupManager<PopupId>(popupContainer, inputBlocker);
             _screenManager = new ScreenManager<ScreenId>(sceneLoader, transitionPlayer, inputBlocker,
@@ -220,7 +231,8 @@ namespace SimpleGame.Game.Boot
                                            await _cloudSaveService.PushAsync(data);
                                        },
                                        analytics: _analyticsService,
-                                       remoteConfig: _remoteConfigService.Config);
+                                       remoteConfig: _remoteConfigService.Config,
+                                       adService: _adService);
                         var next = await ctrl.RunAsync();
                         await _screenManager.ShowScreenAsync(next);
                         break;

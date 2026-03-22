@@ -26,5 +26,7 @@ namespace SimpleGame.Game.Popup
         }
 
         public void UpdateStatus(string text) => _statusText.text = text;
+
+        public void SetWatchInteractable(bool interactable) => _watchButton.interactable = interactable;
     }
 }

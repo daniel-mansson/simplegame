@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
 using NUnit.Framework;
 using SimpleGame.Game.Popup;
+using SimpleGame.Game.Services;
 
 namespace SimpleGame.Tests.Game
 {
@@ -51,8 +52,10 @@ namespace SimpleGame.Tests.Game
         public event Action OnWatchClicked;
         public event Action OnSkipClicked;
         public string LastStatusText { get; private set; }
+        public bool? LastWatchInteractable { get; private set; }
 
         public void UpdateStatus(string text) => LastStatusText = text;
+        public void SetWatchInteractable(bool interactable) => LastWatchInteractable = interactable;
         public void SimulateWatchClicked() => OnWatchClicked?.Invoke();
         public void SimulateSkipClicked() => OnSkipClicked?.Invoke();
         public UniTask AnimateInAsync(CancellationToken ct = default) => UniTask.CompletedTask;
@@ -270,7 +273,8 @@ namespace SimpleGame.Tests.Game
         public void Initialize_SetsStatusText()
         {
             var view = new MockRewardedAdView();
-            var presenter = new RewardedAdPresenter(view);
+            var adSvc = new NullAdService { SimulateLoaded = true };
+            var presenter = new RewardedAdPresenter(view, adSvc);
             presenter.Initialize();
 
             Assert.AreEqual("Watch a short ad for a reward?", view.LastStatusText);
@@ -278,10 +282,35 @@ namespace SimpleGame.Tests.Game
         }
 
         [Test]
-        public async Task WaitForResult_WatchClicked_ReturnsTrue()
+        public void Initialize_WhenAdLoaded_WatchButtonIsInteractable()
         {
             var view = new MockRewardedAdView();
-            var presenter = new RewardedAdPresenter(view);
+            var adSvc = new NullAdService { SimulateLoaded = true };
+            var presenter = new RewardedAdPresenter(view, adSvc);
+            presenter.Initialize();
+
+            Assert.AreEqual(true, view.LastWatchInteractable);
+            presenter.Dispose();
+        }
+
+        [Test]
+        public void Initialize_WhenAdNotLoaded_WatchButtonIsNotInteractable()
+        {
+            var view = new MockRewardedAdView();
+            var adSvc = new NullAdService { SimulateLoaded = false };
+            var presenter = new RewardedAdPresenter(view, adSvc);
+            presenter.Initialize();
+
+            Assert.AreEqual(false, view.LastWatchInteractable);
+            presenter.Dispose();
+        }
+
+        [Test]
+        public async Task WaitForResult_WatchClicked_AdCompleted_ReturnsTrue()
+        {
+            var view = new MockRewardedAdView();
+            var adSvc = new NullAdService { SimulateLoaded = true, SimulateResult = AdResult.Completed };
+            var presenter = new RewardedAdPresenter(view, adSvc);
             presenter.Initialize();
 
             var task = presenter.WaitForResult().AsTask();
@@ -293,10 +322,43 @@ namespace SimpleGame.Tests.Game
         }
 
         [Test]
+        public async Task WaitForResult_WatchClicked_AdSkipped_ReturnsFalse()
+        {
+            var view = new MockRewardedAdView();
+            var adSvc = new NullAdService { SimulateLoaded = true, SimulateResult = AdResult.Skipped };
+            var presenter = new RewardedAdPresenter(view, adSvc);
+            presenter.Initialize();
+
+            var task = presenter.WaitForResult().AsTask();
+            view.SimulateWatchClicked();
+            var result = await task;
+
+            Assert.IsFalse(result);
+            presenter.Dispose();
+        }
+
+        [Test]
+        public void WatchClicked_WhenAdNotLoaded_DisablesButtonAndUpdatesStatus()
+        {
+            var view = new MockRewardedAdView();
+            var adSvc = new NullAdService { SimulateLoaded = false };
+            var presenter = new RewardedAdPresenter(view, adSvc);
+            presenter.Initialize();
+
+            // Reset to detect the second call clearly
+            view.SimulateWatchClicked();
+
+            Assert.AreEqual(false, view.LastWatchInteractable);
+            Assert.IsTrue(view.LastStatusText.Contains("not available"));
+            presenter.Dispose();
+        }
+
+        [Test]
         public async Task WaitForResult_SkipClicked_ReturnsFalse()
         {
             var view = new MockRewardedAdView();
-            var presenter = new RewardedAdPresenter(view);
+            var adSvc = new NullAdService { SimulateLoaded = true };
+            var presenter = new RewardedAdPresenter(view, adSvc);
             presenter.Initialize();
 
             var task = presenter.WaitForResult().AsTask();

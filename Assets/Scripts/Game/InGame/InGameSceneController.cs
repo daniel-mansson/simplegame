@@ -145,6 +145,7 @@ namespace SimpleGame.Game.InGame
         private PopupManager<PopupId> _popupManager;
         private System.Func<Cysharp.Threading.Tasks.UniTask> _onSessionEnd;
         private IAnalyticsService _analytics;
+        private IAdService _adService;
 
         /// <summary>Inject dependencies. Called by the boot loop before RunAsync.</summary>
         public void Initialize(UIFactory uiFactory, ProgressionService progression,
@@ -154,7 +155,8 @@ namespace SimpleGame.Game.InGame
                                ICurrencyOverlay overlay = null,
                                System.Func<Cysharp.Threading.Tasks.UniTask> onSessionEnd = null,
                                IAnalyticsService analytics = null,
-                               GameRemoteConfig? remoteConfig = null)
+                               GameRemoteConfig? remoteConfig = null,
+                               IAdService adService = null)
         {
             // Cancel any in-flight RunAsync before GameBootstrapper takes over.
             _runCts?.Cancel();
@@ -172,6 +174,7 @@ namespace SimpleGame.Game.InGame
             _overlay = overlay;
             _onSessionEnd = onSessionEnd;
             _analytics = analytics;
+            _adService = adService;
 
             // Remote config overrides SerializeField defaults when provided
             if (remoteConfig.HasValue)
@@ -461,10 +464,17 @@ namespace SimpleGame.Game.InGame
 
                             if (choice == LevelFailedChoice.WatchAd)
                             {
-                                await HandleRewardedAdAsync(ct);
-                                // Continue with same presenter — restore hearts, keep piece progress
-                                presenter.RestoreHeartsAndContinue();
-                                continue;
+                                bool adWatched = await HandleRewardedAdAsync(ct);
+                                if (adWatched)
+                                {
+                                    // Ad completed — restore hearts and continue from current state
+                                    presenter.RestoreHeartsAndContinue();
+                                    continue;
+                                }
+                                // Ad skipped, failed, or unavailable — treat as retry
+                                _session.CurrentScore = 0;
+                                await RetryTransitionAsync(ct);
+                                break;
                             }
 
                             if (choice == LevelFailedChoice.Continue)
@@ -586,15 +596,29 @@ namespace SimpleGame.Game.InGame
             }
         }
 
-        private async UniTask HandleRewardedAdAsync(CancellationToken ct)
+        private async UniTask<bool> HandleRewardedAdAsync(CancellationToken ct)
         {
-            // Stub: show rewarded ad popup, wait for completion, grant retry
-            await _popupManager.ShowPopupAsync(PopupId.RewardedAd, ct);
-            // In a real implementation, the RewardedAdPresenter would handle
-            // the ad flow. For the stub, we just dismiss after a beat.
-            // The S06 integration will wire the real presenter.
-            Debug.Log("[InGameSceneController] Rewarded ad stub — granting retry with extra hearts.");
-            await _popupManager.DismissPopupAsync(ct);
+            var view = _viewResolver?.Get<IRewardedAdView>();
+            if (view == null)
+            {
+                Debug.LogWarning("[InGameSceneController] IRewardedAdView not found — cannot show rewarded ad popup.");
+                return false;
+            }
+
+            var adService = _adService ?? new NullAdService();
+            var presenter = new RewardedAdPresenter(view, adService);
+            presenter.Initialize();
+            try
+            {
+                await _popupManager.ShowPopupAsync(PopupId.RewardedAd, ct);
+                bool result = await presenter.WaitForResult();
+                await _popupManager.DismissPopupAsync(ct);
+                return result;
+            }
+            finally
+            {
+                presenter.Dispose();
+            }
         }
 
         /// <summary>
