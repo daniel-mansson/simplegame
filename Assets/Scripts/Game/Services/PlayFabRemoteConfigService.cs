@@ -73,15 +73,15 @@ namespace SimpleGame.Game.Services
             var cfg = GameRemoteConfig.Default;
 
             if (result.Data.TryGetValue(KeyInitialHearts, out var rawHearts) &&
-                int.TryParse(rawHearts.Value, out var hearts) && hearts > 0)
+                int.TryParse(rawHearts, out var hearts) && hearts > 0)
                 cfg.InitialHearts = hearts;
 
             if (result.Data.TryGetValue(KeyGoldenPiecesPerWin, out var rawGolden) &&
-                int.TryParse(rawGolden.Value, out var golden) && golden >= 0)
+                int.TryParse(rawGolden, out var golden) && golden >= 0)
                 cfg.GoldenPiecesPerWin = golden;
 
             if (result.Data.TryGetValue(KeyContinueCostCoins, out var rawContinue) &&
-                int.TryParse(rawContinue.Value, out var continueCost) && continueCost >= 0)
+                int.TryParse(rawContinue, out var continueCost) && continueCost >= 0)
                 cfg.ContinueCostCoins = continueCost;
 
             Config = cfg;
