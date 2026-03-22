@@ -23,9 +23,10 @@ namespace SimpleGame.Game.Services
     /// </summary>
     public class PlayFabRemoteConfigService : IRemoteConfigService
     {
-        private const string KeyInitialHearts      = "initial_hearts";
-        private const string KeyGoldenPiecesPerWin = "golden_pieces_per_win";
-        private const string KeyContinueCostCoins  = "continue_cost_coins";
+        private const string KeyInitialHearts              = "initial_hearts";
+        private const string KeyGoldenPiecesPerWin         = "golden_pieces_per_win";
+        private const string KeyContinueCostCoins          = "continue_cost_coins";
+        private const string KeyInterstitialEveryNLevels   = "interstitial_every_n_levels";
 
         private readonly IPlayFabAuthService _auth;
 
@@ -54,6 +55,7 @@ namespace SimpleGame.Game.Services
                         KeyInitialHearts,
                         KeyGoldenPiecesPerWin,
                         KeyContinueCostCoins,
+                        KeyInterstitialEveryNLevels,
                     }
                 },
                 result => tcs.TrySetResult(result),
@@ -84,8 +86,12 @@ namespace SimpleGame.Game.Services
                 int.TryParse(rawContinue, out var continueCost) && continueCost >= 0)
                 cfg.ContinueCostCoins = continueCost;
 
+            if (result.Data.TryGetValue(KeyInterstitialEveryNLevels, out var rawInterstitial) &&
+                int.TryParse(rawInterstitial, out var interstitialN) && interstitialN >= 0)
+                cfg.InterstitialEveryNLevels = interstitialN;
+
             Config = cfg;
-            Debug.Log($"[RemoteConfig] Loaded — hearts:{cfg.InitialHearts} golden:{cfg.GoldenPiecesPerWin} continue:{cfg.ContinueCostCoins}");
+            Debug.Log($"[RemoteConfig] Loaded — hearts:{cfg.InitialHearts} golden:{cfg.GoldenPiecesPerWin} continue:{cfg.ContinueCostCoins} interstitialEveryN:{cfg.InterstitialEveryNLevels}");
         }
     }
 }

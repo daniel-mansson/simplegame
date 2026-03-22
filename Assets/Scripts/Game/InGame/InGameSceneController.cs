@@ -42,6 +42,8 @@ namespace SimpleGame.Game.InGame
         /// <summary>Delay before win popup appears. Set to 0 in tests via SetWinPopupDelay().</summary>
         private float _winPopupDelaySec = 1.0f;
         private int _continueCostCoins = 100;
+        private int _interstitialEveryNLevels = 3;
+        private int _levelsCompletedThisSession = 0;
 
         [Header("Puzzle Model")]
         [SerializeField] private PuzzleModelConfig _puzzleModelConfig;
@@ -181,6 +183,7 @@ namespace SimpleGame.Game.InGame
             {
                 _goldenPiecesPerWin = remoteConfig.Value.GoldenPiecesPerWin;
                 _continueCostCoins  = remoteConfig.Value.ContinueCostCoins;
+                _interstitialEveryNLevels = remoteConfig.Value.InterstitialEveryNLevels;
                 _uiFactory.SetInitialHearts(remoteConfig.Value.InitialHearts);
             }
         }
@@ -446,6 +449,12 @@ namespace SimpleGame.Game.InGame
                             if (_winPopupDelaySec > 0f)
                                 await UniTask.Delay(System.TimeSpan.FromSeconds(_winPopupDelaySec), cancellationToken: ct);
                             await HandleLevelCompletePopupAsync(ct);
+                            _levelsCompletedThisSession++;
+                            if (_interstitialEveryNLevels > 0 && _levelsCompletedThisSession % _interstitialEveryNLevels == 0)
+                            {
+                                var interstitialResult = await HandleInterstitialAsync(ct);
+                                Debug.Log($"[InGameSceneController] Interstitial result: {interstitialResult}");
+                            }
                             if (_onSessionEnd != null) await _onSessionEnd();
                             return ScreenId.MainMenu;
                         }
@@ -593,6 +602,21 @@ namespace SimpleGame.Game.InGame
             finally
             {
                 presenter.Dispose();
+            }
+        }
+
+        private async UniTask<AdResult> HandleInterstitialAsync(CancellationToken ct)
+        {
+            if (_adService == null || !_adService.IsInterstitialLoaded)
+                return AdResult.NotLoaded;
+            try
+            {
+                return await _adService.ShowInterstitialAsync(ct);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"[InGameSceneController] Interstitial show exception: {ex.Message}");
+                return AdResult.Failed;
             }
         }
 

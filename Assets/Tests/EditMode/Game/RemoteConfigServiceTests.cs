@@ -29,6 +29,12 @@ namespace SimpleGame.Tests.Game
             Assert.AreEqual(100, GameRemoteConfig.Default.ContinueCostCoins);
         }
 
+        [Test]
+        public void Default_InterstitialEveryNLevels_IsThree()
+        {
+            Assert.AreEqual(3, GameRemoteConfig.Default.InterstitialEveryNLevels);
+        }
+
         // ── MockRemoteConfigService ──────────────────────────────────────────
 
         [Test]

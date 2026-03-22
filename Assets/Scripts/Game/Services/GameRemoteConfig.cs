@@ -26,13 +26,21 @@ namespace SimpleGame.Game.Services
         /// <summary>Coins spent when the player chooses to continue after losing.</summary>
         public int ContinueCostCoins;
 
+        /// <summary>
+        /// How many level completions between interstitial ad shows.
+        /// An interstitial is shown after every Nth win (session-scoped counter).
+        /// Set to 0 to disable interstitials entirely.
+        /// </summary>
+        public int InterstitialEveryNLevels;
+
         // ── Defaults (returned when fetch fails or key is absent) ─────────
 
         public static GameRemoteConfig Default => new GameRemoteConfig
         {
-            InitialHearts      = 3,
-            GoldenPiecesPerWin = 5,
-            ContinueCostCoins  = 100,
+            InitialHearts           = 3,
+            GoldenPiecesPerWin      = 5,
+            ContinueCostCoins       = 100,
+            InterstitialEveryNLevels = 3,
         };
     }
 }
