@@ -15,10 +15,10 @@
 
 ## Tasks
 
-- [ ] **T01: Extend IRewardedAdView & Update RewardedAdPresenter**
+- [x] **T01: Extend IRewardedAdView & Update RewardedAdPresenter**
   Add `SetWatchInteractable(bool)` to interface and MonoBehaviour; update `RewardedAdPresenter` to use `IAdService`.
 
-- [ ] **T02: Wire IAdService into InGameSceneController**
+- [x] **T02: Wire IAdService into InGameSceneController**
   Add `IAdService` param to `Initialize()`, replace stub `HandleRewardedAdAsync`, update `GameBootstrapper` to construct and pass `UnityAdService`.
 
 ## Files Likely Touched

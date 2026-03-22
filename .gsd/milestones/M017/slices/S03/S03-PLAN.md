@@ -15,7 +15,7 @@
 
 ## Tasks
 
-- [ ] **T01: GameRemoteConfig + Fetch + Session Counter**
+- [x] **T01: GameRemoteConfig + Fetch + Session Counter**
   Add field to `GameRemoteConfig`, add PlayFab fetch key, add counter and interstitial call to `InGameSceneController`.
 
 ## Files Likely Touched

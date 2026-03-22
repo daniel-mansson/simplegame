@@ -49,16 +49,16 @@ This milestone is complete only when all are true:
 
 ## Slices
 
-- [ ] **S01: Ad Service Abstraction & SDK** `risk:high` `depends:[]`
+- [x] **S01: Ad Service Abstraction & SDK** `risk:high` `depends:[]`
   > After this: `IAdService`, `NullAdService`, and `UnityAdService` exist and compile; `NullAdService` contract tests pass; Advertisement Legacy package is installed.
 
-- [ ] **S02: Rewarded Ad — Real Flow** `risk:medium` `depends:[S01]`
+- [x] **S02: Rewarded Ad — Real Flow** `risk:medium` `depends:[S01]`
   > After this: losing a level and tapping Watch Ad triggers a real Unity Ads rewarded video; unavailable state grays the Watch button with an explanatory message.
 
-- [ ] **S03: Interstitial — Post-Level Frequency** `risk:medium` `depends:[S01]`
+- [x] **S03: Interstitial — Post-Level Frequency** `risk:medium` `depends:[S01]`
   > After this: every N levels (remote-config-controlled, default 3), a real interstitial ad shows after level complete; failed loads are skipped silently.
 
-- [ ] **S04: Ad Analytics** `risk:low` `depends:[S01,S02,S03]`
+- [x] **S04: Ad Analytics** `risk:low` `depends:[S01,S02,S03]`
   > After this: all ad events (impression, completed, skipped, failed-to-load) fire through `IAnalyticsService` and are verified by edit-mode tests.
 
 ## Boundary Map

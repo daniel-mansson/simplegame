@@ -44,4 +44,4 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 - [x] M013: Solvable Deck Shuffle — topology-aware deck generation guaranteeing solvability by construction
 - [x] M015: Fastlane Distribution Pipeline — CLI build, provisioning, and app store distribution automation
 - [x] M016: PlayFab Integration — anonymous accounts, cloud save with take-max merge, platform linking, analytics
-- [ ] M017: Unity Ads Integration — rewarded and interstitial ads with graceful failure handling
+- [x] M017: Unity Ads Integration — rewarded and interstitial ads with graceful failure handling

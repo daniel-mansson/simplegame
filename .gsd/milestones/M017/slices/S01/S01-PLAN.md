@@ -15,10 +15,10 @@
 
 ## Tasks
 
-- [ ] **T01: Install SDK & Define IAdService**
+- [x] **T01: Install SDK & Define IAdService**
   Install Advertisement Legacy via manifest, define `IAdService`, `AdResult`, and create files.
 
-- [ ] **T02: NullAdService + UnityAdService + Tests**
+- [x] **T02: NullAdService + UnityAdService + Tests**
   Implement both service classes, add `IAdService` reference to `SimpleGame.Game.asmdef`, write contract tests.
 
 ## Files Likely Touched

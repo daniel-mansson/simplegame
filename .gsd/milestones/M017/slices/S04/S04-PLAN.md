@@ -15,7 +15,7 @@
 
 ## Tasks
 
-- [ ] **T01: Extend IAnalyticsService & Wire Ad Events**
+- [x] **T01: Extend IAnalyticsService & Wire Ad Events**
   Add methods to interface and `PlayFabAnalyticsService`, wire into `UnityAdService`, update mocks.
 
 ## Files Likely Touched
