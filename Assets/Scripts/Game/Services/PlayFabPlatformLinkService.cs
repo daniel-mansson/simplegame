@@ -101,12 +101,10 @@ namespace SimpleGame.Game.Services
                 return false;
             }
 
-#if UNITY_ANDROID
+#if UNITY_ANDROID && GOOGLE_PLAY_GAMES
             // Obtain a server auth code from Google Play Games Unity plugin.
-            // This requires the Google Play Games plugin to be installed and configured.
-            // PlayGamesClientConfiguration must be initialized before this call.
-            // The server auth code is passed to PlayFab for server-side verification.
-            var serverAuthCode = Google.Play.GameServices.PlayGamesPlatform.Instance?.GetServerAuthCode();
+            // Requires the Google Play Games plugin installed and GOOGLE_PLAY_GAMES scripting define set.
+            var serverAuthCode = GooglePlayGames.PlayGamesPlatform.Instance?.GetServerAuthCode();
             if (string.IsNullOrEmpty(serverAuthCode))
             {
                 Debug.LogWarning("[PlatformLink] Google Play Games server auth code unavailable — is the plugin configured?");
@@ -140,7 +138,9 @@ namespace SimpleGame.Game.Services
             }
             return success;
 #else
-            Debug.Log("[PlatformLink] Google Play Games is only available on Android.");
+            // Google Play Games plugin not installed. Add it and set the GOOGLE_PLAY_GAMES
+            // scripting define in Project Settings > Player > Scripting Define Symbols to enable.
+            Debug.Log("[PlatformLink] Google Play Games linking requires the GPGS plugin (GOOGLE_PLAY_GAMES define).");
             await UniTask.CompletedTask;
             return false;
 #endif
