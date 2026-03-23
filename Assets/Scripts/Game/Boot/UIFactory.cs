@@ -83,5 +83,10 @@ namespace SimpleGame.Game.Boot
         {
             return new PlatformLinkPresenter(view, linkService, analytics);
         }
+
+        public ConsentGatePresenter CreateConsentGatePresenter(IConsentGateView view)
+        {
+            return new ConsentGatePresenter(view);
+        }
     }
 }

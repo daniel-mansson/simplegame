@@ -46,6 +46,7 @@ namespace SimpleGame.Game.Popup
         [SerializeField] private GameObject _iapPurchasePopup;
         [SerializeField] private GameObject _objectRestoredPopup;
         [SerializeField] private GameObject _shopPopup;
+        [SerializeField] private GameObject _consentGatePopup;
 
         [Tooltip("Reference to the input blocker so its sort order can be adjusted when popups stack.")]
         [SerializeField] private UnityInputBlocker _inputBlocker;
@@ -141,6 +142,7 @@ namespace SimpleGame.Game.Popup
                 case PopupId.IAPPurchase:    return _iapPurchasePopup;
                 case PopupId.ObjectRestored: return _objectRestoredPopup;
                 case PopupId.Shop:           return _shopPopup;
+                case PopupId.ConsentGate:    return _consentGatePopup;
                 default:
                     Debug.LogWarning($"[UnityViewContainer] No GameObject registered for PopupId: {popupId}");
                     return null;

@@ -9,6 +9,7 @@ namespace SimpleGame.Game
         IAPPurchase,
         ObjectRestored,
         Shop,
-        PlatformLink
+        PlatformLink,
+        ConsentGate
     }
 }

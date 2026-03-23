@@ -52,7 +52,7 @@ This milestone is complete only when all are true:
 
 ## Slices
 
-- [ ] **S01: Consent Gate Popup** `risk:medium` `depends:[]`
+- [x] **S01: Consent Gate Popup** `risk:medium` `depends:[]`
   > After this: launching the game shows a ToS/Privacy popup with no close button; Accept writes the PlayerPrefs flag and proceeds to main menu; popup never shows again on subsequent launches.
 
 - [ ] **S02: ATT Integration** `risk:medium` `depends:[S01]`

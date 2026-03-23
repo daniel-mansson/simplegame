@@ -64,6 +64,39 @@ namespace SimpleGame.Game.Boot
             QualitySettings.vSyncCount = 0;
             Debug.Log("[GameBootstrapper] Boot sequence started.");
 
+            // --- PopupManager: constructed early so consent gate can use it ---
+            // _viewContainer and _inputBlocker are [SerializeField] — available immediately.
+            _popupManager = new PopupManager<PopupId>(_viewContainer, _inputBlocker);
+
+            // --- Consent gate: must accept before anything else ---
+            // Shown every launch until accepted (R158, D093). No dismiss path (D094).
+            if (ConsentGatePresenter.ShouldShow())
+            {
+                var consentView = FindFirstObjectInBootScene<IConsentGateView>();
+                if (consentView != null)
+                {
+                    var consentPresenter = new ConsentGatePresenter(consentView);
+                    consentPresenter.Initialize();
+                    try
+                    {
+                        await _popupManager.ShowPopupAsync(PopupId.ConsentGate);
+                        await consentPresenter.WaitForAccept();
+                    }
+                    finally
+                    {
+                        await _popupManager.DismissPopupAsync();
+                        consentPresenter.Dispose();
+                    }
+                }
+                else
+                {
+                    // View not in scene — mark accepted so boot can proceed.
+                    // This should not happen in a correctly configured build.
+                    Debug.LogError("[GameBootstrapper] ConsentGate view not found in Boot scene — marking accepted to unblock boot. Add ConsentGatePopup prefab to Boot scene.");
+                    ConsentGatePresenter.MarkAccepted();
+                }
+            }
+
             // --- PlayFab: authenticate before anything else ---
             _authService = new PlayFabAuthService();
             try
@@ -127,7 +160,7 @@ namespace SimpleGame.Game.Boot
             unityAdService.Initialize(appKey: "25aaee6dd", testMode: true);
             _adService = unityAdService;
 
-            _popupManager = new PopupManager<PopupId>(popupContainer, inputBlocker);
+            // _popupManager already constructed at boot top (before consent gate).
             _screenManager = new ScreenManager<ScreenId>(sceneLoader, transitionPlayer, inputBlocker,
                 onBeforeSceneUnload: _popupManager.DismissAllAsync);
             _uiFactory = new UIFactory(gameService, _progressionService, _sessionService,
