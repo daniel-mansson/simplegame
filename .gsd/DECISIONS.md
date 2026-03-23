@@ -120,3 +120,5 @@
 **To activate:** Install `com.unity.services.levelplay` via Package Manager, install Unity Ads adapter via Ads Mediation → Integration Manager, create LevelPlay app for App Key, add `LEVELPLAY_ENABLED` scripting define.
 
 **Revisable:** No
+
+| D095b | M018/S02 | arch | ATT via direct P/Invoke bridge (supersedes D095) | ATTBridge.mm native plugin instead of com.unity.ads.ios-support package | ios-support 1.2.0 tgz was partially downloaded; 1.0.0 caused Unity MCP to become unresponsive after import (background SKAdNetwork network fetcher blocked domain reload reconnect). Direct P/Invoke is simpler — two extern C functions, zero package dependencies, identical ATT behaviour | No |

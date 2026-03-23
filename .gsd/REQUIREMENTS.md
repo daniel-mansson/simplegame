@@ -1614,8 +1614,8 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Source: inferred
 - Primary owning slice: M018/S02
 - Supporting slices: none
-- Validation: mapped
-- Notes: Injected automatically; no manual Xcode editing required.
+- Validation: PostBuildATT.cs uses IPostprocessBuildWithReport to inject NSUserTrackingUsageDescription via PlistDocument. Runs on iOS builds only. Key: "We use your device advertising ID to show you relevant ads and measure ad performance."
+- Notes: Injected automatically; no manual Xcode editing required. Full verification requires an iOS build.
 
 ### R163 — GDPR/CCPA consent toggles
 - Class: anti-feature

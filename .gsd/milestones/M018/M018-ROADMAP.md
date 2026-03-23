@@ -55,7 +55,7 @@ This milestone is complete only when all are true:
 - [x] **S01: Consent Gate Popup** `risk:medium` `depends:[]`
   > After this: launching the game shows a ToS/Privacy popup with no close button; Accept writes the PlayerPrefs flag and proceeds to main menu; popup never shows again on subsequent launches.
 
-- [ ] **S02: ATT Integration** `risk:medium` `depends:[S01]`
+- [x] **S02: ATT Integration** `risk:medium` `depends:[S01]`
   > After this: on an iOS device, Accept triggers the native ATT system dialog; LevelPlay initializes after the ATT result; NSUserTrackingUsageDescription is in the Xcode build plist.
 
 ## Boundary Map

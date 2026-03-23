@@ -57,6 +57,7 @@ namespace SimpleGame.Game.Boot
         private IRemoteConfigService _remoteConfigService;
         private IAdService _adService;
         private ISingularService _singularService;
+        private IATTService _attService;
 
         private async UniTaskVoid Start()
         {
@@ -96,6 +97,17 @@ namespace SimpleGame.Game.Boot
                     ConsentGatePresenter.MarkAccepted();
                 }
             }
+
+            // --- ATT: request tracking authorization before any SDK init (R160, D097) ---
+            // Fires immediately after consent accepted, before PlayFab and before LevelPlay.
+            // On non-iOS: NullATTService returns immediately.
+#if UNITY_IOS
+            _attService = new UnityATTService();
+#else
+            _attService = new NullATTService();
+#endif
+            var attStatus = await _attService.RequestAuthorizationAsync();
+            Debug.Log($"[GameBootstrapper] ATT status: {attStatus}");
 
             // --- PlayFab: authenticate before anything else ---
             _authService = new PlayFabAuthService();
@@ -150,7 +162,7 @@ namespace SimpleGame.Game.Boot
             var popupContainer = _viewContainer;
             var sceneLoader = new UnitySceneLoader();
 
-            // --- Ads: initialize before navigation loop ---
+            // --- Ads: initialize after ATT result so IDFA is available if authorized (D097) ---
             var unityAdService = new UnityAdService();
             unityAdService.SetAnalytics(_analyticsService);
             _singularService = new SingularService();

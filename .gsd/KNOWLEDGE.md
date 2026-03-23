@@ -126,3 +126,16 @@ The `simple-jigsaw` package.json is at `Assets/SimpleJigsaw/package.json` in the
 
 **Also:** The package's `Runtime/Configs/PieceRenderConfig.asset` has a stale shader GUID (`50f401a8...`) from the original source project. The PuzzlePiece shader in our submodule has GUID `c67764c5...`. Always use the project-local `DemoPieceRenderConfig.asset` or create a fresh `PieceRenderConfig` asset in `Assets/` with the correct GUID.
 
+
+---
+
+### K010 — com.unity.ads.ios-support: SKAdNetwork background fetcher blocks Unity MCP reconnect
+**Date:** 2026-03-20
+
+Adding `com.unity.ads.ios-support` to `Packages/manifest.json` causes Unity MCP to become unresponsive after the domain reload triggered by the package import. The package's `PostProcessBuildPlist.cs` and associated editor scripts make a background network call to fetch SKAdNetwork IDs from Unity's servers during `InvokePackagesCallback` (1.7s in the import profiler). This appears to block the MCP WebSocket server from reconnecting after domain reload.
+
+**Symptom:** `mcporter call unityMCP.read_console` returns `"Unity session not ready for 'read_console' (ping not answered)"` indefinitely after the package is installed, even though the Editor.log shows a clean compile and domain reload.
+
+**Fix:** Remove `com.unity.ads.ios-support` from the manifest. For ATT functionality, use a direct P/Invoke bridge: place `ATTBridge.mm` in `Assets/Plugins/iOS/` and call `[DllImport("__Internal")]` functions from C# behind `#if UNITY_IOS`. This provides identical ATT behaviour with zero package dependencies and no background network activity in the editor.
+
+**Rule:** Avoid `com.unity.ads.ios-support` in this project. If ATT API changes require it in the future, test the package import in isolation and verify MCP reconnects before committing.
