@@ -66,7 +66,7 @@ namespace SimpleGame.Game.Services
             {
                 // Enables test ads for registered test devices (required while app is in "Temp" status on LevelPlay dashboard).
                 // Register device GAID at: platform.ironsrc.com → Monetize → Setup → SDK Testing
-                IronSource.Agent.setAdaptersDebug(true);
+                LevelPlay.SetAdaptersDebug(true);
             }
             LevelPlay.OnInitSuccess  += OnInitSuccess;
             LevelPlay.OnInitFailed   += OnInitFailed;
