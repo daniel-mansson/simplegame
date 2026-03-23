@@ -1,0 +1,14 @@
+﻿<Solution>
+  <Project Path="SimpleGame.Game.csproj" />
+  <Project Path="SimpleGame.Tests.Game.csproj" />
+  <Project Path="SimpleJigsaw.Runtime.csproj" />
+  <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="PlayFab.csproj" />
+  <Project Path="SimpleGame.Core.csproj" />
+  <Project Path="SimpleGame.Editor.JigsawDemo.csproj" />
+  <Project Path="SimpleGame.Editor.csproj" />
+  <Project Path="SimpleGame.Puzzle.csproj" />
+  <Project Path="SimpleGame.Tests.Core.csproj" />
+  <Project Path="PlayFabSDKEditor.csproj" />
+  <Project Path="SimpleGame.Tests.Puzzle.csproj" />
+</Solution>
