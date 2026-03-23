@@ -69,6 +69,7 @@ public static class PrefabKitSetup
         CreateIAPPurchasePrefab(animConfig);
         CreateObjectRestoredPrefab(animConfig);
         CreateShopPrefab(animConfig);
+        CreateConsentGatePrefab(animConfig);
 
         AssetDatabase.Refresh();
         Debug.Log("[PrefabKitSetup] Popup prefabs created in Assets/Prefabs/Game/Popups/.");
@@ -198,6 +199,45 @@ public static class PrefabKitSetup
         WireField(view, "_continueButton",   AddButtonPrefab(panel, "PositiveButton", "ContinueButton", "Continue",       new Vector2(0.25f, 0.10f), new Vector2(0.75f, 0.38f)));
 
         SavePopupPrefab(root, "ObjectRestoredPopup");
+    }
+
+    private static void CreateConsentGatePrefab(PopupAnimationConfig animConfig)
+    {
+        var bigWindow = LoadPrefab(WindowPrefabDir, "BigPopupWindow");
+        var root      = InstantiateNested(bigWindow, "ConsentGatePopup");
+        var panel     = root.transform.Find("Panel");
+
+        var view = root.AddComponent<ConsentGateView>();
+        WireField(view, "_animConfig",      animConfig);
+        WireField(view, "_canvasGroup",     root.GetComponent<CanvasGroup>());
+        WireField(view, "_panel",           panel.GetComponent<RectTransform>());
+
+        // Title
+        AddTextPrefab(panel, "TitleText", "TitleText", "Welcome to PuzzleTap",
+            new Vector2(0.05f, 0.82f), new Vector2(0.95f, 0.96f));
+
+        // Body — ToS / Privacy description
+        AddTextPrefab(panel, "BodyText", "BodyText",
+            "By continuing you agree to our Terms of Service and Privacy Policy.",
+            new Vector2(0.05f, 0.58f), new Vector2(0.95f, 0.82f));
+
+        // ToS link button (text-style, no fill background)
+        var tosBtn = AddButtonPrefab(panel, "NeutralButton", "ToSLinkButton", "Terms of Service",
+            new Vector2(0.05f, 0.44f), new Vector2(0.48f, 0.56f));
+
+        // Privacy link button
+        var privacyBtn = AddButtonPrefab(panel, "NeutralButton", "PrivacyLinkButton", "Privacy Policy",
+            new Vector2(0.52f, 0.44f), new Vector2(0.95f, 0.56f));
+
+        // Accept button — full-width, prominent
+        var acceptBtn = AddButtonPrefab(panel, "PositiveButton", "AcceptButton", "Accept & Continue",
+            new Vector2(0.1f, 0.10f), new Vector2(0.9f, 0.35f));
+
+        WireField(view, "_acceptButton",      acceptBtn);
+        WireField(view, "_tosLinkButton",     tosBtn);
+        WireField(view, "_privacyLinkButton", privacyBtn);
+
+        SavePopupPrefab(root, "ConsentGatePopup");
     }
 
     private static void CreateShopPrefab(PopupAnimationConfig animConfig)
