@@ -19,7 +19,7 @@ namespace SimpleGame.Game.Services
     ///   2. In Unity Editor: Ads Mediation → Integration Manager
     ///      Install the "Unity Ads" adapter. Run the Android/iOS resolver.
     ///
-    ///   3. Sign up at https://platform.ironsource.io and create an app.
+    ///   3. Sign up at https://platform.ironsrc.com and create an app.
     ///      Copy your App Key into GameBootstrapper where UnityAdService is constructed.
     ///
     ///   4. Add LEVELPLAY_ENABLED to Project Settings → Player → Scripting Define Symbols.
@@ -64,12 +64,16 @@ namespace SimpleGame.Game.Services
 #if LEVELPLAY_ENABLED
             if (testMode)
             {
-                // Enables test ads for registered test devices (required while app is in "Temp" status on LevelPlay dashboard).
-                // Register device GAID at: platform.ironsrc.com → Monetize → Setup → SDK Testing
+                // Enables adapter debug logging and test ad serving.
+                // Required while app is in "Temp" status on LevelPlay dashboard (before going live on store).
+                // ValidateIntegration() logs the full integration report including device GAID at the bottom.
+                // Register GAID at: platform.ironsrc.com → Monetize → Setup → SDK Testing.
+                // TODO(ads): Remove SetAdaptersDebug + ValidateIntegration once GAID is registered and ads confirmed working.
                 LevelPlay.SetAdaptersDebug(true);
+                LevelPlay.ValidateIntegration();
             }
-            LevelPlay.OnInitSuccess  += OnInitSuccess;
-            LevelPlay.OnInitFailed   += OnInitFailed;
+            LevelPlay.OnInitSuccess += OnInitSuccess;
+            LevelPlay.OnInitFailed  += OnInitFailed;
             LevelPlay.Init(appKey);
             Debug.Log($"[UnityAdService] LevelPlay.Init called — appKey={appKey} testMode={testMode}");
 #else
@@ -81,10 +85,10 @@ namespace SimpleGame.Game.Services
         {
 #if LEVELPLAY_ENABLED
             var ad = new LevelPlayRewardedAd("DefaultRewardedVideoStoreId");
-            ad.OnAdLoaded        += (info) => { IsRewardedLoaded = true; _currentRewarded = ad; Debug.Log("[UnityAdService] Rewarded loaded."); };
-            ad.OnAdLoadFailed    += (error) => { Debug.LogWarning($"[UnityAdService] Rewarded failed to load: {error}"); _analytics?.TrackAdFailedToLoad("rewarded"); };
-            ad.OnAdDisplayed     += (info)  => { _analytics?.TrackAdImpression("rewarded"); ReportAdRevenue(info); };
-            ad.OnAdClosed        += (info)  => { IsRewardedLoaded = false; _rewardedTcs?.TrySetResult(AdResult.Completed); _analytics?.TrackAdCompleted("rewarded"); LoadRewarded(); };
+            ad.OnAdLoaded        += (info)        => { IsRewardedLoaded = true; _currentRewarded = ad; Debug.Log("[UnityAdService] Rewarded loaded."); };
+            ad.OnAdLoadFailed    += (error)       => { Debug.LogWarning($"[UnityAdService] Rewarded failed to load: {error}"); _analytics?.TrackAdFailedToLoad("rewarded"); };
+            ad.OnAdDisplayed     += (info)        => { _analytics?.TrackAdImpression("rewarded"); ReportAdRevenue(info); };
+            ad.OnAdClosed        += (info)        => { IsRewardedLoaded = false; _rewardedTcs?.TrySetResult(AdResult.Completed); _analytics?.TrackAdCompleted("rewarded"); LoadRewarded(); };
             ad.OnAdDisplayFailed += (info, error) => { _rewardedTcs?.TrySetResult(AdResult.Failed); LoadRewarded(); };
             ad.LoadAd();
 #else
@@ -96,10 +100,10 @@ namespace SimpleGame.Game.Services
         {
 #if LEVELPLAY_ENABLED
             var ad = new LevelPlayInterstitialAd("DefaultInterstitialStoreId");
-            ad.OnAdLoaded        += (info) => { IsInterstitialLoaded = true; _currentInterstitial = ad; Debug.Log("[UnityAdService] Interstitial loaded."); };
-            ad.OnAdLoadFailed    += (error) => { Debug.LogWarning($"[UnityAdService] Interstitial failed to load: {error}"); _analytics?.TrackAdFailedToLoad("interstitial"); };
-            ad.OnAdDisplayed     += (info)  => { _analytics?.TrackAdImpression("interstitial"); ReportAdRevenue(info); };
-            ad.OnAdClosed        += (info)  => { IsInterstitialLoaded = false; _interstitialTcs?.TrySetResult(AdResult.Completed); _analytics?.TrackAdCompleted("interstitial"); LoadInterstitial(); };
+            ad.OnAdLoaded        += (info)        => { IsInterstitialLoaded = true; _currentInterstitial = ad; Debug.Log("[UnityAdService] Interstitial loaded."); };
+            ad.OnAdLoadFailed    += (error)       => { Debug.LogWarning($"[UnityAdService] Interstitial failed to load: {error}"); _analytics?.TrackAdFailedToLoad("interstitial"); };
+            ad.OnAdDisplayed     += (info)        => { _analytics?.TrackAdImpression("interstitial"); ReportAdRevenue(info); };
+            ad.OnAdClosed        += (info)        => { IsInterstitialLoaded = false; _interstitialTcs?.TrySetResult(AdResult.Completed); _analytics?.TrackAdCompleted("interstitial"); LoadInterstitial(); };
             ad.OnAdDisplayFailed += (info, error) => { _interstitialTcs?.TrySetResult(AdResult.Failed); LoadInterstitial(); };
             ad.LoadAd();
 #else
@@ -151,11 +155,7 @@ namespace SimpleGame.Game.Services
 
         private void OnInitSuccess(LevelPlayConfiguration config)
         {
-            Debug.Log("[UnityAdService] LevelPlay initialized — loading ads.");
-            // TODO(ads): Remove ValidateIntegration() call before shipping.
-            // Run once to get device GAID (at bottom of log) for registering in
-            // platform.ironsrc.com → Monetize → Setup → SDK Testing.
-            LevelPlay.ValidateIntegration();
+            Debug.Log("[UnityAdService] LevelPlay initialized successfully — loading ads.");
             LoadRewarded();
             LoadInterstitial();
         }
@@ -168,8 +168,8 @@ namespace SimpleGame.Game.Services
         private void ReportAdRevenue(LevelPlayAdInfo info)
         {
             if (info == null) return;
-            var revenue  = info.Revenue ?? 0;
-            var network  = string.IsNullOrEmpty(info.AdNetwork) ? "LevelPlay" : info.AdNetwork;
+            var revenue = info.Revenue ?? 0;
+            var network = string.IsNullOrEmpty(info.AdNetwork) ? "LevelPlay" : info.AdNetwork;
             (_singular ?? new NullSingularService()).ReportAdRevenue(network, "USD", revenue);
         }
 #endif
