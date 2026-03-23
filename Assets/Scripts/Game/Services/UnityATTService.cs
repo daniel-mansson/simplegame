@@ -43,6 +43,8 @@ namespace SimpleGame.Game.Services
         public ATTAuthorizationStatus GetCurrentStatus()
         {
 #if UNITY_IOS
+            if (Application.platform != RuntimePlatform.IPhonePlayer)
+                return ATTAuthorizationStatus.NotDetermined;
             return MapStatus(_GetATTAuthorizationStatus());
 #else
             return ATTAuthorizationStatus.NotDetermined;
@@ -52,6 +54,12 @@ namespace SimpleGame.Game.Services
         public async UniTask<ATTAuthorizationStatus> RequestAuthorizationAsync()
         {
 #if UNITY_IOS
+            if (Application.platform != RuntimePlatform.IPhonePlayer)
+            {
+                Debug.Log("[UnityATTService] Not running on iOS device — ATT skipped.");
+                return ATTAuthorizationStatus.NotDetermined;
+            }
+
             int current = _GetATTAuthorizationStatus();
             if (current != StatusNotDetermined)
             {
@@ -82,7 +90,7 @@ namespace SimpleGame.Game.Services
             return ATTAuthorizationStatus.NotDetermined;
 #else
             Debug.Log("[UnityATTService] Not running on iOS — ATT skipped.");
-            return await UniTask.FromResult(ATTAuthorizationStatus.NotDetermined);
+            return ATTAuthorizationStatus.NotDetermined;
 #endif
         }
 
