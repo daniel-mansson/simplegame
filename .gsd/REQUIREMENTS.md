@@ -1561,3 +1561,80 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Supporting slices: none
 - Validation: n/a
 - Notes: None.
+
+### R158 — First-launch consent gate
+- Class: launchability
+- Status: active
+- Description: On first launch (and every subsequent launch until accepted), a consent popup blocks the main menu. The player must tap Accept to proceed. There is no close button, no skip, no dismiss. The flag is stored in PlayerPrefs; once accepted it never shows again.
+- Why it matters: Legal requirement for app store distribution — ToS acceptance must be explicit.
+- Source: user
+- Primary owning slice: M018/S01
+- Supporting slices: none
+- Validation: mapped
+- Notes: Gate fires before PlayFab login and before main menu loads.
+
+### R159 — ToS and Privacy Policy links
+- Class: launchability
+- Status: active
+- Description: The consent popup displays tappable links to the Terms of Service and Privacy Policy, both pointing to https://simplemagicstudios.com/play. Links open in the device browser.
+- Why it matters: App store requirement — users must be able to read the policies they are accepting.
+- Source: user
+- Primary owning slice: M018/S01
+- Supporting slices: none
+- Validation: mapped
+- Notes: Same URL for both ToS and Privacy Policy per user specification.
+
+### R160 — iOS App Tracking Transparency dialog
+- Class: launchability
+- Status: active
+- Description: Immediately after the player accepts the consent popup, the native iOS ATT system dialog fires (RequestAuthorizationTracking). The result (authorized or denied) does not block game progression — ads and analytics work in both cases, just with or without IDFA.
+- Why it matters: Apple App Store requirement since iOS 14.5 — apps that access IDFA without ATT authorization are rejected.
+- Source: user
+- Primary owning slice: M018/S02
+- Supporting slices: M018/S01
+- Validation: mapped
+- Notes: ATT must fire before any SDK that uses IDFA (LevelPlay ads). On non-iOS platforms, ATT call is compiled out.
+
+### R161 — ATT precedes ad SDK initialization
+- Class: constraint
+- Status: active
+- Description: LevelPlay (Unity Ads) initialization is deferred until after the ATT result is known. This ensures the SDK can use the IDFA if authorized.
+- Why it matters: Per Apple guidelines and Unity Ads docs — initializing the ad SDK before ATT result means it cannot access IDFA even if the user later authorizes.
+- Source: inferred
+- Primary owning slice: M018/S02
+- Supporting slices: none
+- Validation: mapped
+- Notes: Boot sequence becomes: consent gate → ATT dialog → ads init → PlayFab login → main menu.
+
+### R162 — NSUserTrackingUsageDescription in built plist
+- Class: launchability
+- Status: active
+- Description: The Xcode build's Info.plist must contain NSUserTrackingUsageDescription with a human-readable explanation of tracking use. Injected via Unity post-build script.
+- Why it matters: Apple rejects builds without this key if ATT is requested — mandatory for App Store submission.
+- Source: inferred
+- Primary owning slice: M018/S02
+- Supporting slices: none
+- Validation: mapped
+- Notes: Injected automatically; no manual Xcode editing required.
+
+### R163 — GDPR/CCPA consent toggles
+- Class: anti-feature
+- Status: out-of-scope
+- Description: No separate GDPR or CCPA opt-in/opt-out UI.
+- Why it matters: Scope clarity — consent for this project is iOS ATT only.
+- Source: user
+- Primary owning slice: none
+- Supporting slices: none
+- Validation: n/a
+- Notes: None.
+
+### R164 — Android tracking consent
+- Class: anti-feature
+- Status: out-of-scope
+- Description: No Android-specific tracking consent dialog.
+- Why it matters: Scope clarity — ATT is iOS only.
+- Source: user
+- Primary owning slice: none
+- Supporting slices: none
+- Validation: n/a
+- Notes: None.
