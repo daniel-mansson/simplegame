@@ -84,7 +84,7 @@ namespace SimpleGame.Game.Services
         public void LoadRewarded()
         {
 #if LEVELPLAY_ENABLED
-            var ad = new LevelPlayRewardedAd("DefaultRewardedVideoStoreId");
+            var ad = new LevelPlayRewardedAd("n3c9ig0cb5syw1av");
             ad.OnAdLoaded        += (info)        => { IsRewardedLoaded = true; _currentRewarded = ad; Debug.Log("[UnityAdService] Rewarded loaded."); };
             ad.OnAdLoadFailed    += (error)       => { Debug.LogWarning($"[UnityAdService] Rewarded failed to load: {error}"); _analytics?.TrackAdFailedToLoad("rewarded"); };
             ad.OnAdDisplayed     += (info)        => { _analytics?.TrackAdImpression("rewarded"); ReportAdRevenue(info); };
