@@ -24,7 +24,10 @@ namespace SimpleGame.Game.Services
         /// Must be called once before any Load or Show operations.
         /// </summary>
         /// <param name="appKey">LevelPlay App Key from the ironSource/LevelPlay dashboard.</param>
-        void Initialize(string appKey);
+        /// <param name="testMode">When true, enables adapter debug logging and test ad serving.
+        /// Required while app is in "Temp" status on the LevelPlay dashboard (before going live on store).
+        /// Register test device GAID at: platform.ironsrc.com → Monetize → Setup → SDK Testing.</param>
+        void Initialize(string appKey, bool testMode = false);
 
         /// <summary>
         /// Manually triggers a load of the rewarded ad unit.

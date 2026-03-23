@@ -122,10 +122,9 @@ namespace SimpleGame.Game.Boot
             unityAdService.SetAnalytics(_analyticsService);
             _singularService = new SingularService();
             unityAdService.SetSingular(_singularService);
-            // TODO(M017): Replace with real App Key from LevelPlay dashboard once
-            // com.unity.services.levelplay is installed and LEVELPLAY_ENABLED is set.
-            // Install guide in Docs/LEVELPLAY_SETUP.md
-            unityAdService.Initialize(appKey: "25aaee6dd");
+            // TODO(ads): Set testMode: false once the app is live on the store and LevelPlay app status changes from "Temp".
+            // While "Temp": register device GAID at platform.ironsrc.com → Monetize → Setup → SDK Testing.
+            unityAdService.Initialize(appKey: "25aaee6dd", testMode: true);
             _adService = unityAdService;
 
             _popupManager = new PopupManager<PopupId>(popupContainer, inputBlocker);

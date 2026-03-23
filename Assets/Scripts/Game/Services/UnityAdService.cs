@@ -59,13 +59,19 @@ namespace SimpleGame.Game.Services
 
         // ── IAdService ────────────────────────────────────────────────────────
 
-        public void Initialize(string appKey)
+        public void Initialize(string appKey, bool testMode = false)
         {
 #if LEVELPLAY_ENABLED
+            if (testMode)
+            {
+                // Enables test ads for registered test devices (required while app is in "Temp" status on LevelPlay dashboard).
+                // Register device GAID at: platform.ironsrc.com → Monetize → Setup → SDK Testing
+                IronSource.Agent.setAdaptersDebug(true);
+            }
             LevelPlay.OnInitSuccess  += OnInitSuccess;
             LevelPlay.OnInitFailed   += OnInitFailed;
             LevelPlay.Init(appKey);
-            Debug.Log($"[UnityAdService] LevelPlay.Init called — appKey={appKey}");
+            Debug.Log($"[UnityAdService] LevelPlay.Init called — appKey={appKey} testMode={testMode}");
 #else
             Debug.LogWarning("[UnityAdService] LevelPlay SDK not installed. Install com.unity.services.levelplay and add LEVELPLAY_ENABLED scripting symbol. Ads will be unavailable this session.");
 #endif
@@ -146,6 +152,10 @@ namespace SimpleGame.Game.Services
         private void OnInitSuccess(LevelPlayConfiguration config)
         {
             Debug.Log("[UnityAdService] LevelPlay initialized — loading ads.");
+            // TODO(ads): Remove ValidateIntegration() call before shipping.
+            // Run once to get device GAID (at bottom of log) for registering in
+            // platform.ironsrc.com → Monetize → Setup → SDK Testing.
+            LevelPlay.ValidateIntegration();
             LoadRewarded();
             LoadInterstitial();
         }

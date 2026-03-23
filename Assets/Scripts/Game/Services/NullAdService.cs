@@ -36,7 +36,7 @@ namespace SimpleGame.Game.Services
         public bool IsRewardedLoaded     => SimulateLoaded;
         public bool IsInterstitialLoaded => SimulateLoaded;
 
-        public void Initialize(string appKey) { }
+        public void Initialize(string appKey, bool testMode = false) { }
         public void LoadRewarded()     { }
         public void LoadInterstitial() { }
 
