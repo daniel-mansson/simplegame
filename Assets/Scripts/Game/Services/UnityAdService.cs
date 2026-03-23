@@ -99,7 +99,7 @@ namespace SimpleGame.Game.Services
         public void LoadInterstitial()
         {
 #if LEVELPLAY_ENABLED
-            var ad = new LevelPlayInterstitialAd("DefaultInterstitialStoreId");
+            var ad = new LevelPlayInterstitialAd("f5qdzo6186wl8s74");
             ad.OnAdLoaded        += (info)        => { IsInterstitialLoaded = true; _currentInterstitial = ad; Debug.Log("[UnityAdService] Interstitial loaded."); };
             ad.OnAdLoadFailed    += (error)       => { Debug.LogWarning($"[UnityAdService] Interstitial failed to load: {error}"); _analytics?.TrackAdFailedToLoad("interstitial"); };
             ad.OnAdDisplayed     += (info)        => { _analytics?.TrackAdImpression("interstitial"); ReportAdRevenue(info); };
