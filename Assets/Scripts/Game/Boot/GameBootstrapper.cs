@@ -91,10 +91,11 @@ namespace SimpleGame.Game.Boot
                 }
                 else
                 {
-                    // View not in scene — mark accepted so boot can proceed.
-                    // This should not happen in a correctly configured build.
-                    Debug.LogError("[GameBootstrapper] ConsentGate view not found in Boot scene — marking accepted to unblock boot. Add ConsentGatePopup prefab to Boot scene.");
-                    ConsentGatePresenter.MarkAccepted();
+                    // View not in scene — this is a build configuration error.
+                    // Log loudly but do NOT mark accepted: consent must not be bypassed
+                    // by a missing prefab. The game will proceed without the popup
+                    // but the gate will re-show on every launch until the build is fixed.
+                    Debug.LogError("[GameBootstrapper] ConsentGate view not found in Boot scene — skipping popup this launch. DO NOT ship: add ConsentGatePopup prefab to Boot scene and re-run SceneSetup.");
                 }
             }
 
