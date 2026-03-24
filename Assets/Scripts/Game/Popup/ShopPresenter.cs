@@ -7,28 +7,29 @@ namespace SimpleGame.Game.Popup
 {
     /// <summary>
     /// Presenter for the Shop popup.
-    /// Displays three coin pack tiers backed by fake IAP (stub — no real store SDK).
-    /// Purchasing a pack grants coins immediately. Cancel closes the shop.
+    /// Displays coin pack options read from <see cref="IAPProductCatalog"/> and
+    /// delegates all purchase logic to <see cref="IIAPService"/>.
     ///
-    /// Pack tiers (hardcoded for stub implementation):
-    ///   Pack 0: 500 coins — €1.99
-    ///   Pack 1: 1200 coins — €3.99
-    ///   Pack 2: 2500 coins — €7.99
+    /// Coins are granted inside IIAPService after PlayFab validates the receipt —
+    /// this presenter never calls ICoinsService directly.
+    ///
+    /// Pack price strings shown in the UI come from the store (product metadata)
+    /// when available; otherwise the catalog DisplayName is used as the label.
     /// </summary>
     public class ShopPresenter : Presenter<IShopView>
     {
-        private static readonly (int coins, string label)[] Packs =
-        {
-            (500,  "500 Coins\n€1.99"),
-            (1200, "1200 Coins\n€3.99"),
-            (2500, "2500 Coins\n€7.99"),
-        };
-
+        private readonly IIAPService _iap;
+        private readonly IAPProductCatalog _catalog;
         private readonly ICoinsService _coins;
-        private UniTaskCompletionSource<bool> _resultTcs;
 
-        public ShopPresenter(IShopView view, ICoinsService coins) : base(view)
+        private UniTaskCompletionSource<bool> _resultTcs;
+        private bool _purchaseInProgress;
+
+        public ShopPresenter(IShopView view, IIAPService iap, IAPProductCatalog catalog, ICoinsService coins)
+            : base(view)
         {
+            _iap = iap;
+            _catalog = catalog;
             _coins = coins;
         }
 
@@ -37,9 +38,7 @@ namespace SimpleGame.Game.Popup
             View.OnPackClicked += HandlePackClicked;
             View.OnCancelClicked += HandleCancelClicked;
 
-            for (int i = 0; i < Packs.Length; i++)
-                View.UpdatePackLabel(i, Packs[i].label);
-
+            RefreshPackLabels();
             RefreshStatus();
         }
 
@@ -62,30 +61,86 @@ namespace SimpleGame.Game.Popup
             return _resultTcs.Task;
         }
 
+        private void RefreshPackLabels()
+        {
+            if (_catalog?.Products == null) return;
+            for (int i = 0; i < _catalog.Products.Length && i < 3; i++)
+            {
+                var def = _catalog.Products[i];
+                if (def == null) continue;
+                // Use display name from catalog — store price is not available until runtime
+                // on a real device. Presenters running on device can be extended to read
+                // product.metadata.localizedPriceString from the IStoreController if desired.
+                View.UpdatePackLabel(i, def.DisplayName);
+            }
+        }
+
+        private void RefreshStatus()
+        {
+            var balance = _coins?.Balance ?? 0;
+            View.UpdateStatus($"Your balance: {balance} coins");
+        }
+
         private void HandlePackClicked(int packIndex)
         {
-            if (packIndex < 0 || packIndex >= Packs.Length)
+            if (_purchaseInProgress)
+            {
+                Debug.LogWarning("[ShopPresenter] Purchase already in progress.");
+                return;
+            }
+
+            if (_catalog?.Products == null || packIndex < 0 || packIndex >= _catalog.Products.Length)
             {
                 Debug.LogWarning($"[ShopPresenter] Invalid pack index: {packIndex}");
                 return;
             }
 
-            var (coinsGranted, _) = Packs[packIndex];
-            Debug.Log($"[ShopPresenter] Stub purchase: pack {packIndex} — granting {coinsGranted} coins.");
+            var def = _catalog.Products[packIndex];
+            if (def == null || string.IsNullOrEmpty(def.ProductId))
+            {
+                Debug.LogWarning($"[ShopPresenter] No product definition at index {packIndex}.");
+                return;
+            }
 
-            _coins?.Earn(coinsGranted);
-            _coins?.Save();
-
-            // Show updated balance — stay open so player can buy more or close manually
-            int newBalance = _coins?.Balance ?? 0;
-            View.UpdateStatus($"Your balance: {newBalance} coins\n(+{coinsGranted} added)");
-            // Do NOT resolve _resultTcs — player stays in shop until they press cancel/back
+            ExecutePurchaseAsync(def.ProductId).Forget();
         }
 
-        private void RefreshStatus()
+        private async UniTaskVoid ExecutePurchaseAsync(string productId)
         {
-            int balance = _coins?.Balance ?? 0;
-            View.UpdateStatus($"Your balance: {balance} coins");
+            _purchaseInProgress = true;
+            View.UpdateStatus("Processing...");
+
+            IAPResult result;
+            try
+            {
+                result = await _iap.BuyAsync(productId);
+            }
+            finally
+            {
+                _purchaseInProgress = false;
+            }
+
+            switch (result.Outcome)
+            {
+                case IAPOutcome.Success:
+                    var newBalance = _coins?.Balance ?? result.CoinsGranted;
+                    View.UpdateStatus($"Purchase complete! Your balance: {newBalance} coins");
+                    _resultTcs?.TrySetResult(true);
+                    break;
+
+                case IAPOutcome.Cancelled:
+                    View.UpdateStatus("Purchase cancelled.");
+                    RefreshStatus();
+                    break;
+
+                case IAPOutcome.PaymentFailed:
+                    View.UpdateStatus("Purchase failed. Please try again.");
+                    break;
+
+                case IAPOutcome.ValidationFailed:
+                    View.UpdateStatus("Purchase could not be verified. Please try again.");
+                    break;
+            }
         }
 
         private void HandleCancelClicked()

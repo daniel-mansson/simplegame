@@ -404,24 +404,40 @@ namespace SimpleGame.Tests.Game
     [TestFixture]
     internal class IAPPurchasePresenterTests
     {
+        private static (MockIAPPurchaseView view, IAPPurchasePresenter presenter, IAPMockConfig config) Make(
+            IAPOutcome outcome = IAPOutcome.Success, int coins = 500)
+        {
+            var config = UnityEngine.ScriptableObject.CreateInstance<IAPMockConfig>();
+            config.MockOutcome = outcome;
+            config.CoinsGranted = coins;
+            var iap = new MockIAPService(config);
+            var product = new IAPProductDefinition
+            {
+                ProductId = "com.simplegame.coins.500",
+                CoinsAmount = coins,
+                DisplayName = "500 Coins",
+            };
+            var view = new MockIAPPurchaseView();
+            var presenter = new IAPPurchasePresenter(view, iap, product, coins: null);
+            return (view, presenter, config);
+        }
+
         [Test]
         public void Initialize_SetsItemAndPrice()
         {
-            var view = new MockIAPPurchaseView();
-            var presenter = new IAPPurchasePresenter(view, "50 Golden Pieces", "$0.99", 50);
+            var (view, presenter, _) = Make();
             presenter.Initialize();
 
-            Assert.AreEqual("50 Golden Pieces", view.LastItemNameText);
-            Assert.AreEqual("$0.99", view.LastPriceText);
+            Assert.AreEqual("500 Coins", view.LastItemNameText);
+            Assert.AreEqual("500 coins", view.LastPriceText);
             Assert.AreEqual("Tap Purchase to buy.", view.LastStatusText);
             presenter.Dispose();
         }
 
         [Test]
-        public async Task WaitForResult_PurchaseClicked_ReturnsTrue()
+        public async Task WaitForResult_PurchaseClicked_Success_ReturnsTrue()
         {
-            var view = new MockIAPPurchaseView();
-            var presenter = new IAPPurchasePresenter(view, "50 Golden Pieces", "$0.99", 50);
+            var (view, presenter, _) = Make(IAPOutcome.Success, 500);
             presenter.Initialize();
 
             var task = presenter.WaitForResult().AsTask();
@@ -435,8 +451,7 @@ namespace SimpleGame.Tests.Game
         [Test]
         public async Task WaitForResult_CancelClicked_ReturnsFalse()
         {
-            var view = new MockIAPPurchaseView();
-            var presenter = new IAPPurchasePresenter(view, "50 Golden Pieces", "$0.99", 50);
+            var (view, presenter, _) = Make();
             presenter.Initialize();
 
             var task = presenter.WaitForResult().AsTask();
@@ -448,23 +463,36 @@ namespace SimpleGame.Tests.Game
         }
 
         [Test]
+        public async Task PurchaseClicked_PaymentFailed_ShowsError_TaskNotResolved()
+        {
+            var (view, presenter, _) = Make(IAPOutcome.PaymentFailed);
+            presenter.Initialize();
+
+            // Don't await — just fire and check status
+            view.SimulatePurchaseClicked();
+            // Allow async to run
+            await UniTask.Yield();
+
+            StringAssert.Contains("failed", view.LastStatusText.ToLower());
+            presenter.Dispose();
+        }
+
+        [Test]
         public void Dispose_CancelsPendingTask()
         {
-            var view = new MockIAPPurchaseView();
-            var presenter = new IAPPurchasePresenter(view, "50 Golden Pieces", "$0.99", 50);
+            var (view, presenter, _) = Make();
             presenter.Initialize();
 
             var task = presenter.WaitForResult().AsTask();
             presenter.Dispose();
 
-            Assert.ThrowsAsync<TaskCanceledException>(async () => await task);
+            Assert.ThrowsAsync<System.Threading.Tasks.TaskCanceledException>(async () => await task);
         }
 
         [Test]
         public void Dispose_UnsubscribesViewEvents()
         {
-            var view = new MockIAPPurchaseView();
-            var presenter = new IAPPurchasePresenter(view, "50 Golden Pieces", "$0.99", 50);
+            var (view, presenter, _) = Make();
             presenter.Initialize();
             presenter.Dispose();
 

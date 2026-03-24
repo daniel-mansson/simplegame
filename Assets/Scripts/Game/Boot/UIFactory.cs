@@ -18,12 +18,16 @@ namespace SimpleGame.Game.Boot
         private readonly MetaProgressionService _metaProgression;
         private readonly IGoldenPieceService _goldenPieces;
         private readonly ICoinsService _coins;
+        private readonly IIAPService _iap;
+        private readonly IAPProductCatalog _iapCatalog;
 
         public UIFactory(GameService gameService, ProgressionService progression,
                          GameSessionService session, IHeartService hearts = null,
                          MetaProgressionService metaProgression = null,
                          IGoldenPieceService goldenPieces = null,
-                         ICoinsService coins = null)
+                         ICoinsService coins = null,
+                         IIAPService iap = null,
+                         IAPProductCatalog iapCatalog = null)
         {
             _gameService = gameService;
             _progression = progression;
@@ -32,6 +36,8 @@ namespace SimpleGame.Game.Boot
             _metaProgression = metaProgression;
             _goldenPieces = goldenPieces;
             _coins = coins;
+            _iap = iap;
+            _iapCatalog = iapCatalog;
         }
 
         public MainMenuPresenter CreateMainMenuPresenter(IMainMenuView view, EnvironmentData currentEnvironment,
@@ -76,7 +82,21 @@ namespace SimpleGame.Game.Boot
 
         public ShopPresenter CreateShopPresenter(IShopView view)
         {
-            return new ShopPresenter(view, _coins);
+            var iap = _iap ?? new NullIAPService();
+            return new ShopPresenter(view, iap, _iapCatalog, _coins);
+        }
+
+        /// <summary>
+        /// Creates an IAPPurchasePresenter for the given product index in the catalog.
+        /// If the catalog is null or the index is out of range, returns a presenter backed by NullIAPService.
+        /// </summary>
+        public IAPPurchasePresenter CreateIAPPurchasePresenter(IIAPPurchaseView view, int productIndex = 0)
+        {
+            var iap = _iap ?? new NullIAPService();
+            IAPProductDefinition product = null;
+            if (_iapCatalog?.Products != null && productIndex >= 0 && productIndex < _iapCatalog.Products.Length)
+                product = _iapCatalog.Products[productIndex];
+            return new IAPPurchasePresenter(view, iap, product, _coins);
         }
 
         public PlatformLinkPresenter CreatePlatformLinkPresenter(IPlatformLinkView view, IPlatformLinkService linkService, IAnalyticsService analytics = null)

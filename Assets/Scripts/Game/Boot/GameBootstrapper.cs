@@ -58,6 +58,8 @@ namespace SimpleGame.Game.Boot
         private IAdService _adService;
         private ISingularService _singularService;
         private IATTService _attService;
+        private IIAPService _iapService;
+        private IAPProductCatalog _iapCatalog;
 
         private async UniTaskVoid Start()
         {
@@ -176,9 +178,25 @@ namespace SimpleGame.Game.Boot
             // _popupManager already constructed at boot top (before consent gate).
             _screenManager = new ScreenManager<ScreenId>(sceneLoader, transitionPlayer, inputBlocker,
                 onBeforeSceneUnload: _popupManager.DismissAllAsync);
+
+            // --- IAP: load catalog and construct service (mock in Editor, real on device) ---
+            _iapCatalog = UnityEngine.Resources.Load<IAPProductCatalog>("IAPProductCatalog");
+            if (_iapCatalog == null)
+                Debug.LogWarning("[GameBootstrapper] IAPProductCatalog not found in Resources. Run Tools/Setup/Create IAP Assets.");
+
+#if UNITY_EDITOR
+            var mockConfig = UnityEngine.Resources.Load<IAPMockConfig>("IAPMockConfig");
+            _iapService = new MockIAPService(mockConfig ?? ScriptableObject.CreateInstance<IAPMockConfig>(), _coinsService);
+            Debug.Log("[GameBootstrapper] IAP: using MockIAPService (Editor).");
+#else
+            _iapService = new UnityIAPService(_iapCatalog, _coinsService, _authService);
+            Debug.Log("[GameBootstrapper] IAP: using UnityIAPService (device).");
+#endif
+            await _iapService.InitializeAsync();
+
             _uiFactory = new UIFactory(gameService, _progressionService, _sessionService,
                                        _heartService, _metaProgressionService, _goldenPieceService,
-                                       _coinsService);
+                                       _coinsService, _iapService, _iapCatalog);
 
             Debug.Log("[GameBootstrapper] Infrastructure ready. Starting navigation loop.");
 

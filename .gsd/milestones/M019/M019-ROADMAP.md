@@ -49,16 +49,16 @@ This milestone is complete only when all are true:
 
 ## Slices
 
-- [ ] **S01: IIAPService abstraction, mock, and product catalog** `risk:high` `depends:[]`
+- [x] **S01: IIAPService abstraction, mock, and product catalog** `risk:high` `depends:[]`
   > After this: Editor mock service is injectable everywhere; all four purchase outcomes work in EditMode tests; IAPProductCatalog ScriptableObject defines the three coin packs.
 
-- [ ] **S02: Unity Purchasing SDK integration** `risk:high` `depends:[S01]`
+- [x] **S02: Unity Purchasing SDK integration** `risk:high` `depends:[S01]`
   > After this: com.unity.purchasing in manifest; UnityIAPService initialises and loads products from the store; sandbox product list visible in Editor (FakeStore) and on device.
 
-- [ ] **S03: PlayFab receipt validation** `risk:medium` `depends:[S02]`
+- [x] **S03: PlayFab receipt validation** `risk:medium` `depends:[S02]`
   > After this: Sandbox receipt from Unity Purchasing is sent to PlayFab ValidateIOSReceipt / ValidateGooglePlayPurchase; coins granted only after validation succeeds; ConfirmPendingPurchase called at the right moment.
 
-- [ ] **S04: Wire presenters and UIFactory** `risk:low` `depends:[S03]`
+- [x] **S04: Wire presenters and UIFactory** `risk:low` `depends:[S03]`
   > After this: ShopPresenter and IAPPurchasePresenter both call IIAPService; IAPPurchase popup grants coins (not golden pieces); UIFactory and GameBootstrapper pass IIAPService through; full end-to-end purchase flow works in Editor (mock) and on device (real).
 
 ## Boundary Map
