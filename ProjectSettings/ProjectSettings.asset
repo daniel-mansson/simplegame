@@ -783,6 +783,7 @@ PlayerSettings:
   scriptingDefineSymbols:
     Android: LEVELPLAY_DEPENDENCIES_INSTALLED;LEVELPLAY_ENABLED
     Standalone: LEVELPLAY_DEPENDENCIES_INSTALLED;LEVELPLAY_ENABLED
+    iPhone: LEVELPLAY_DEPENDENCIES_INSTALLED;LEVELPLAY_ENABLED
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend:
