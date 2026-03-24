@@ -64,7 +64,18 @@ namespace SimpleGame.Game.Services
 
             _initTcs = new UniTaskCompletionSource();
 
-            var builder = ConfigurationBuilder.Instance(StandardPurchasingModule.Instance());
+            var module = StandardPurchasingModule.Instance();
+
+#if UNITY_EDITOR
+            // In the Editor, use DeveloperUser FakeStore so the full flow runs
+            // (store dialog → receipt → PlayFab validation → coin grant) without a device.
+            // DeveloperUser shows a dialog with failure-reason selection on each purchase,
+            // letting you test success, cancellation, and specific failure codes.
+            module.useFakeStoreUIMode = FakeStoreUIMode.DeveloperUser;
+            Debug.Log("[UnityIAPService] Editor: FakeStore (DeveloperUser) enabled — real PlayFab validation will run.");
+#endif
+
+            var builder = ConfigurationBuilder.Instance(module);
 
             if (_catalog?.Products != null)
             {
