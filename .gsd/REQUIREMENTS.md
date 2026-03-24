@@ -1638,3 +1638,95 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Supporting slices: none
 - Validation: n/a
 - Notes: None.
+
+---
+
+## M019 — Real IAP
+
+### R165 — IIAPService abstraction
+- Class: core-capability
+- Status: active
+- Description: All game code purchases coins through an IIAPService interface. Real and mock implementations are swappable. No presenter or scene controller calls Unity Purchasing or PlayFab IAP APIs directly.
+- Why it matters: Keeps game layer testable without the store SDK; consistent with IAdService, IAnalyticsService pattern.
+- Source: inferred
+- Primary owning slice: M019/S01
+- Supporting slices: M019/S04
+- Validation: mapped
+- Notes: Mock implementation must be usable from Editor without any store SDK present.
+
+### R166 — Editor mock IAP with selectable outcomes
+- Class: quality-attribute
+- Status: active
+- Description: In the Editor (and in tests), IIAPService resolves to a MockIAPService whose outcome (success, payment failed, PlayFab validation failed, user cancelled) is configurable via a ScriptableObject. All code paths exercisable without a device.
+- Why it matters: Development and QA velocity — every outcome must be testable without sandbox credentials or a real device.
+- Source: user
+- Primary owning slice: M019/S01
+- Supporting slices: none
+- Validation: mapped
+- Notes: None.
+
+### R167 — Unity Purchasing SDK integration
+- Class: integration
+- Status: active
+- Description: com.unity.purchasing is added to the project. Products are initialised via IStoreListener. The real IIAPService implementation wraps Unity Purchasing, initialises on app start, and exposes a BuyAsync(productId) method.
+- Why it matters: Unity Purchasing is the standard Unity-native way to communicate with App Store and Google Play.
+- Source: user
+- Primary owning slice: M019/S02
+- Supporting slices: none
+- Validation: mapped
+- Notes: asmdef must reference UnityEngine.Purchasing.
+
+### R168 — PlayFab receipt validation (iOS + Android)
+- Class: integration
+- Status: active
+- Description: After a successful Unity Purchasing transaction, the receipt is sent to PlayFab via ValidateIOSReceipt (iOS) or ValidateGooglePlayPurchase (Android). Coins are granted only after PlayFab confirms the receipt. The store transaction is finished (ConfirmPendingPurchase) only after validation succeeds.
+- Why it matters: Server-side validation prevents receipt spoofing and fraudulent coin grants.
+- Source: user
+- Primary owning slice: M019/S03
+- Supporting slices: none
+- Validation: mapped
+- Notes: PlayFab catalog items must have ItemIds matching Unity Purchasing product IDs.
+
+### R169 — Coin packs defined as a single source of truth
+- Class: core-capability
+- Status: active
+- Description: The three coin pack definitions (product ID, display name, coin amount) live in one ScriptableObject (IAPProductCatalog). Both ShopPresenter and IAPPurchasePresenter read from it. No hardcoded pack data in presenters.
+- Why it matters: Product IDs must match exactly between Unity Purchasing, PlayFab catalog, and in-game display. A single source prevents drift.
+- Source: inferred
+- Primary owning slice: M019/S01
+- Supporting slices: M019/S04
+- Validation: mapped
+- Notes: Prices shown in UI come from the store (Unity Purchasing product metadata), not from the ScriptableObject.
+
+### R170 — Shop panel wired to real IAP
+- Class: primary-user-loop
+- Status: active
+- Description: Tapping a coin pack in the Shop panel triggers a real purchase via IIAPService. On success, coins are added to ICoinsService and persisted. On failure or cancellation, an error message is shown and no coins are granted.
+- Why it matters: The shop is the primary monetisation surface.
+- Source: user
+- Primary owning slice: M019/S04
+- Supporting slices: M019/S03
+- Validation: mapped
+- Notes: None.
+
+### R171 — IAPPurchase popup wired to real IAP (coins, not golden pieces)
+- Class: primary-user-loop
+- Status: active
+- Description: The IAPPurchase popup triggers a real purchase for a single coin pack via IIAPService. Grants coins (not golden pieces — correcting the stub). On success, coins added to ICoinsService and persisted.
+- Why it matters: Popup is a secondary IAP entry point; must be functionally equivalent to the shop flow.
+- Source: user
+- Primary owning slice: M019/S04
+- Supporting slices: M019/S03
+- Validation: mapped
+- Notes: The stub granted golden pieces — this is a deliberate correction.
+
+### R172 — Test payments in sandbox
+- Class: quality-attribute
+- Status: active
+- Description: End-to-end purchase flow (Unity Purchasing → PlayFab validation → coin grant) works with Apple sandbox and Google test accounts on device. No real money charged during testing.
+- Why it matters: Required for pre-submission store review and QA confidence.
+- Source: user
+- Primary owning slice: M019/S03
+- Supporting slices: M019/S02
+- Validation: mapped
+- Notes: Requires PlayFab title configured with correct package name / bundle ID and shared secret.

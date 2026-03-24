@@ -46,3 +46,4 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 - [x] M016: PlayFab Integration — anonymous accounts, cloud save with take-max merge, platform linking, analytics
 - [x] M017: Unity Ads Integration — rewarded and interstitial ads with graceful failure handling
 - [x] M018: Consent & ATT — first-launch ToS acceptance gate and iOS App Tracking Transparency dialog
+- [ ] M019: Real IAP — Unity Purchasing + PlayFab receipt validation for coin purchases (iOS + Android)
