@@ -149,13 +149,27 @@ When Unity's Bee compiler gets stuck in a persistent compile-error retry loop, i
 
 **Symptom:** Error messages show wrong line numbers (matching an old version of the file), or the same error persists after a verified fix is on disk. `ls -la` shows the source file is newer than the reported error's context, but the dll timestamp predates the fix.
 
-**Fix:** Delete only the active dag files (do NOT delete all 5.5GB of `Library/Bee/`):
+**Important:** Old compile errors persist in `Editor.log` forever — the log is append-only. Always check if errors appear *after the last `Starting:` line* to determine if they are from the current build. Use:
+```python
+python3 -c "
+log = open('C:/Users/Daniel/AppData/Local/Unity/Editor/Editor.log', errors='replace').read()
+last = log.split('Starting: ')[-1]
+errors = [l for l in last.split('\n') if 'error CS' in l]
+print('\n'.join(errors) if errors else 'No errors in last compile run')
+"
 ```
-rm Library/Bee/900b0aEDbg.dag
-rm Library/Bee/900b0aEDbg.dag.payloads
-rm Library/Bee/900b0aEDbg.dag_derived
-rm Library/Bee/900b0aEDbg.dag_fsmtime
-rm Library/Bee/900b0aEDbg.dag.outputdata
+
+**Fix:** Delete the active dag binary AND json files, plus tundra caches (do NOT delete all 5.5GB of `Library/Bee/`):
+```
+rm Library/Bee/<hash>EDbg.dag
+rm Library/Bee/<hash>EDbg.dag.payloads
+rm Library/Bee/<hash>EDbg.dag_derived
+rm Library/Bee/<hash>EDbg.dag_fsmtime
+rm Library/Bee/<hash>EDbg.dag.outputdata
+rm Library/Bee/<hash>EDbg.dag.json
+rm Library/Bee/<hash>EDbg-inputdata.json
+rm Library/Bee/tundra.digestcache
+rm Library/Bee/tundra.scancache
 ```
 Then `Assets/Refresh` from the Unity Editor. Bee rebuilds the dag from scratch on next compile.
 
