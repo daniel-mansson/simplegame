@@ -65,6 +65,12 @@ namespace SimpleGame.Game.Services
             _initTcs = new UniTaskCompletionSource();
 
             var module = StandardPurchasingModule.Instance();
+#if UNITY_EDITOR
+            // StandardUser FakeStore: shows a Buy/Cancel dialog per purchase only — no dialog at init.
+            // Receipt will be "ThisIsFakeReceiptData" so PlayFab validation returns Invalid Receipt.
+            // The ValidationFailed path is exercised; coin grant is skipped (expected in Editor).
+            module.useFakeStoreUIMode = FakeStoreUIMode.StandardUser;
+#endif
             var builder = ConfigurationBuilder.Instance(module);
 
             if (_catalog?.Products != null)
@@ -198,13 +204,19 @@ namespace SimpleGame.Game.Services
 
             bool validated = false;
 
-#if UNITY_IOS
+#if UNITY_EDITOR
+            // FakeStore produces "ThisIsFakeReceiptData" — PlayFab would reject it.
+            // Auto-validate in Editor so the full post-validation flow (coin grant,
+            // ConfirmPendingPurchase, UI update) can be exercised without a real device.
+            Debug.Log("[UnityIAPService] Editor: skipping PlayFab receipt validation (FakeStore receipt).");
+            validated = true;
+#elif UNITY_IOS
             validated = await ValidateIOSAsync(product);
 #elif UNITY_ANDROID
             validated = await ValidateGooglePlayAsync(product);
 #else
-            // Editor / unsupported platform — treat as validated for development convenience.
-            Debug.Log("[UnityIAPService] Non-mobile platform: skipping PlayFab validation (dev mode).");
+            // Unsupported platform — treat as validated for development convenience.
+            Debug.Log("[UnityIAPService] Unsupported platform: skipping PlayFab validation.");
             validated = true;
 #endif
 

@@ -1,5 +1,6 @@
 using Cysharp.Threading.Tasks;
 using SimpleGame.Core;
+using System;
 using SimpleGame.Core.PopupManagement;
 using SimpleGame.Core.ScreenManagement;
 using SimpleGame.Core.Unity;
@@ -12,6 +13,7 @@ using SimpleGame.Game.Meta;
 using SimpleGame.Game.Popup;
 using SimpleGame.Game.Services;
 using SimpleGame.Game.Settings;
+using Unity.Services.Core;
 using UnityEngine;
 
 namespace SimpleGame.Game.Boot
@@ -66,6 +68,18 @@ namespace SimpleGame.Game.Boot
             Application.targetFrameRate = 60;
             QualitySettings.vSyncCount = 0;
             Debug.Log("[GameBootstrapper] Boot sequence started.");
+
+            // --- Unity Gaming Services: must initialise first — required by Unity Purchasing and LevelPlay ---
+            try
+            {
+                await UnityServices.InitializeAsync();
+                Debug.Log("[GameBootstrapper] Unity Gaming Services initialised.");
+            }
+            catch (Exception ex)
+            {
+                // Non-fatal in Editor when project is not linked; fatal on device (IAP will not work).
+                Debug.LogWarning($"[GameBootstrapper] UGS initialisation failed — IAP unavailable: {ex.Message}");
+            }
 
             // --- PopupManager: constructed early so consent gate can use it ---
             // _viewContainer and _inputBlocker are [SerializeField] — available immediately.
@@ -180,20 +194,19 @@ namespace SimpleGame.Game.Boot
                 onBeforeSceneUnload: _popupManager.DismissAllAsync);
 
             // --- IAP: load catalog and construct service ---
-            // Editor uses MockIAPService (driven by IAPMockConfig ScriptableObject, no network needed).
-            // Device uses UnityIAPService (real store + PlayFab receipt validation).
+            // UnityIAPService is used in both Editor (FakeStore with StandardUser UI — shows
+            // Buy/Cancel per purchase, no dialog at init) and on device (real store).
+            // UGS must be initialised above before this runs.
+            // In the Editor: FakeStore receipt is fake so PlayFab validation will fail with
+            // "Invalid receipt" — this is expected. Coin grant is skipped on validation failure.
+            // To test coin grant flow without a device, use MockIAPService by swapping
+            // the #if below temporarily, or set MOCK_IAP scripting symbol.
             _iapCatalog = UnityEngine.Resources.Load<IAPProductCatalog>("IAPProductCatalog");
             if (_iapCatalog == null)
                 Debug.LogWarning("[GameBootstrapper] IAPProductCatalog not found in Resources. Run Tools/Setup/Create IAP Assets.");
 
-#if UNITY_EDITOR
-            var mockConfig = UnityEngine.Resources.Load<IAPMockConfig>("IAPMockConfig");
-            _iapService = new MockIAPService(mockConfig ?? ScriptableObject.CreateInstance<IAPMockConfig>(), _coinsService);
-            Debug.Log("[GameBootstrapper] IAP: MockIAPService (Editor). Change IAPMockConfig.asset to test outcomes.");
-#else
             _iapService = new UnityIAPService(_iapCatalog, _coinsService, _authService);
-            Debug.Log("[GameBootstrapper] IAP: UnityIAPService (device).");
-#endif
+            Debug.Log("[GameBootstrapper] IAP: UnityIAPService (FakeStore/StandardUser in Editor, real store on device).");
             await _iapService.InitializeAsync();
 
             _uiFactory = new UIFactory(gameService, _progressionService, _sessionService,
