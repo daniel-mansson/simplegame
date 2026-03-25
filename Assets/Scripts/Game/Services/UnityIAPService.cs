@@ -118,10 +118,19 @@ namespace SimpleGame.Game.Services
             }
 
             _purchaseTcs = new UniTaskCompletionSource<IAPResult>();
+            Debug.Log($"[UnityIAPService] InitiatePurchase: {productId}");
             _controller.InitiatePurchase(product);
 
-            var result = await _purchaseTcs.Task;
-            _purchaseTcs = null;
+            IAPResult result;
+            try
+            {
+                result = await _purchaseTcs.Task;
+            }
+            finally
+            {
+                _purchaseTcs = null;
+            }
+            Debug.Log($"[UnityIAPService] BuyAsync result: {result.Outcome} coins={result.CoinsGranted}");
             return result;
         }
 
@@ -163,22 +172,28 @@ namespace SimpleGame.Game.Services
         public void OnPurchaseFailed(Product product, PurchaseFailureDescription failureDescription)
         {
             var reason = failureDescription?.reason ?? PurchaseFailureReason.Unknown;
-            Debug.LogWarning($"[UnityIAPService] OnPurchaseFailed: {product.definition.id} — {reason}");
+            Debug.LogWarning($"[UnityIAPService] OnPurchaseFailed(detailed): {product?.definition.id} — {reason} | tcs={_purchaseTcs != null}");
 
             var outcome = reason == PurchaseFailureReason.UserCancelled
                 ? IAPOutcome.Cancelled
                 : IAPOutcome.PaymentFailed;
+
+            if (_purchaseTcs == null)
+                Debug.LogError("[UnityIAPService] OnPurchaseFailed fired but _purchaseTcs is null — result dropped!");
 
             _purchaseTcs?.TrySetResult(IAPResult.Failed(outcome));
         }
 
         public void OnPurchaseFailed(Product product, PurchaseFailureReason failureReason)
         {
-            Debug.LogWarning($"[UnityIAPService] OnPurchaseFailed: {product.definition.id} — {failureReason}");
+            Debug.LogWarning($"[UnityIAPService] OnPurchaseFailed(legacy): {product?.definition.id} — {failureReason} | tcs={_purchaseTcs != null}");
 
             var outcome = failureReason == PurchaseFailureReason.UserCancelled
                 ? IAPOutcome.Cancelled
                 : IAPOutcome.PaymentFailed;
+
+            if (_purchaseTcs == null)
+                Debug.LogError("[UnityIAPService] OnPurchaseFailed(legacy) fired but _purchaseTcs is null — result dropped!");
 
             _purchaseTcs?.TrySetResult(IAPResult.Failed(outcome));
         }
