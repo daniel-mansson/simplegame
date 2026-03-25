@@ -11,7 +11,12 @@ namespace SimpleGame.Game.Services
     /// Fetches the PlayFab Classic catalog and merges it with the local
     /// <see cref="IAPProductCatalog"/> to produce <see cref="IAPProductInfo"/> records.
     ///
-    /// See <see cref="IPlayFabCatalogService"/> for merge rules and error-handling contract.
+    /// PlayFab is authoritative: only items returned by PlayFab appear in the output.
+    /// Local catalog values are used as fallbacks for fields missing from PlayFab
+    /// (DisplayName, CoinsAmount). Products absent from PlayFab are not shown.
+    ///
+    /// On network failure, returns the full local catalog as fallback so the shop
+    /// remains functional offline.
     /// </summary>
     public class PlayFabCatalogService : IPlayFabCatalogService
     {
@@ -49,38 +54,40 @@ namespace SimpleGame.Game.Services
             var catalog = await tcs.Task;
 
             if (catalog == null)
-                return results; // network failure — fallbacks already built
+                return results; // network failure — return local fallbacks
 
-            // Build a lookup by ItemId for O(1) merge.
-            var byId = new Dictionary<string, CatalogItem>(catalog.Count, StringComparer.Ordinal);
+            // PlayFab is authoritative: build output from PlayFab items only.
+            // Products not listed in PlayFab are not shown (even if in the local catalog).
+            // Local catalog provides fallback field values for matched products.
+
+            // Build a local lookup for O(1) fallback access.
+            var localById = new Dictionary<string, IAPProductInfo>(results.Count, StringComparer.Ordinal);
+            foreach (var info in results)
+                localById[info.ProductId] = info;
+
+            var merged = new List<IAPProductInfo>(catalog.Count);
             foreach (var item in catalog)
             {
-                if (!string.IsNullOrEmpty(item.ItemId))
-                    byId[item.ItemId] = item;
+                if (string.IsNullOrEmpty(item.ItemId))
+                    continue;
+
+                // Use local fallback values as the base, or create a blank entry.
+                localById.TryGetValue(item.ItemId, out var local);
+
+                var displayName = string.IsNullOrEmpty(item.DisplayName)
+                    ? (local?.DisplayName ?? item.ItemId)
+                    : item.DisplayName;
+                var description  = string.IsNullOrEmpty(item.Description)  ? (local?.Description  ?? string.Empty) : item.Description;
+                var iconUrl      = string.IsNullOrEmpty(item.ItemImageUrl)  ? (local?.IconUrl      ?? string.Empty) : item.ItemImageUrl;
+
+                int coins = ParseCoins(item.CustomData, item.ItemId);
+                if (coins <= 0)
+                    coins = local?.CoinsAmount ?? 0;
+
+                merged.Add(new IAPProductInfo(item.ItemId, displayName, description, coins, iconUrl));
             }
 
-            // Merge into results, which are already ordered by local catalog index.
-            for (int i = 0; i < results.Count; i++)
-            {
-                var info = results[i];
-                if (!byId.TryGetValue(info.ProductId, out var playfab))
-                    continue; // product missing from PlayFab — keep local fallback
-
-                if (!string.IsNullOrEmpty(playfab.DisplayName))
-                    info.DisplayName = playfab.DisplayName;
-
-                if (!string.IsNullOrEmpty(playfab.Description))
-                    info.Description = playfab.Description;
-
-                if (!string.IsNullOrEmpty(playfab.ItemImageUrl))
-                    info.IconUrl = playfab.ItemImageUrl;
-
-                int playfabCoins = ParseCoins(playfab.CustomData, info.ProductId);
-                if (playfabCoins > 0)
-                    info.CoinsAmount = playfabCoins;
-            }
-
-            return results;
+            return merged;
         }
 
         // -----------------------------------------------------------------------
