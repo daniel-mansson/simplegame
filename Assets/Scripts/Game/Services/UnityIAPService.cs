@@ -116,33 +116,34 @@ namespace SimpleGame.Game.Services
             _purchaseTcs = new UniTaskCompletionSource<IAPResult>();
             _controller.InitiatePurchase(product);
 
+            // Start a timeout that resolves the TCS if the store callback never fires.
+            // We fire-and-forget it; OnPurchaseFailed/ValidateAndGrantAsync both call
+            // TrySetResult so whichever arrives first wins — subsequent calls are no-ops.
+#if UNITY_EDITOR
+            const int timeoutMs = 30_000;
+#else
+            const int timeoutMs = 120_000;
+#endif
+            TimeoutPurchaseAsync(_purchaseTcs, timeoutMs).Forget();
+
             IAPResult result;
             try
             {
-                // Timeout guards against dropped callbacks (e.g. UGS not initialised,
-                // store in bad state, or platform edge cases where OnPurchaseFailed never fires).
-                // Without this, a dropped cancel/failure leaves the UI on "Processing..." forever.
-#if UNITY_EDITOR
-                const int timeoutMs = 30_000;   // 30 s in Editor for fast dev feedback
-#else
-                const int timeoutMs = 120_000;  // 2 min on device — real stores can be slow
-#endif
-                using var cts = new System.Threading.CancellationTokenSource(timeoutMs);
-                try
-                {
-                    result = await _purchaseTcs.Task.AttachExternalCancellation(cts.Token);
-                }
-                catch (System.OperationCanceledException)
-                {
-                    Debug.LogWarning("[UnityIAPService] BuyAsync timed out — store callback never arrived. Is UGS initialised?");
-                    result = IAPResult.Failed(IAPOutcome.PaymentFailed);
-                }
+                result = await _purchaseTcs.Task;
             }
             finally
             {
                 _purchaseTcs = null;
             }
             return result;
+        }
+
+        private static async UniTaskVoid TimeoutPurchaseAsync(
+            UniTaskCompletionSource<IAPResult> tcs, int delayMs)
+        {
+            await UniTask.Delay(delayMs);
+            if (tcs.TrySetResult(IAPResult.Failed(IAPOutcome.PaymentFailed)))
+                Debug.LogWarning("[UnityIAPService] BuyAsync timed out — store callback never arrived. Is UGS initialised?");
         }
 
         // -----------------------------------------------------------------------
