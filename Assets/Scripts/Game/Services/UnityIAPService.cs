@@ -210,6 +210,7 @@ namespace SimpleGame.Game.Services
             // ConfirmPendingPurchase, UI update) can be exercised without a real device.
             Debug.Log("[UnityIAPService] Editor: skipping PlayFab receipt validation (FakeStore receipt).");
             validated = true;
+            await UniTask.CompletedTask; // keeps async signature valid in Editor-only build
 #elif UNITY_IOS
             validated = await ValidateIOSAsync(product);
 #elif UNITY_ANDROID
