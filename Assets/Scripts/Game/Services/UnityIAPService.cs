@@ -123,22 +123,19 @@ namespace SimpleGame.Game.Services
                 // store in bad state, or platform edge cases where OnPurchaseFailed never fires).
                 // Without this, a dropped cancel/failure leaves the UI on "Processing..." forever.
 #if UNITY_EDITOR
-                const int timeoutSeconds = 30;   // short in Editor so dev feedback is fast
+                const int timeoutMs = 30_000;   // 30 s in Editor for fast dev feedback
 #else
-                const int timeoutSeconds = 120;  // 2 min on device — real stores can be slow
+                const int timeoutMs = 120_000;  // 2 min on device — real stores can be slow
 #endif
-                // Use the params UniTask[] overload (returns winning index as int).
-                var winIndex = await UniTask.WhenAny(
-                    _purchaseTcs.Task.AsUniTask(),
-                    UniTask.Delay(System.TimeSpan.FromSeconds(timeoutSeconds)));
-                if (winIndex == 1)
+                using var cts = new System.Threading.CancellationTokenSource(timeoutMs);
+                try
+                {
+                    result = await _purchaseTcs.Task.AttachExternalCancellation(cts.Token);
+                }
+                catch (System.OperationCanceledException)
                 {
                     Debug.LogWarning("[UnityIAPService] BuyAsync timed out — store callback never arrived. Is UGS initialised?");
                     result = IAPResult.Failed(IAPOutcome.PaymentFailed);
-                }
-                else
-                {
-                    result = await _purchaseTcs.Task;
                 }
             }
             finally
