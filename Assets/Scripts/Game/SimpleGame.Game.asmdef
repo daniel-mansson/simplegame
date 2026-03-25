@@ -1,7 +1,7 @@
 {
   "name": "SimpleGame.Game",
   "rootNamespace": "SimpleGame.Game",
-  "references": ["SimpleGame.Core", "SimpleGame.Puzzle", "SimpleJigsaw.Runtime", "UniTask", "UnityEngine.UI", "Unity.TextMeshPro", "PlayFab", "Unity.LevelPlay", "UnityEngine.Purchasing", "UnityEngine.Purchasing.Stores", "Unity.Services.Core"],
+  "references": ["SimpleGame.Core", "SimpleGame.Puzzle", "SimpleJigsaw.Runtime", "UniTask", "UnityEngine.UI", "Unity.TextMeshPro", "PlayFab", "Unity.LevelPlay", "UnityEngine.Purchasing", "UnityEngine.Purchasing.Stores", "GUID:fe25561d224ed4743af4c60938a59d0b"],
   "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,
