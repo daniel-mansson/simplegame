@@ -101,7 +101,12 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 9f3dc44319986be4983284f7ba522122, type: 3}
---- !u!114 &1400466334156284381 stripped
+--- !u!224 &1341727496110782407 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 232785663059506964, guid: 9f3dc44319986be4983284f7ba522122, type: 3}
+  m_PrefabInstance: {fileID: 1271637283740156115}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &8960861286084674470 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 7925944483539649397, guid: 9f3dc44319986be4983284f7ba522122, type: 3}
   m_PrefabInstance: {fileID: 1271637283740156115}
@@ -112,11 +117,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
---- !u!224 &9055311021361157564 stripped
-RectTransform:
-  m_CorrespondingSourceObject: {fileID: 232785663059506964, guid: 9f3dc44319986be4983284f7ba522122, type: 3}
-  m_PrefabInstance: {fileID: 1271637283740156115}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1600546668538878103
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -337,7 +337,7 @@ PrefabInstance:
       addedObject: {fileID: 4738048966143837153}
     - targetCorrespondingSourceObject: {fileID: 1273336704213657654, guid: 35adb0d28bf7db747a551b8a425a5cc3, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 9055311021361157564}
+      addedObject: {fileID: 1341727496110782407}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 3819014185004630531, guid: 35adb0d28bf7db747a551b8a425a5cc3, type: 3}
       insertIndex: -1
@@ -369,7 +369,7 @@ MonoBehaviour:
   _panel: {fileID: 7258408314107622077}
   _animConfig: {fileID: 11400000, guid: a34582faabbe1804d8950e7be08a87a4, type: 2}
   _confirmButton: {fileID: 6429490931813937363}
-  _cancelButton: {fileID: 1400466334156284381}
+  _cancelButton: {fileID: 8960861286084674470}
   _messageText: {fileID: 194074978480857086}
 --- !u!224 &7258408314107622077 stripped
 RectTransform:
