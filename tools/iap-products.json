@@ -1,0 +1,26 @@
+{
+  "catalog_version": "main",
+  "products": [
+    {
+      "id": "com.simplegame.coins.500",
+      "display_name": "500 Coins",
+      "description": "A small pouch of coins.",
+      "coins": 500,
+      "price_usd": 0.99
+    },
+    {
+      "id": "com.simplegame.coins.1200",
+      "display_name": "1200 Coins",
+      "description": "A bag of coins.",
+      "coins": 1200,
+      "price_usd": 1.99
+    },
+    {
+      "id": "com.simplegame.coins.2500",
+      "display_name": "2500 Coins",
+      "description": "A chest of coins.",
+      "coins": 2500,
+      "price_usd": 3.99
+    }
+  ]
+}
