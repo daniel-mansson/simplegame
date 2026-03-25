@@ -114,7 +114,9 @@ namespace SimpleGame.Game.Services
             }
 
             _purchaseTcs = new UniTaskCompletionSource<IAPResult>();
+            Debug.Log($"[UnityIAPService] BuyAsync: calling InitiatePurchase for {productId}");
             _controller.InitiatePurchase(product);
+            Debug.Log($"[UnityIAPService] BuyAsync: InitiatePurchase returned. TCS status={_purchaseTcs?.UnsafeGetStatus().ToString() ?? "null"}");
 
             // Start a timeout that resolves the TCS if the store callback never fires.
             // We fire-and-forget it; OnPurchaseFailed/ValidateAndGrantAsync both call
@@ -129,7 +131,9 @@ namespace SimpleGame.Game.Services
             IAPResult result;
             try
             {
+                Debug.Log($"[UnityIAPService] BuyAsync: about to await TCS (status={_purchaseTcs?.UnsafeGetStatus().ToString() ?? "null"})");
                 result = await _purchaseTcs.Task;
+                Debug.Log($"[UnityIAPService] BuyAsync: await returned. result={result.Outcome}");
             }
             finally
             {
