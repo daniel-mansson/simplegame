@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 
@@ -24,12 +25,28 @@ namespace SimpleGame.Game.Services
 
         public bool IsInitialized { get; private set; }
 
+        /// <summary>
+        /// Products list — populated with local fallbacks when a catalog is provided.
+        /// Tests that don't pass a catalog get an empty list.
+        /// </summary>
+        public IReadOnlyList<IAPProductInfo> Products { get; private set; } =
+            System.Array.Empty<IAPProductInfo>();
+
         /// <param name="config">Mock outcome configuration. Must not be null.</param>
         /// <param name="coins">Optional — if provided, Earn+Save called on Success.</param>
-        public MockIAPService(IAPMockConfig config, ICoinsService coins = null)
+        /// <param name="catalog">Optional — if provided, Products is pre-populated from local fallbacks.</param>
+        public MockIAPService(IAPMockConfig config, ICoinsService coins = null, IAPProductCatalog catalog = null)
         {
             _config = config;
             _coins = coins;
+            if (catalog?.Products != null)
+            {
+                var list = new List<IAPProductInfo>(catalog.Products.Length);
+                foreach (var def in catalog.Products)
+                    if (def != null && !string.IsNullOrEmpty(def.ProductId))
+                        list.Add(IAPProductInfo.FromLocal(def));
+                Products = list;
+            }
         }
 
         /// <inheritdoc/>

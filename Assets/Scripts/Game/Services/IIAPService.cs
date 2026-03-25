@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 
 namespace SimpleGame.Game.Services
@@ -17,6 +18,16 @@ namespace SimpleGame.Game.Services
         /// True after <see cref="InitializeAsync"/> has completed successfully.
         /// </summary>
         bool IsInitialized { get; }
+
+        /// <summary>
+        /// Runtime-merged product list. Populated after <see cref="InitializeAsync"/>
+        /// completes (including the PlayFab catalog fetch). Presenters read from
+        /// this instead of from <see cref="IAPProductCatalog"/> directly.
+        ///
+        /// Empty until <see cref="InitializeAsync"/> resolves.
+        /// Falls back to local catalog values if PlayFab is unreachable.
+        /// </summary>
+        IReadOnlyList<IAPProductInfo> Products { get; }
 
         /// <summary>
         /// Initialise the underlying store connection and load the product list.

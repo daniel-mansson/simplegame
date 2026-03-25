@@ -8,32 +8,28 @@ namespace SimpleGame.Game.Popup
 {
     /// <summary>
     /// Presenter for the Shop popup.
-    /// Displays coin pack options read from <see cref="IAPProductCatalog"/> and
-    /// delegates all purchase logic to <see cref="IIAPService"/>.
+    /// Displays coin pack options from <see cref="IIAPService.Products"/> (runtime-merged
+    /// data from PlayFab + local catalog fallback) and delegates purchase logic to
+    /// <see cref="IIAPService"/>.
     ///
     /// Coins are granted inside IIAPService after PlayFab validates the receipt —
     /// this presenter never calls ICoinsService directly.
-    ///
-    /// Pack price strings shown in the UI come from the store (product metadata)
-    /// when available; otherwise the catalog DisplayName is used as the label.
     /// </summary>
     public class ShopPresenter : Presenter<IShopView>
     {
         private readonly IIAPService _iap;
-        private readonly IAPProductCatalog _catalog;
         private readonly ICoinsService _coins;
         private readonly IInputBlocker _inputBlocker;
 
         private UniTaskCompletionSource<bool> _resultTcs;
         private bool _purchaseInProgress;
 
-        public ShopPresenter(IShopView view, IIAPService iap, IAPProductCatalog catalog, ICoinsService coins,
+        public ShopPresenter(IShopView view, IIAPService iap, ICoinsService coins,
                              IInputBlocker inputBlocker = null)
             : base(view)
         {
-            _iap = iap;
-            _catalog = catalog;
-            _coins = coins;
+            _iap          = iap;
+            _coins        = coins;
             _inputBlocker = inputBlocker;
         }
 
@@ -67,15 +63,15 @@ namespace SimpleGame.Game.Popup
 
         private void RefreshPackLabels()
         {
-            if (_catalog?.Products == null) return;
-            for (int i = 0; i < _catalog.Products.Length && i < 3; i++)
+            var products = _iap.Products;
+            for (int i = 0; i < products.Count && i < 3; i++)
             {
-                var def = _catalog.Products[i];
-                if (def == null) continue;
-                // Use display name from catalog — store price is not available until runtime
-                // on a real device. Presenters running on device can be extended to read
-                // product.metadata.localizedPriceString from the IStoreController if desired.
-                View.UpdatePackLabel(i, def.DisplayName);
+                var info = products[i];
+                // Label: DisplayName on first line, coin amount on second if description available.
+                var label = string.IsNullOrEmpty(info.Description)
+                    ? info.DisplayName
+                    : $"{info.DisplayName}\n{info.Description}";
+                View.UpdatePackLabel(i, label);
             }
         }
 
@@ -93,20 +89,21 @@ namespace SimpleGame.Game.Popup
                 return;
             }
 
-            if (_catalog?.Products == null || packIndex < 0 || packIndex >= _catalog.Products.Length)
+            var products = _iap.Products;
+            if (packIndex < 0 || packIndex >= products.Count)
             {
                 Debug.LogWarning($"[ShopPresenter] Invalid pack index: {packIndex}");
                 return;
             }
 
-            var def = _catalog.Products[packIndex];
-            if (def == null || string.IsNullOrEmpty(def.ProductId))
+            var info = products[packIndex];
+            if (string.IsNullOrEmpty(info.ProductId))
             {
-                Debug.LogWarning($"[ShopPresenter] No product definition at index {packIndex}.");
+                Debug.LogWarning($"[ShopPresenter] No product ID at index {packIndex}.");
                 return;
             }
 
-            ExecutePurchaseAsync(def.ProductId).Forget();
+            ExecutePurchaseAsync(info.ProductId).Forget();
         }
 
         private async UniTaskVoid ExecutePurchaseAsync(string productId)

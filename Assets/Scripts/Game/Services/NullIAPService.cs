@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 
@@ -11,6 +12,7 @@ namespace SimpleGame.Game.Services
     public class NullIAPService : IIAPService
     {
         public bool IsInitialized => false;
+        public IReadOnlyList<IAPProductInfo> Products => System.Array.Empty<IAPProductInfo>();
 
         public UniTask InitializeAsync()
         {

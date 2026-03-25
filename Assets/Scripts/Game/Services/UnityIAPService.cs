@@ -13,7 +13,8 @@ namespace SimpleGame.Game.Services
     /// Real in-app purchase service backed by Unity Purchasing and PlayFab receipt validation.
     ///
     /// Flow:
-    ///   1. InitializeAsync() — registers products with Unity Purchasing, waits for store init.
+    ///   1. InitializeAsync() — registers products with Unity Purchasing, waits for store init,
+    ///      then fetches the PlayFab catalog to populate <see cref="Products"/>.
     ///   2. BuyAsync(productId) — initiates store purchase via IStoreController.
     ///   3. ProcessPurchase callback — extracts receipt, calls PlayFab validate endpoint.
     ///   4. On PlayFab success — Earn + Save coins, call ConfirmPendingPurchase, resolve result.
@@ -23,13 +24,15 @@ namespace SimpleGame.Game.Services
     /// are used for both the init wait and the per-purchase wait (D084 pattern).
     ///
     /// Dependencies injected via constructor:
-    ///   IAPProductCatalog — product definitions (IDs + coin amounts)
-    ///   ICoinsService — coin grant on success
-    ///   IPlayFabAuthService — login guard before PlayFab calls
+    ///   IAPProductCatalog       — product registration manifest + offline fallbacks
+    ///   IPlayFabCatalogService  — fetches live display data (name, desc, coins, icon)
+    ///   ICoinsService           — coin grant on success
+    ///   IPlayFabAuthService     — login guard before PlayFab calls
     /// </summary>
     public class UnityIAPService : IIAPService, IDetailedStoreListener
     {
         private readonly IAPProductCatalog _catalog;
+        private readonly IPlayFabCatalogService _catalogService;
         private readonly ICoinsService _coins;
         private readonly IPlayFabAuthService _auth;
 
@@ -45,11 +48,19 @@ namespace SimpleGame.Game.Services
 
         public bool IsInitialized => _controller != null;
 
-        public UnityIAPService(IAPProductCatalog catalog, ICoinsService coins, IPlayFabAuthService auth)
+        /// <inheritdoc/>
+        /// Populated after InitializeAsync completes. Falls back to local catalog values
+        /// when PlayFab is unreachable.
+        public IReadOnlyList<IAPProductInfo> Products { get; private set; } =
+            System.Array.Empty<IAPProductInfo>();
+
+        public UnityIAPService(IAPProductCatalog catalog, IPlayFabCatalogService catalogService,
+                               ICoinsService coins, IPlayFabAuthService auth)
         {
-            _catalog = catalog;
-            _coins = coins;
-            _auth = auth;
+            _catalog        = catalog;
+            _catalogService = catalogService;
+            _coins          = coins;
+            _auth           = auth;
         }
 
         // -----------------------------------------------------------------------
@@ -86,9 +97,17 @@ namespace SimpleGame.Game.Services
             await _initTcs.Task;
 
             if (_initFailed)
+            {
                 Debug.LogWarning("[UnityIAPService] Initialization failed — purchases unavailable.");
+                // Populate Products from local fallbacks so the shop can still display something.
+                Products = await _catalogService.FetchAsync();
+            }
             else
-                Debug.Log("[UnityIAPService] Initialized. Products loaded.");
+            {
+                Debug.Log("[UnityIAPService] Initialized. Fetching PlayFab catalog...");
+                Products = await _catalogService.FetchAsync();
+                Debug.Log($"[UnityIAPService] Catalog ready. {Products.Count} products loaded.");
+            }
         }
 
         /// <inheritdoc/>
@@ -342,11 +361,20 @@ namespace SimpleGame.Game.Services
 
         private int GetCoinsForProduct(string productId)
         {
-            if (_catalog?.Products == null) return 0;
-            foreach (var def in _catalog.Products)
+            // Prefer the runtime-merged Products list (may include updated PlayFab values).
+            foreach (var info in Products)
             {
-                if (def?.ProductId == productId)
-                    return def.CoinsAmount;
+                if (info.ProductId == productId)
+                    return info.CoinsAmount;
+            }
+            // Fallback to local catalog (Products may be empty if called before InitializeAsync completes).
+            if (_catalog?.Products != null)
+            {
+                foreach (var def in _catalog.Products)
+                {
+                    if (def?.ProductId == productId)
+                        return def.CoinsAmount;
+                }
             }
             Debug.LogWarning($"[UnityIAPService] No catalog entry for product: {productId}");
             return 0;

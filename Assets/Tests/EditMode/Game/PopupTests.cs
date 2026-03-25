@@ -411,12 +411,12 @@ namespace SimpleGame.Tests.Game
             config.MockOutcome = outcome;
             config.CoinsGranted = coins;
             var iap = new MockIAPService(config);
-            var product = new IAPProductDefinition
-            {
-                ProductId = "com.simplegame.coins.500",
-                CoinsAmount = coins,
-                DisplayName = "500 Coins",
-            };
+            var product = new IAPProductInfo(
+                productId:   "com.simplegame.coins.500",
+                displayName: "500 Coins",
+                description: string.Empty,
+                coinsAmount: coins
+            );
             var view = new MockIAPPurchaseView();
             var presenter = new IAPPurchasePresenter(view, iap, product, coins: null);
             return (view, presenter, config);

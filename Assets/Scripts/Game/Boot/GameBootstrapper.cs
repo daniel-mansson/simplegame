@@ -205,7 +205,11 @@ namespace SimpleGame.Game.Boot
             if (_iapCatalog == null)
                 Debug.LogWarning("[GameBootstrapper] IAPProductCatalog not found in Resources. Run Tools/Setup/Create IAP Assets.");
 
-            _iapService = new UnityIAPService(_iapCatalog, _coinsService, _authService);
+            var catalogService = _authService.IsLoggedIn
+                ? (IPlayFabCatalogService)new PlayFabCatalogService(_iapCatalog)
+                : new NullPlayFabCatalogService(_iapCatalog);
+
+            _iapService = new UnityIAPService(_iapCatalog, catalogService, _coinsService, _authService);
             Debug.Log("[GameBootstrapper] IAP: UnityIAPService (FakeStore/StandardUser in Editor, real store on device).");
             await _iapService.InitializeAsync();
 

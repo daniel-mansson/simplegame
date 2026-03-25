@@ -20,7 +20,6 @@ namespace SimpleGame.Game.Boot
         private readonly IGoldenPieceService _goldenPieces;
         private readonly ICoinsService _coins;
         private readonly IIAPService _iap;
-        private readonly IAPProductCatalog _iapCatalog;
         private readonly IInputBlocker _inputBlocker;
 
         public UIFactory(GameService gameService, ProgressionService progression,
@@ -29,7 +28,7 @@ namespace SimpleGame.Game.Boot
                          IGoldenPieceService goldenPieces = null,
                          ICoinsService coins = null,
                          IIAPService iap = null,
-                         IAPProductCatalog iapCatalog = null,
+                         IAPProductCatalog iapCatalog = null,   // kept for call-site compat; not used (Products come from IIAPService)
                          IInputBlocker inputBlocker = null)
         {
             _gameService = gameService;
@@ -40,7 +39,6 @@ namespace SimpleGame.Game.Boot
             _goldenPieces = goldenPieces;
             _coins = coins;
             _iap = iap;
-            _iapCatalog = iapCatalog;
             _inputBlocker = inputBlocker;
         }
 
@@ -87,19 +85,20 @@ namespace SimpleGame.Game.Boot
         public ShopPresenter CreateShopPresenter(IShopView view)
         {
             var iap = _iap ?? new NullIAPService();
-            return new ShopPresenter(view, iap, _iapCatalog, _coins, _inputBlocker);
+            return new ShopPresenter(view, iap, _coins, _inputBlocker);
         }
 
         /// <summary>
-        /// Creates an IAPPurchasePresenter for the given product index in the catalog.
-        /// If the catalog is null or the index is out of range, returns a presenter backed by NullIAPService.
+        /// Creates an IAPPurchasePresenter for the given product index.
+        /// Reads from <see cref="IIAPService.Products"/> (runtime-merged PlayFab + local data).
+        /// Falls back to null product (presenter shows "Coin Pack / unavailable") if out of range.
         /// </summary>
         public IAPPurchasePresenter CreateIAPPurchasePresenter(IIAPPurchaseView view, int productIndex = 0)
         {
             var iap = _iap ?? new NullIAPService();
-            IAPProductDefinition product = null;
-            if (_iapCatalog?.Products != null && productIndex >= 0 && productIndex < _iapCatalog.Products.Length)
-                product = _iapCatalog.Products[productIndex];
+            IAPProductInfo product = null;
+            if (productIndex >= 0 && productIndex < iap.Products.Count)
+                product = iap.Products[productIndex];
             return new IAPPurchasePresenter(view, iap, product, _coins, _inputBlocker);
         }
 

@@ -13,19 +13,19 @@ namespace SimpleGame.Game.Popup
     /// Coins are granted inside IIAPService after PlayFab validates the receipt —
     /// this presenter never calls ICoinsService directly.
     ///
-    /// The product ID and display info come from an <see cref="IAPProductDefinition"/>
-    /// passed at construction time. The caller decides which product to show.
+    /// Product display data comes from <see cref="IAPProductInfo"/> — the runtime-merged
+    /// record combining the local catalog (fallback) with live PlayFab catalog data.
     /// </summary>
     public class IAPPurchasePresenter : Presenter<IIAPPurchaseView>
     {
         private readonly IIAPService _iap;
-        private readonly IAPProductDefinition _product;
+        private readonly IAPProductInfo _product;
         private readonly ICoinsService _coins;
         private readonly IInputBlocker _inputBlocker;
 
         private UniTaskCompletionSource<bool> _resultTcs;
 
-        public IAPPurchasePresenter(IIAPPurchaseView view, IIAPService iap, IAPProductDefinition product,
+        public IAPPurchasePresenter(IIAPPurchaseView view, IIAPService iap, IAPProductInfo product,
                                     ICoinsService coins, IInputBlocker inputBlocker = null)
             : base(view)
         {
