@@ -67,12 +67,12 @@ namespace SimpleGame.Game.Services
             var module = StandardPurchasingModule.Instance();
 
 #if UNITY_EDITOR
-            // In the Editor, use DeveloperUser FakeStore so the full flow runs
+            // In the Editor, use StandardUser FakeStore so the full flow runs
             // (store dialog → receipt → PlayFab validation → coin grant) without a device.
-            // DeveloperUser shows a dialog with failure-reason selection on each purchase,
-            // letting you test success, cancellation, and specific failure codes.
-            module.useFakeStoreUIMode = FakeStoreUIMode.DeveloperUser;
-            Debug.Log("[UnityIAPService] Editor: FakeStore (DeveloperUser) enabled — real PlayFab validation will run.");
+            // StandardUser shows a confirm/cancel dialog per purchase only — no dialog at init.
+            // (DeveloperUser also shows a dialog at product retrieval on boot, which is disruptive.)
+            module.useFakeStoreUIMode = FakeStoreUIMode.StandardUser;
+            Debug.Log("[UnityIAPService] Editor: FakeStore (StandardUser) enabled — real PlayFab validation will run.");
 #endif
 
             var builder = ConfigurationBuilder.Instance(module);
