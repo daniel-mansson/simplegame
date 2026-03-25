@@ -114,9 +114,7 @@ namespace SimpleGame.Game.Services
             }
 
             _purchaseTcs = new UniTaskCompletionSource<IAPResult>();
-            Debug.Log($"[UnityIAPService] BuyAsync: calling InitiatePurchase for {productId}");
             _controller.InitiatePurchase(product);
-            Debug.Log($"[UnityIAPService] BuyAsync: InitiatePurchase returned. TCS status={_purchaseTcs?.UnsafeGetStatus().ToString() ?? "null"}");
 
             // Start a timeout that resolves the TCS if the store callback never fires.
             // We fire-and-forget it; OnPurchaseFailed/ValidateAndGrantAsync both call
@@ -131,9 +129,7 @@ namespace SimpleGame.Game.Services
             IAPResult result;
             try
             {
-                Debug.Log($"[UnityIAPService] BuyAsync: about to await TCS (status={_purchaseTcs?.UnsafeGetStatus().ToString() ?? "null"})");
                 result = await _purchaseTcs.Task;
-                Debug.Log($"[UnityIAPService] BuyAsync: await returned. result={result.Outcome}");
             }
             finally
             {
@@ -188,28 +184,24 @@ namespace SimpleGame.Game.Services
         public void OnPurchaseFailed(Product product, PurchaseFailureDescription failureDescription)
         {
             var reason = failureDescription?.reason ?? PurchaseFailureReason.Unknown;
-            var tcsState = _purchaseTcs == null ? "null" : _purchaseTcs.UnsafeGetStatus().ToString();
-            Debug.LogWarning($"[UnityIAPService] OnPurchaseFailed(desc): {product?.definition.id} — {reason} | tcs={tcsState}");
+            Debug.LogWarning($"[UnityIAPService] OnPurchaseFailed: {product?.definition.id} — {reason}");
 
             var outcome = reason == PurchaseFailureReason.UserCancelled
                 ? IAPOutcome.Cancelled
                 : IAPOutcome.PaymentFailed;
 
-            var set = _purchaseTcs?.TrySetResult(IAPResult.Failed(outcome));
-            Debug.LogWarning($"[UnityIAPService] OnPurchaseFailed(desc): TrySetResult={set}");
+            _purchaseTcs?.TrySetResult(IAPResult.Failed(outcome));
         }
 
         public void OnPurchaseFailed(Product product, PurchaseFailureReason failureReason)
         {
-            var tcsState = _purchaseTcs == null ? "null" : _purchaseTcs.UnsafeGetStatus().ToString();
-            Debug.LogWarning($"[UnityIAPService] OnPurchaseFailed(reason): {product?.definition.id} — {failureReason} | tcs={tcsState}");
+            Debug.LogWarning($"[UnityIAPService] OnPurchaseFailed: {product?.definition.id} — {failureReason}");
 
             var outcome = failureReason == PurchaseFailureReason.UserCancelled
                 ? IAPOutcome.Cancelled
                 : IAPOutcome.PaymentFailed;
 
-            var set = _purchaseTcs?.TrySetResult(IAPResult.Failed(outcome));
-            Debug.LogWarning($"[UnityIAPService] OnPurchaseFailed(reason): TrySetResult={set}");
+            _purchaseTcs?.TrySetResult(IAPResult.Failed(outcome));
         }
 
         // -----------------------------------------------------------------------

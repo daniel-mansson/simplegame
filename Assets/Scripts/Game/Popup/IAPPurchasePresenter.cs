@@ -82,6 +82,9 @@ namespace SimpleGame.Game.Popup
             try
             {
                 result = await _iap.BuyAsync(productId);
+
+                // Wait one frame for Unity to fully destroy the FakeStore dialog (Object.Destroy is deferred).
+                await UniTask.NextFrame();
             }
             finally
             {
