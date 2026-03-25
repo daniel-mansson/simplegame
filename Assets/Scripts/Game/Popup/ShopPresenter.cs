@@ -121,7 +121,9 @@ namespace SimpleGame.Game.Popup
                 // (Object.Destroy is deferred). Without this, a rapid second tap finds
                 // m_UIFakeStoreWindowObject non-null in UIFakeStore.GetOrCreateFakeStoreWindow,
                 // reuses the pending-destroy object, and the new dialog is immediately destroyed.
-                await UniTask.NextFrame();
+                // Skipped outside the player loop (e.g. EditMode tests).
+                if (UnityEngine.Application.isPlaying)
+                    await UniTask.NextFrame();
             }
             finally
             {
