@@ -119,7 +119,22 @@ namespace SimpleGame.Game.Services
             IAPResult result;
             try
             {
-                result = await _purchaseTcs.Task;
+                // Timeout guards against dropped callbacks (e.g. UGS not initialised,
+                // store in bad state, or platform edge cases where OnPurchaseFailed never fires).
+                // Without this, a dropped cancel/failure leaves the UI on "Processing..." forever.
+#if UNITY_EDITOR
+                var timeoutSeconds = 30;   // short in Editor so dev feedback is fast
+#else
+                var timeoutSeconds = 120;  // 2 min on device — real stores can be slow
+#endif
+                var winner = await UniTask.WhenAny(
+                    _purchaseTcs.Task,
+                    UniTask.Delay(System.TimeSpan.FromSeconds(timeoutSeconds)));
+                result = winner == 0
+                    ? _purchaseTcs.Task.GetAwaiter().GetResult()
+                    : IAPResult.Failed(IAPOutcome.PaymentFailed);
+                if (winner == 1)
+                    Debug.LogWarning("[UnityIAPService] BuyAsync timed out — store callback never arrived. Is UGS initialised?");
             }
             finally
             {
