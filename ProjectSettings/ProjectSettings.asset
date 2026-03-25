@@ -887,11 +887,11 @@ PlayerSettings:
   captureStartupLogs: {}
   activeInputHandler: 0
   windowsGamepadBackendHint: 0
-  cloudProjectId: 
+  cloudProjectId: fd772210-2248-43b3-a22d-76c96af6939e
   framebufferDepthMemorylessMode: 0
   qualitySettingsNames: []
-  projectName: 
-  organizationId: 
+  projectName: Puzzle Tap (25aaee6dd)
+  organizationId: simple-magic-studios
   cloudEnabled: 0
   legacyClampBlendShapeWeights: 0
   hmiLoadingImage: {fileID: 0}
