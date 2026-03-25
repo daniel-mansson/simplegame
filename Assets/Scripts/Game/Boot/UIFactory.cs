@@ -1,3 +1,4 @@
+using SimpleGame.Core.PopupManagement;
 using SimpleGame.Game.InGame;
 using SimpleGame.Game.MainMenu;
 using SimpleGame.Game.Meta;
@@ -20,6 +21,7 @@ namespace SimpleGame.Game.Boot
         private readonly ICoinsService _coins;
         private readonly IIAPService _iap;
         private readonly IAPProductCatalog _iapCatalog;
+        private readonly IInputBlocker _inputBlocker;
 
         public UIFactory(GameService gameService, ProgressionService progression,
                          GameSessionService session, IHeartService hearts = null,
@@ -27,7 +29,8 @@ namespace SimpleGame.Game.Boot
                          IGoldenPieceService goldenPieces = null,
                          ICoinsService coins = null,
                          IIAPService iap = null,
-                         IAPProductCatalog iapCatalog = null)
+                         IAPProductCatalog iapCatalog = null,
+                         IInputBlocker inputBlocker = null)
         {
             _gameService = gameService;
             _progression = progression;
@@ -38,6 +41,7 @@ namespace SimpleGame.Game.Boot
             _coins = coins;
             _iap = iap;
             _iapCatalog = iapCatalog;
+            _inputBlocker = inputBlocker;
         }
 
         public MainMenuPresenter CreateMainMenuPresenter(IMainMenuView view, EnvironmentData currentEnvironment,
@@ -83,7 +87,7 @@ namespace SimpleGame.Game.Boot
         public ShopPresenter CreateShopPresenter(IShopView view)
         {
             var iap = _iap ?? new NullIAPService();
-            return new ShopPresenter(view, iap, _iapCatalog, _coins);
+            return new ShopPresenter(view, iap, _iapCatalog, _coins, _inputBlocker);
         }
 
         /// <summary>
@@ -96,7 +100,7 @@ namespace SimpleGame.Game.Boot
             IAPProductDefinition product = null;
             if (_iapCatalog?.Products != null && productIndex >= 0 && productIndex < _iapCatalog.Products.Length)
                 product = _iapCatalog.Products[productIndex];
-            return new IAPPurchasePresenter(view, iap, product, _coins);
+            return new IAPPurchasePresenter(view, iap, product, _coins, _inputBlocker);
         }
 
         public PlatformLinkPresenter CreatePlatformLinkPresenter(IPlatformLinkView view, IPlatformLinkService linkService, IAnalyticsService analytics = null)

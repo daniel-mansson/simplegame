@@ -211,7 +211,7 @@ namespace SimpleGame.Game.Boot
 
             _uiFactory = new UIFactory(gameService, _progressionService, _sessionService,
                                        _heartService, _metaProgressionService, _goldenPieceService,
-                                       _coinsService, _iapService, _iapCatalog);
+                                       _coinsService, _iapService, _iapCatalog, _inputBlocker);
 
             Debug.Log("[GameBootstrapper] Infrastructure ready. Starting navigation loop.");
 

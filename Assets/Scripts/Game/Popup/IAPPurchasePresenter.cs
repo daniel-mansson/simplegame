@@ -1,5 +1,6 @@
 using Cysharp.Threading.Tasks;
 using SimpleGame.Core.MVP;
+using SimpleGame.Core.PopupManagement;
 using SimpleGame.Game.Services;
 using UnityEngine;
 
@@ -20,15 +21,18 @@ namespace SimpleGame.Game.Popup
         private readonly IIAPService _iap;
         private readonly IAPProductDefinition _product;
         private readonly ICoinsService _coins;
+        private readonly IInputBlocker _inputBlocker;
 
         private UniTaskCompletionSource<bool> _resultTcs;
 
-        public IAPPurchasePresenter(IIAPPurchaseView view, IIAPService iap, IAPProductDefinition product, ICoinsService coins)
+        public IAPPurchasePresenter(IIAPPurchaseView view, IIAPService iap, IAPProductDefinition product,
+                                    ICoinsService coins, IInputBlocker inputBlocker = null)
             : base(view)
         {
             _iap = iap;
             _product = product;
             _coins = coins;
+            _inputBlocker = inputBlocker;
         }
 
         public override void Initialize()
@@ -77,6 +81,7 @@ namespace SimpleGame.Game.Popup
         {
             View.UpdateStatus("Processing...");
             View.OnPurchaseClicked -= HandlePurchase;  // prevent double-tap
+            _inputBlocker?.Block();
 
             IAPResult result;
             try
@@ -88,6 +93,7 @@ namespace SimpleGame.Game.Popup
             }
             finally
             {
+                _inputBlocker?.Unblock();
                 View.OnPurchaseClicked += HandlePurchase;
             }
 
