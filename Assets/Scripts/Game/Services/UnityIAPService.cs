@@ -65,16 +65,6 @@ namespace SimpleGame.Game.Services
             _initTcs = new UniTaskCompletionSource();
 
             var module = StandardPurchasingModule.Instance();
-
-#if UNITY_EDITOR
-            // In the Editor, use StandardUser FakeStore so the full flow runs
-            // (store dialog → receipt → PlayFab validation → coin grant) without a device.
-            // StandardUser shows a confirm/cancel dialog per purchase only — no dialog at init.
-            // (DeveloperUser also shows a dialog at product retrieval on boot, which is disruptive.)
-            module.useFakeStoreUIMode = FakeStoreUIMode.StandardUser;
-            Debug.Log("[UnityIAPService] Editor: FakeStore (StandardUser) enabled — real PlayFab validation will run.");
-#endif
-
             var builder = ConfigurationBuilder.Instance(module);
 
             if (_catalog?.Products != null)
@@ -118,7 +108,6 @@ namespace SimpleGame.Game.Services
             }
 
             _purchaseTcs = new UniTaskCompletionSource<IAPResult>();
-            Debug.Log($"[UnityIAPService] InitiatePurchase: {productId}");
             _controller.InitiatePurchase(product);
 
             IAPResult result;
@@ -130,7 +119,6 @@ namespace SimpleGame.Game.Services
             {
                 _purchaseTcs = null;
             }
-            Debug.Log($"[UnityIAPService] BuyAsync result: {result.Outcome} coins={result.CoinsGranted}");
             return result;
         }
 
@@ -172,28 +160,22 @@ namespace SimpleGame.Game.Services
         public void OnPurchaseFailed(Product product, PurchaseFailureDescription failureDescription)
         {
             var reason = failureDescription?.reason ?? PurchaseFailureReason.Unknown;
-            Debug.LogWarning($"[UnityIAPService] OnPurchaseFailed(detailed): {product?.definition.id} — {reason} | tcs={_purchaseTcs != null}");
+            Debug.LogWarning($"[UnityIAPService] OnPurchaseFailed: {product?.definition.id} — {reason}");
 
             var outcome = reason == PurchaseFailureReason.UserCancelled
                 ? IAPOutcome.Cancelled
                 : IAPOutcome.PaymentFailed;
-
-            if (_purchaseTcs == null)
-                Debug.LogError("[UnityIAPService] OnPurchaseFailed fired but _purchaseTcs is null — result dropped!");
 
             _purchaseTcs?.TrySetResult(IAPResult.Failed(outcome));
         }
 
         public void OnPurchaseFailed(Product product, PurchaseFailureReason failureReason)
         {
-            Debug.LogWarning($"[UnityIAPService] OnPurchaseFailed(legacy): {product?.definition.id} — {failureReason} | tcs={_purchaseTcs != null}");
+            Debug.LogWarning($"[UnityIAPService] OnPurchaseFailed: {product?.definition.id} — {failureReason}");
 
             var outcome = failureReason == PurchaseFailureReason.UserCancelled
                 ? IAPOutcome.Cancelled
                 : IAPOutcome.PaymentFailed;
-
-            if (_purchaseTcs == null)
-                Debug.LogError("[UnityIAPService] OnPurchaseFailed(legacy) fired but _purchaseTcs is null — result dropped!");
 
             _purchaseTcs?.TrySetResult(IAPResult.Failed(outcome));
         }
