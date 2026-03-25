@@ -188,24 +188,28 @@ namespace SimpleGame.Game.Services
         public void OnPurchaseFailed(Product product, PurchaseFailureDescription failureDescription)
         {
             var reason = failureDescription?.reason ?? PurchaseFailureReason.Unknown;
-            Debug.LogWarning($"[UnityIAPService] OnPurchaseFailed: {product?.definition.id} — {reason}");
+            var tcsState = _purchaseTcs == null ? "null" : _purchaseTcs.UnsafeGetStatus().ToString();
+            Debug.LogWarning($"[UnityIAPService] OnPurchaseFailed(desc): {product?.definition.id} — {reason} | tcs={tcsState}");
 
             var outcome = reason == PurchaseFailureReason.UserCancelled
                 ? IAPOutcome.Cancelled
                 : IAPOutcome.PaymentFailed;
 
-            _purchaseTcs?.TrySetResult(IAPResult.Failed(outcome));
+            var set = _purchaseTcs?.TrySetResult(IAPResult.Failed(outcome));
+            Debug.LogWarning($"[UnityIAPService] OnPurchaseFailed(desc): TrySetResult={set}");
         }
 
         public void OnPurchaseFailed(Product product, PurchaseFailureReason failureReason)
         {
-            Debug.LogWarning($"[UnityIAPService] OnPurchaseFailed: {product?.definition.id} — {failureReason}");
+            var tcsState = _purchaseTcs == null ? "null" : _purchaseTcs.UnsafeGetStatus().ToString();
+            Debug.LogWarning($"[UnityIAPService] OnPurchaseFailed(reason): {product?.definition.id} — {failureReason} | tcs={tcsState}");
 
             var outcome = failureReason == PurchaseFailureReason.UserCancelled
                 ? IAPOutcome.Cancelled
                 : IAPOutcome.PaymentFailed;
 
-            _purchaseTcs?.TrySetResult(IAPResult.Failed(outcome));
+            var set = _purchaseTcs?.TrySetResult(IAPResult.Failed(outcome));
+            Debug.LogWarning($"[UnityIAPService] OnPurchaseFailed(reason): TrySetResult={set}");
         }
 
         // -----------------------------------------------------------------------
