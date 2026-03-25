@@ -139,3 +139,24 @@ Adding `com.unity.ads.ios-support` to `Packages/manifest.json` causes Unity MCP 
 **Fix:** Remove `com.unity.ads.ios-support` from the manifest. For ATT functionality, use a direct P/Invoke bridge: place `ATTBridge.mm` in `Assets/Plugins/iOS/` and call `[DllImport("__Internal")]` functions from C# behind `#if UNITY_IOS`. This provides identical ATT behaviour with zero package dependencies and no background network activity in the editor.
 
 **Rule:** Avoid `com.unity.ads.ios-support` in this project. If ATT API changes require it in the future, test the package import in isolation and verify MCP reconnects before committing.
+
+---
+
+### K011 — Bee compilation pipeline stuck on stale content hashes
+**Date:** 2026-03-25
+
+When Unity's Bee compiler gets stuck in a persistent compile-error retry loop, it stops regenerating the dag from fresh file content. Subsequent source file changes are not picked up — Bee uses cached content hashes from the old `.dag` binary and recompiles the old failing code indefinitely.
+
+**Symptom:** Error messages show wrong line numbers (matching an old version of the file), or the same error persists after a verified fix is on disk. `ls -la` shows the source file is newer than the reported error's context, but the dll timestamp predates the fix.
+
+**Fix:** Delete only the active dag files (do NOT delete all 5.5GB of `Library/Bee/`):
+```
+rm Library/Bee/900b0aEDbg.dag
+rm Library/Bee/900b0aEDbg.dag.payloads
+rm Library/Bee/900b0aEDbg.dag_derived
+rm Library/Bee/900b0aEDbg.dag_fsmtime
+rm Library/Bee/900b0aEDbg.dag.outputdata
+```
+Then `Assets/Refresh` from the Unity Editor. Bee rebuilds the dag from scratch on next compile.
+
+**How to identify the active dag hash:** Check the `Starting:` lines in `Editor.log` — the hash appears in the path e.g. `Library/Bee/900b0aEDbg.dag.json` or `900b0aEDbg-inputdata.json`.
