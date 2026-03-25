@@ -20,6 +20,9 @@ namespace SimpleGame.Game.Popup
         /// <summary>Updates the label on a pack button (e.g. "500 Coins\n€1.99").</summary>
         void UpdatePackLabel(int packIndex, string text);
 
+        /// <summary>Shows or hides a pack button. Hidden buttons are not clickable.</summary>
+        void SetPackVisible(int packIndex, bool visible);
+
         /// <summary>Shows a status message (e.g. "Purchase complete!").</summary>
         void UpdateStatus(string text);
     }

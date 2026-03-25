@@ -44,6 +44,12 @@ namespace SimpleGame.Game.Popup
                 _packLabels[packIndex].text = text;
         }
 
+        public void SetPackVisible(int packIndex, bool visible)
+        {
+            if (_packButtons != null && packIndex >= 0 && packIndex < _packButtons.Length && _packButtons[packIndex] != null)
+                _packButtons[packIndex].gameObject.SetActive(visible);
+        }
+
         public void UpdateStatus(string text)
         {
             if (_statusText != null)

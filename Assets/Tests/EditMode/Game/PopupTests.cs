@@ -96,12 +96,19 @@ namespace SimpleGame.Tests.Game
         public event Action OnCancelClicked;
 
         public string[] LastPackLabels { get; } = new string[3];
+        public bool[] PackVisible { get; } = new bool[] { true, true, true };
         public string LastStatusText { get; private set; }
 
         public void UpdatePackLabel(int packIndex, string text)
         {
             if (packIndex >= 0 && packIndex < LastPackLabels.Length)
                 LastPackLabels[packIndex] = text;
+        }
+
+        public void SetPackVisible(int packIndex, bool visible)
+        {
+            if (packIndex >= 0 && packIndex < PackVisible.Length)
+                PackVisible[packIndex] = visible;
         }
 
         public void UpdateStatus(string text) => LastStatusText = text;

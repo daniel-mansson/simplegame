@@ -64,14 +64,21 @@ namespace SimpleGame.Game.Popup
         private void RefreshPackLabels()
         {
             var products = _iap.Products;
-            for (int i = 0; i < products.Count && i < 3; i++)
+            for (int i = 0; i < 3; i++)
             {
-                var info = products[i];
-                // Label: DisplayName on first line, coin amount on second if description available.
-                var label = string.IsNullOrEmpty(info.Description)
-                    ? info.DisplayName
-                    : $"{info.DisplayName}\n{info.Description}";
-                View.UpdatePackLabel(i, label);
+                if (i < products.Count)
+                {
+                    var info = products[i];
+                    var label = string.IsNullOrEmpty(info.Description)
+                        ? info.DisplayName
+                        : $"{info.DisplayName}\n{info.Description}";
+                    View.UpdatePackLabel(i, label);
+                    View.SetPackVisible(i, true);
+                }
+                else
+                {
+                    View.SetPackVisible(i, false);
+                }
             }
         }
 
