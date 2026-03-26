@@ -226,6 +226,12 @@ namespace SimpleGame.Game.InGame
                     onRevealPiece:     RevealPiece,
                     onShakePiece:      ShakePieceInSlot
                 );
+
+                // Provide piece GO lookup so InGameView can hand pieces to DeckPreviewManager
+                _inGameView.SetPieceGoLookup(pid =>
+                    _pieceObjects != null && _pieceObjects.TryGetValue(pid, out var go) ? go : null);
+
+                _inGameView.SetHiddenPos(hiddenPos);
             }
 
             // Populate UGUI deck panel — one button per visible slot
@@ -371,22 +377,8 @@ namespace SimpleGame.Game.InGame
 
         private void MovePieceToTraySlot(int pieceId, int slotIndex)
         {
-            // Deck panel buttons are the visual while pieces are in the deck.
-            // Keep the 3D piece off-screen — it should not be visible in the tray.
-            if (!_pieceObjects.TryGetValue(pieceId, out var go)) return;
-
-            var cam    = Camera.main;
-            float orthoW = cam != null ? cam.orthographicSize * 2f * cam.aspect : 18f;
-            float camX   = cam != null ? cam.transform.position.x : 0f;
-            float trayY  = _traySlotPositions != null && _traySlotPositions.Length > 0
-                           ? _traySlotPositions[0].y : 0f;
-            var hiddenPos = new Vector3(camX + orthoW * 2f, trayY, -2f);
-
-            go.transform.SetParent(null, worldPositionStays: false);
-            go.transform.position = hiddenPos;
-
-            if (_traySlotData != null)
-                _traySlotData[pieceId] = (hiddenPos, go.transform.localScale);
+            // DeckPreviewManager handles piece positioning when RefreshSlot is called.
+            // PuzzleStageController has no additional work to do here.
         }
 
         private void ShakePieceInSlot(int slotIndex)
@@ -400,6 +392,10 @@ namespace SimpleGame.Game.InGame
             if (!_pieceObjects.TryGetValue(pieceId, out var go)) return;
             if (!_solvedWorldPositions.TryGetValue(pieceId, out var solved)) return;
 
+            // Reset layer to Default so the main camera renders the piece on the board.
+            // DeckPreviewManager may have set it to a DeckPreview layer while in the deck.
+            SetLayerRecursive(go, 0);
+
             var boardParent = _puzzleParent != null ? _puzzleParent : transform;
 
             var col = go.GetComponent<Collider>();
@@ -409,6 +405,13 @@ namespace SimpleGame.Game.InGame
             var targetLocal = boardParent.InverseTransformPoint(solved);
 
             PieceTweener.PlaceOnBoard(go, targetLocal, destroyCancellationToken).Forget();
+        }
+
+        private static void SetLayerRecursive(GameObject go, int layer)
+        {
+            go.layer = layer;
+            foreach (Transform child in go.transform)
+                SetLayerRecursive(child.gameObject, layer);
         }
     }
 }

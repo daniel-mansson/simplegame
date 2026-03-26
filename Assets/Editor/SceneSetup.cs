@@ -3,6 +3,7 @@ using SimpleGame.Core.Unity.PopupManagement;
 using SimpleGame.Core.Unity.TransitionManagement;
 using SimpleGame.Game.Boot;
 using SimpleGame.Game.InGame;
+using SimpleGame.Game.InGame;
 using SimpleGame.Game.MainMenu;
 using SimpleGame.Game.Popup;
 using SimpleGame.Game.Settings;
@@ -582,6 +583,14 @@ internal class SceneSetupHelpers
         cam.farClipPlane = 100f;
         cam.depth = 0;
         go.transform.position = new Vector3(0f, 0f, -10f);
+
+        // Exclude all DeckPreview layers (6–10) so pieces inside preview cameras
+        // don't render through to the main view.
+        int deckPreviewMask = 0;
+        for (int i = 0; i < DeckPreviewManager.MaxSlots; i++)
+            deckPreviewMask |= 1 << (DeckPreviewManager.BaseLayer + i);
+        cam.cullingMask = ~deckPreviewMask; // everything except DeckPreview layers
+
         return cam;
     }
 
