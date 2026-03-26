@@ -18,7 +18,7 @@
 - [x] **T01: Create IAP/ folder and move 15 IAP files**
   Move all IAP-related files from `Services/` (IIAPService, IAPOutcome, IAPResult, IAPProductDefinition, IAPProductInfo, IAPProductCatalog, IAPMockConfig, MockIAPService, UnityIAPService, NullIAPService, PlayFabCatalogService, NullPlayFabCatalogService) and from `Popup/` (IIAPPurchaseView, IAPPurchasePresenter, IAPPurchaseView) into new `Assets/Scripts/Game/IAP/` folder.
 
-- [ ] **T02: Create Ads/ folder and move 7 Ads files**
+- [x] **T02: Create Ads/ folder and move 7 Ads files**
   Move from `Services/` (IAdService, AdResult, UnityAdService, NullAdService) and `Popup/` (IRewardedAdView, RewardedAdPresenter, RewardedAdView) into `Assets/Scripts/Game/Ads/`.
 
 - [ ] **T03: Create ATT/ folder and move 7 ATT files**
@@ -40,5 +40,5 @@ This slice is a pure filesystem reorganisation — no runtime behaviour changes.
 - **Confirm sources are clean:** `ls Assets/Scripts/Game/Services/*.cs Assets/Scripts/Game/Popup/*.cs` — should show only non-IAP/Ads/ATT files after each task
 - **Unity compile status:** Check Unity Editor console after reload; any namespace or reference breakage surfaces as `error CS` lines in `Editor.log`. Use the K011 `python3` snippet to read errors after the last `Starting:` line.
 - **Test gate:** `run_tests EditMode` — 340 tests must pass after T03 commits; failure here indicates a `.meta` GUID mismatch or stale Bee dag (see K011).
-- **Failure state:** If a `git mv` is accidentally omitted, `git status` will show the file as untracked in the old location and missing from the new one. Run `git status --short | grep "^R"` to confirm all expected renames are staged.
+- **Failure state detection:** If a `git mv` is accidentally omitted, `git status` will show the file as untracked in the old location and missing from the new one. Run `git status --short | grep "^R"` to confirm all expected renames are staged. To verify completeness per task: `find Assets/Scripts/Game/Ads -name "*.cs" | sort` and `find Assets/Scripts/Game/ATT -name "*.cs" | sort` — both must list exactly 7 files. If any file is missing, `git status` will show it as deleted/untracked; re-run the specific `git mv` for that file.
 - **No secrets involved** — no redaction constraints apply.

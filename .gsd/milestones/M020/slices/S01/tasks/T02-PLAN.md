@@ -33,3 +33,12 @@ Move all Ads-related source files from `Services/` and `Popup/` into a new `Asse
 
 - No source file edits — namespaces unchanged
 - Do NOT commit yet — wait for T03
+
+## Observability Impact
+
+This task is a pure filesystem rename — no runtime behaviour changes. However, it affects the Unity asset database and compiler pipeline.
+
+- **Inspectable success state:** After the 7 `git mv` calls, `git status --short | grep "^R"` shows 14 lines (7 `.cs` renames + 7 `.meta` renames). `find Assets/Scripts/Game/Ads -name "*.cs" | wc -l` returns 7.
+- **Inspectable failure state:** If a move was missed, `git status --short` shows the file as `D` (deleted) in the old location with no corresponding `A` (added) in the new one. The missing file can be re-moved with `git mv <old> <new>`.
+- **Unity compile signal:** Since namespaces are unchanged, Unity will recompile without errors. Check `Editor.log` after reload using the K011 `python3` snippet — zero `error CS` lines after the last `Starting:` confirms success.
+- **Agent inspection:** Run `git status --short | grep "^R" | grep -i "Ads\|AdService\|AdResult\|RewardedAd"` to see exactly which Ads renames are staged.
