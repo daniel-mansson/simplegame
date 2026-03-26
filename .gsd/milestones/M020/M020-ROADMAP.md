@@ -7,7 +7,7 @@
 - `Assets/Scripts/Game/Services/` does not exist
 - `Assets/Scripts/Game/Popup/` contains only `UnityViewContainer.cs`
 - Every feature folder contains all related files (service + popup pair where applicable)
-- All 340 EditMode tests pass
+- All 347 EditMode tests pass
 - No missing-script warnings in any scene
 
 ## Key Risks / Unknowns
@@ -34,7 +34,7 @@ This milestone is complete only when all are true:
 - All four slices complete
 - `Assets/Scripts/Game/Services/` directory does not exist
 - `Assets/Scripts/Game/Popup/` contains exactly 1 `.cs` file (`UnityViewContainer.cs`)
-- 340 EditMode tests pass
+- 347 EditMode tests pass
 - `git status` shows no untracked `.meta` files from emptied folders
 
 ## Requirement Coverage
@@ -47,28 +47,28 @@ This milestone is complete only when all are true:
 ## Slices
 
 - [x] **S01: Move IAP, Ads, and ATT feature groups** `risk:medium` `depends:[]`
-  > After this: `Assets/Scripts/Game/IAP/` (14 files), `Ads/` (7 files), `ATT/` (7 files) exist; those files no longer in `Services/` or `Popup/`; tests pass.
+  > After this: `Assets/Scripts/Game/IAP/` (15 files), `Ads/` (7 files), `ATT/` (7 files) exist; those files no longer in `Services/` or `Popup/`; tests pass. Services/ and Popup/ cleanup completed ahead of schedule.
 
 - [ ] **S02: Move Economy, Save, Progression, and PlayFab feature groups** `risk:medium` `depends:[S01]`
-  > After this: `Economy/` (6 files), `Save/` (4 files), `Progression/` (4 files), `PlayFab/` (15 files) exist; `Services/` folder is empty and removed; tests pass.
+  > After this: `Economy/` (6 files), `Save/` (4 files), `Progression/` (4 files), `PlayFab/` (15 files) exist; tests pass. Note: `Services/` directory is already gone (removed in S01); no removal step needed.
 
-- [ ] **S03: Move remaining Popup feature files into feature folders** `risk:medium` `depends:[S02]`
-  > After this: `Meta/` gains `MetaProgressionService` + ObjectRestored popup trio; `Shop/` (3 files), `LevelFlow/` (7 files), `ConfirmDialog/` (3 files) created; `Popup/` contains only `UnityViewContainer.cs`; tests pass.
+- [ ] **S03: Move remaining Popup feature files into feature folders** `risk:low` `depends:[S02]`
+  > After this: `Meta/` gains `MetaProgressionService` + ObjectRestored popup trio; `Shop/` (3 files), `LevelFlow/` (7 files), `ConfirmDialog/` (3 files) created; tests pass. Note: `Popup/` already contains only `UnityViewContainer.cs` (cleanup completed in S01); verify that state is preserved and execute any remaining moves only. Risk downgraded from medium to low — Popup/ cleanup risk is already retired.
 
 - [ ] **S04: Final verification — compile, tests, orphan cleanup** `risk:low` `depends:[S03]`
-  > After this: zero orphaned `.meta` files, 340 tests confirmed passing, no missing-script warnings, all target folder manifests verified against expected file counts.
+  > After this: zero orphaned `.meta` files, 347 tests confirmed passing, no missing-script warnings, all target folder manifests verified against expected file counts.
 
 ## Boundary Map
 
 ### S01 outputs
 
 Produces:
-- `Assets/Scripts/Game/IAP/` — 14 files (IIAPService, IAPOutcome, IAPResult, IAPProductDefinition, IAPProductInfo, IAPProductCatalog, IAPMockConfig, MockIAPService, UnityIAPService, NullIAPService, PlayFabCatalogService, NullPlayFabCatalogService, IIAPPurchaseView, IAPPurchasePresenter, IAPPurchaseView)
+- `Assets/Scripts/Game/IAP/` — 15 files (IIAPService, IAPOutcome, IAPResult, IAPProductDefinition, IAPProductInfo, IAPProductCatalog, IAPMockConfig, MockIAPService, UnityIAPService, NullIAPService, PlayFabCatalogService, NullPlayFabCatalogService, IIAPPurchaseView, IAPPurchasePresenter, IAPPurchaseView)
 - `Assets/Scripts/Game/Ads/` — 7 files (IAdService, AdResult, UnityAdService, NullAdService, IRewardedAdView, RewardedAdPresenter, RewardedAdView)
 - `Assets/Scripts/Game/ATT/` — 7 files (IATTService, ATTAuthorizationStatus, UnityATTService, NullATTService, IConsentGateView, ConsentGatePresenter, ConsentGateView)
 - Corresponding `.meta` files preserved by `git mv`
-- `Services/` still contains Economy/Save/Progression/PlayFab files (not yet moved)
-- `Popup/` still contains all non-IAP/Ads/ATT popup files (not yet moved)
+- `Services/` directory removed (emptied by these moves plus pre-existing work) — ahead of schedule
+- `Popup/` contains only `UnityViewContainer.cs` — ahead of schedule
 
 ### S02 outputs
 
@@ -77,8 +77,7 @@ Produces:
 - `Assets/Scripts/Game/Save/` — 4 files (IMetaSaveService, MetaSaveData, MetaSaveMerge, PlayerPrefsMetaSaveService)
 - `Assets/Scripts/Game/Progression/` — 4 files (ProgressionService, GameService, GameSessionService, GameOutcome)
 - `Assets/Scripts/Game/PlayFab/` — 15 files (IPlayFabAuthService, PlayFabAuthService, ICloudSaveService, PlayFabCloudSaveService, IAnalyticsService, PlayFabAnalyticsService, IPlatformLinkService, PlayFabPlatformLinkService, IRemoteConfigService, PlayFabRemoteConfigService, GameRemoteConfig, ISingularService, SingularService, NullSingularService, IPlatformLinkView, PlatformLinkPresenter)
-- `Assets/Scripts/Game/Services/` removed (empty after all moves)
-- `Services.meta` removed
+- Note: `Assets/Scripts/Game/Services/` is already gone — no removal step required; verify absence only
 
 ### S03 outputs
 
@@ -87,9 +86,9 @@ Produces:
 - `Assets/Scripts/Game/Shop/` — 3 files (IShopView, ShopPresenter, ShopView)
 - `Assets/Scripts/Game/LevelFlow/` — 7 files (ILevelCompleteView, LevelCompletePresenter, LevelCompleteView, ILevelFailedView, LevelFailedPresenter, LevelFailedView, LevelFailedChoice)
 - `Assets/Scripts/Game/ConfirmDialog/` — 3 files (IConfirmDialogView, ConfirmDialogPresenter, ConfirmDialogView)
-- `Assets/Scripts/Game/Popup/` contains only `UnityViewContainer.cs` (and `PopupId.cs` stays at `Game/PopupId.cs`)
+- Note: `Assets/Scripts/Game/Popup/` already contains only `UnityViewContainer.cs` — verify this state is preserved; no Popup cleanup moves needed
 
 ### S04 outputs
 
 Produces:
-- Confirmed clean state: zero orphaned `.meta` files, 340 tests passing, no missing-script warnings
+- Confirmed clean state: zero orphaned `.meta` files, 347 tests passing, no missing-script warnings
