@@ -29,6 +29,16 @@ Move all IAP-related source files from `Services/` and `Popup/` into a new `Asse
 4. `git status` — confirm 15 renames staged, no unexpected changes
 5. Verify no IAP files remain in `Services/` or `Popup/`
 
+## Observability Impact
+
+This task is a pure filesystem reorganisation — no runtime behaviour changes. Failure state is entirely visible via git:
+
+- **Success signal:** `git status` shows exactly 30 renames staged (15 `.cs` + 15 `.meta`), no other changes
+- **Failure signal:** `git status` shows unexpected deletions (without corresponding additions) — indicates a raw `mv` was used instead of `git mv`, which would break Unity GUID tracking
+- **Inspection command:** `find Assets/Scripts/Game/IAP -name "*.cs" | wc -l` → must return 15
+- **Negative check:** `ls Assets/Scripts/Game/Services/ | grep -i iap` → must return empty
+- **Redaction:** No secrets involved; this task touches only source file paths
+
 ## Context
 
 - `git mv src dst` automatically moves the `.meta` file too — do not move `.meta` files manually

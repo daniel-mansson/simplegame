@@ -24,6 +24,17 @@
 - [x] **T03: Create ATT/ folder and move 7 ATT files**
   Move from `Services/` (IATTService, ATTAuthorizationStatus, UnityATTService, NullATTService) and `Popup/` (IConsentGateView, ConsentGatePresenter, ConsentGateView) into `Assets/Scripts/Game/ATT/`. Run tests; commit.
 
+## Observability / Diagnostics
+
+This slice is a pure filesystem reorganisation. All failure state is inspectable via git and the filesystem:
+
+- **Move integrity:** `git log --diff-filter=R --name-status HEAD` shows renames, not add/delete pairs. If raw `mv` was used, Unity loses GUID links.
+- **File count surfaces:** `find Assets/Scripts/Game/IAP -name "*.cs" | wc -l` → 15; `find Assets/Scripts/Game/Ads -name "*.cs" | wc -l` → 7; `find Assets/Scripts/Game/ATT -name "*.cs" | wc -l` → 7
+- **Negative check (diagnostic):** `rg "IAdService|IATTService|IIAPService" Assets/Scripts/Game/Services/` → must return empty. Non-empty means a file was missed.
+- **Compile health:** Unity console errors after domain reload indicate a `.meta` GUID was broken. `mcp_call(unityMCP, read_console)` surfaces these immediately.
+- **Test gate:** `mcporter call unityMCP.run_tests testMode:EditMode` (via stdin pipe — see K006); all 340 EditMode tests must pass after the T03 commit.
+- **Redaction:** No secrets involved.
+
 ## Files Likely Touched
 
 - `Assets/Scripts/Game/Services/` — source (files removed, but folder remains for S02)
