@@ -36,3 +36,13 @@ Move all IAP-related source files from `Services/` and `Popup/` into a new `Asse
 - The `Services/` folder should NOT be removed yet — it still contains Economy/Save/Progression/PlayFab files moved in S02
 - Namespaces are unchanged (still `SimpleGame.Game.Services` for service files, `SimpleGame.Game.Popup` for popup files) — no source file edits required
 - Do NOT commit yet — T02 and T03 complete the slice before committing
+
+## Observability Impact
+
+This task is a pure `git mv` reorganisation — no runtime code changes. Inspection surfaces after T01:
+
+- **File count check:** `find Assets/Scripts/Game/IAP -name "*.cs" | wc -l` → 15. Deviation means a file was missed.
+- **Source directories clean:** `ls Assets/Scripts/Game/Services/*.cs | grep -iE "IAP|Purchase"` and same for `Popup/` — both should return no matches.
+- **Git staging:** `git status --short | grep "^R" | wc -l` → 30 (15 `.cs` + 15 `.meta` renames). If fewer, a file or its meta was not moved.
+- **Failure state:** Any missed `git mv` shows as `?? Assets/Scripts/Game/IAP/<file>.cs` (untracked new) + `D  Assets/Scripts/Game/Services/<file>.cs` (deleted old) in `git status`. Recoverable by running the missed `git mv` before T02 begins.
+- **Unity compile:** No compile errors expected since namespaces are not changed. If Unity shows `error CS0246` (type not found), a `.meta` GUID was lost — check `git status` for any non-rename entries on the affected file.

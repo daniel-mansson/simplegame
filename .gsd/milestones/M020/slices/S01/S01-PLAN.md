@@ -15,7 +15,7 @@
 
 ## Tasks
 
-- [ ] **T01: Create IAP/ folder and move 15 IAP files**
+- [x] **T01: Create IAP/ folder and move 15 IAP files**
   Move all IAP-related files from `Services/` (IIAPService, IAPOutcome, IAPResult, IAPProductDefinition, IAPProductInfo, IAPProductCatalog, IAPMockConfig, MockIAPService, UnityIAPService, NullIAPService, PlayFabCatalogService, NullPlayFabCatalogService) and from `Popup/` (IIAPPurchaseView, IAPPurchasePresenter, IAPPurchaseView) into new `Assets/Scripts/Game/IAP/` folder.
 
 - [ ] **T02: Create Ads/ folder and move 7 Ads files**
@@ -31,3 +31,14 @@
 - `Assets/Scripts/Game/IAP/` — created
 - `Assets/Scripts/Game/Ads/` — created
 - `Assets/Scripts/Game/ATT/` — created
+
+## Observability / Diagnostics
+
+This slice is a pure filesystem reorganisation — no runtime behaviour changes. Diagnostic surfaces:
+
+- **Confirm move complete:** `find Assets/Scripts/Game/IAP -name "*.cs" | wc -l` (expect 15), same for Ads (7) and ATT (7)
+- **Confirm sources are clean:** `ls Assets/Scripts/Game/Services/*.cs Assets/Scripts/Game/Popup/*.cs` — should show only non-IAP/Ads/ATT files after each task
+- **Unity compile status:** Check Unity Editor console after reload; any namespace or reference breakage surfaces as `error CS` lines in `Editor.log`. Use the K011 `python3` snippet to read errors after the last `Starting:` line.
+- **Test gate:** `run_tests EditMode` — 340 tests must pass after T03 commits; failure here indicates a `.meta` GUID mismatch or stale Bee dag (see K011).
+- **Failure state:** If a `git mv` is accidentally omitted, `git status` will show the file as untracked in the old location and missing from the new one. Run `git status --short | grep "^R"` to confirm all expected renames are staged.
+- **No secrets involved** — no redaction constraints apply.
