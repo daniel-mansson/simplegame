@@ -53,7 +53,7 @@ This milestone is complete only when all are true:
   > After this: `Economy/` (6 files), `Save/` (4 files), `Progression/` (4 files), `PlayFab/` (17 files) exist; tests pass (347). Services/ fully removed (was already gone from S01). IPlayFabCatalogService.cs swept in as extra file. S03 work partially committed on branch already.
 
 - [ ] **S03: Move remaining Popup feature files into feature folders** `risk:low` `depends:[S02]`
-  > After this: `Meta/` gains `MetaProgressionService` + ObjectRestored popup trio; `Shop/` (3 files), `LevelFlow/` (7 files), `ConfirmDialog/` (3 files) created; tests pass. Note: `Popup/` already contains only `UnityViewContainer.cs` (cleanup completed in S01); verify that state is preserved and execute any remaining moves only. Risk downgraded from medium to low — Popup/ cleanup risk is already retired.
+  > After this: `Meta/` gains `MetaProgressionService` + ObjectRestored popup trio; `Shop/` (3 files), `LevelFlow/` (7 files), `ConfirmDialog/` (3 files) created; tests pass. Note: All S03 moves are already committed on the branch ahead of schedule (confirmed by filesystem state after S02). S03 is a verification-only pass — confirm target folders match the boundary map, then close the slice.
 
 - [ ] **S04: Final verification — compile, tests, orphan cleanup** `risk:low` `depends:[S03]`
   > After this: zero orphaned `.meta` files, 347 tests confirmed passing, no missing-script warnings, all target folder manifests verified against expected file counts.
