@@ -52,7 +52,7 @@ This milestone is complete only when all are true:
 - [x] **S02: Move Economy, Save, Progression, and PlayFab feature groups** `risk:medium` `depends:[S01]`
   > After this: `Economy/` (6 files), `Save/` (4 files), `Progression/` (4 files), `PlayFab/` (17 files) exist; tests pass (347). Services/ fully removed (was already gone from S01). IPlayFabCatalogService.cs swept in as extra file. S03 work partially committed on branch already.
 
-- [ ] **S03: Move remaining Popup feature files into feature folders** `risk:low` `depends:[S02]`
+- [x] **S03: Move remaining Popup feature files into feature folders** `risk:low` `depends:[S02]`
   > After this: `Meta/` gains `MetaProgressionService` + ObjectRestored popup trio; `Shop/` (3 files), `LevelFlow/` (7 files), `ConfirmDialog/` (3 files) created; tests pass. Note: All S03 moves are already committed on the branch ahead of schedule (confirmed by filesystem state after S02). S03 is a verification-only pass — confirm target folders match the boundary map, then close the slice.
 
 - [ ] **S04: Final verification — compile, tests, orphan cleanup** `risk:low` `depends:[S03]`
