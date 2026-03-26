@@ -436,18 +436,17 @@ public static class SceneSetup
         var puzzleParentGO = new GameObject("PuzzleParent");
         puzzleParentGO.transform.SetParent(null);
 
-        // ── InGameSceneController ─────────────────────────────────────────
-        var sceneControllerGO = new GameObject("InGameSceneController");
-        var inGameController = sceneControllerGO.AddComponent<InGameSceneController>();
-        sceneControllerGO.AddComponent<InGameDebugMenu>();
-        WireSerializedField(inGameController, "_inGameView",   inGameView);
-        WireSerializedField(inGameController, "_puzzleParent", puzzleParentGO.transform);
+        // ── PuzzleStageController — owns all 3D piece/tray logic ─────────
+        var stageGO = new GameObject("PuzzleStageController");
+        var stage = stageGO.AddComponent<PuzzleStageController>();
+        WireSerializedField(stage, "_inGameView",   inGameView);
+        WireSerializedField(stage, "_puzzleParent", puzzleParentGO.transform);
 
         var gridConfig   = AssetDatabase.LoadAssetAtPath<GridLayoutConfig>("Assets/Data/DefaultGridConfig.asset");
         var renderConfig = AssetDatabase.LoadAssetAtPath<PieceRenderConfig>("Assets/Data/DefaultPieceRenderConfig.asset");
-        if (gridConfig   != null) WireSerializedField(inGameController, "_gridLayoutConfig", gridConfig);
+        if (gridConfig   != null) WireSerializedField(stage, "_gridLayoutConfig", gridConfig);
         else Debug.LogWarning("[SceneSetup] DefaultGridConfig.asset not found.");
-        if (renderConfig != null) WireSerializedField(inGameController, "_pieceRenderConfig", renderConfig);
+        if (renderConfig != null) WireSerializedField(stage, "_pieceRenderConfig", renderConfig);
 
         // Transition overlay — same prefab used by Boot scene
         var transitionPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/TransitionOverlay.prefab");
@@ -456,12 +455,19 @@ public static class SceneSetup
             var transitionInstance = (GameObject)PrefabUtility.InstantiatePrefab(transitionPrefab);
             transitionInstance.name = "RetryTransitionOverlay";
             transitionInstance.SetActive(false);
-            WireSerializedField(inGameController, "_transitionPlayer", transitionInstance.GetComponent<UnityTransitionPlayer>());
+            WireSerializedField(stage, "_transitionPlayer", transitionInstance.GetComponent<UnityTransitionPlayer>());
         }
         else
         {
             Debug.LogWarning("[SceneSetup] TransitionOverlay.prefab not found — retry will use runtime fallback.");
         }
+
+        // ── InGameSceneController ─────────────────────────────────────────
+        var sceneControllerGO = new GameObject("InGameSceneController");
+        var inGameController = sceneControllerGO.AddComponent<InGameSceneController>();
+        sceneControllerGO.AddComponent<InGameDebugMenu>();
+        WireSerializedField(inGameController, "_inGameView", inGameView);
+        WireSerializedField(inGameController, "_stage",      stage);
 
         bool saved = EditorSceneManager.SaveScene(scene, InGamePath);
         Debug.Log(saved ? "[SceneSetup] InGame scene saved." : "[SceneSetup] ERROR saving InGame scene.");
