@@ -48,4 +48,5 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 - [x] M018: Consent & ATT — first-launch ToS acceptance gate and iOS App Tracking Transparency dialog
 - [x] M019: Real IAP — Unity Purchasing + PlayFab receipt validation for coin purchases (iOS + Android)
 - [x] M020: Feature-Cohesion Restructure — reorganise Services/ and Popup/ into feature-cohesive folders (IAP/, Ads/, ATT/, Economy/, Save/, PlayFab/, Progression/, Shop/, LevelFlow/, ConfirmDialog/)
-- [x] M021: Scene Controller Composition Refactor — slim InGameSceneController (1085→133 lines) and MainMenuSceneController (391→82 lines) by extracting PuzzleStageController (3D/tray) and InGameFlowPresenter (game loop/popups)
+- [x] M021: Scene Controller Composition Refactor
+- [ ] M022: In-Game Deck Panel — UGUI piece buttons in horizontal layout replacing the invisible overlay tap system — slim InGameSceneController (1085→133 lines) and MainMenuSceneController (391→82 lines) by extracting PuzzleStageController (3D/tray) and InGameFlowPresenter (game loop/popups)
