@@ -12,12 +12,15 @@ namespace SimpleGame.Game.InGame
 {
     /// <summary>
     /// MonoBehaviour that owns all 3D puzzle stage concerns:
-    /// piece GameObject spawning, tray slot layout (LateUpdate), UGUI slot buttons,
+    /// piece GameObject spawning, tray slot layout (LateUpdate),
     /// piece reveal/shake/slide tweens, and retry reset.
     ///
     /// Wired via [SerializeField] on InGameSceneController. Call SpawnLevel() once
     /// per level start (or retry) to populate the stage. Reset() tears down and
     /// prepares for the next SpawnLevel call.
+    ///
+    /// Tap targets are owned by <see cref="InGameView.SetupDeckPanel"/> — this class
+    /// no longer creates a SlotButtonCanvas or overlay buttons.
     ///
     /// <para>The stage does not own game rules — it only knows about GameObjects,
     /// transforms, and how to animate them. All rule decisions are made by
@@ -64,12 +67,6 @@ namespace SimpleGame.Game.InGame
         private int _currentGridRows;
         private int _currentGridCols;
 
-        /// <summary>UGUI Buttons for each tray slot — invisible, positioned over 3D slot pieces.</summary>
-        private UnityEngine.UI.Button[] _slotButtons;
-
-        /// <summary>Canvas that hosts the slot buttons (Screen Space Overlay).</summary>
-        private Canvas _slotButtonCanvas;
-
         /// <summary>
         /// Piece IDs currently mid-shake. LateUpdate skips repositioning these so the
         /// shake tween can animate position freely without being overwritten each frame.
@@ -92,10 +89,7 @@ namespace SimpleGame.Game.InGame
 
         /// <summary>
         /// Spawn all piece GameObjects for this level, lay out the initial tray, wire
-        /// piece-position callbacks on InGameView, and create slot buttons.
-        ///
-        /// Returns the model factory closure that InGameFlowPresenter should call per retry
-        /// (the factory itself calls SpawnLevel again with a fresh board).
+        /// piece-position callbacks on InGameView, and set up the deck panel buttons.
         /// </summary>
         public void SpawnLevel(SimpleJigsaw.PuzzleBoard rawBoard, int seedPieceId, int slotCount,
                                IReadOnlyList<int> deckOrder, int gridCols)
@@ -247,7 +241,7 @@ namespace SimpleGame.Game.InGame
                 );
             }
 
-            SpawnSlotButtons(slotCount);
+            // Populate UGUI deck panel — one button per visible slot
             _inGameView?.SetupDeckPanel(slotCount);
 
             Debug.Log($"[PuzzleStageController] Spawned {pieces.Count} pieces — 1 seed, {deckOrder.Count} in deck, {slotCount} visible slots. Board: {gridRows}x{gridCols}");
@@ -342,7 +336,7 @@ namespace SimpleGame.Game.InGame
             return tp;
         }
 
-        // ── LateUpdate: reposition tray slot pieces and UGUI buttons ─────────────────
+        // ── LateUpdate: reposition 3D tray slot pieces each frame ────────────────────
 
         private void LateUpdate()
         {
@@ -366,11 +360,11 @@ namespace SimpleGame.Game.InGame
             float maxByWidth = slotCount > 0 ? (orthoW * 0.92f) / slotCount : orthoW;
             if (slotWorldW > maxByWidth) slotScale = maxByWidth / cellW;
 
-            float slotWorldWFinal = cellW  * slotScale;
-            float slotWorldHFinal = cellH  * slotScale;
+            float slotWorldHFinal = cellH * slotScale;
             float trayY = camY - orthoH * 0.5f + slotWorldHFinal * 0.5f + 0.1f;
 
             float totalTrayW  = orthoW * 0.92f;
+            float slotWorldWFinal = cellW * slotScale;
             float slotSpacing = slotCount > 1
                 ? (totalTrayW - slotWorldWFinal) / (slotCount - 1)
                 : 0f;
@@ -399,32 +393,6 @@ namespace SimpleGame.Game.InGame
                         if (_traySlotData != null) _traySlotData[pid] = (newPos, newScale);
                     }
                 }
-            }
-
-            if (_slotButtons == null) return;
-
-            float canvasScale = _slotButtonCanvas != null ? _slotButtonCanvas.scaleFactor : 1f;
-            if (canvasScale < 1e-4f) canvasScale = 1f;
-
-            for (int i = 0; i < _slotButtons.Length && i < slotCount; i++)
-            {
-                var btn = _slotButtons[i];
-                if (btn == null) continue;
-
-                var rt = btn.GetComponent<RectTransform>();
-
-                Vector3 screenPos = cam.WorldToScreenPoint(_traySlotPositions[i]);
-                rt.anchoredPosition = new Vector2(screenPos.x / canvasScale,
-                                                  screenPos.y / canvasScale);
-
-                Vector3 rightEdge = cam.WorldToScreenPoint(_traySlotPositions[i] + Vector3.right * slotWorldWFinal * 0.5f);
-                Vector3 leftEdge  = cam.WorldToScreenPoint(_traySlotPositions[i] - Vector3.right * slotWorldWFinal * 0.5f);
-                Vector3 topEdge   = cam.WorldToScreenPoint(_traySlotPositions[i] + Vector3.up    * slotWorldHFinal * 0.5f);
-                Vector3 botEdge   = cam.WorldToScreenPoint(_traySlotPositions[i] - Vector3.up    * slotWorldHFinal * 0.5f);
-
-                float pxW = Mathf.Abs(rightEdge.x - leftEdge.x);
-                float pxH = Mathf.Abs(topEdge.y   - botEdge.y);
-                rt.sizeDelta = new Vector2(pxW / canvasScale, pxH / canvasScale);
             }
         }
 
@@ -501,63 +469,6 @@ namespace SimpleGame.Game.InGame
             var targetLocal = boardParent.InverseTransformPoint(solved);
 
             PieceTweener.PlaceOnBoard(go, targetLocal, destroyCancellationToken).Forget();
-        }
-
-        // ── Slot button spawning ──────────────────────────────────────────────────────
-
-        private void SpawnSlotButtons(int slotCount)
-        {
-            if (_slotButtons != null)
-            {
-                foreach (var b in _slotButtons)
-                    if (b != null) Destroy(b.gameObject);
-            }
-            _slotButtons = null;
-
-            if (_slotButtonCanvas == null)
-            {
-                var canvasGo = new GameObject("SlotButtonCanvas");
-                _slotButtonCanvas = canvasGo.AddComponent<Canvas>();
-                _slotButtonCanvas.renderMode  = RenderMode.ScreenSpaceOverlay;
-                _slotButtonCanvas.sortingOrder = 10;
-                canvasGo.AddComponent<UnityEngine.UI.CanvasScaler>();
-                canvasGo.AddComponent<UnityEngine.UI.GraphicRaycaster>();
-            }
-
-            _slotButtons = new UnityEngine.UI.Button[slotCount];
-
-            for (int i = 0; i < slotCount; i++)
-            {
-                int slotIdx = i;
-
-                var btnGo = new GameObject($"SlotButton_{i}");
-                btnGo.transform.SetParent(_slotButtonCanvas.transform, false);
-
-                var rt = btnGo.AddComponent<RectTransform>();
-                rt.anchorMin = Vector2.zero;
-                rt.anchorMax = Vector2.zero;
-                rt.pivot     = new Vector2(0.5f, 0.5f);
-                rt.sizeDelta = new Vector2(100f, 100f);
-
-                var img = btnGo.AddComponent<UnityEngine.UI.Image>();
-                img.color = new Color(1f, 1f, 1f, 0f);
-
-                var btn = btnGo.AddComponent<UnityEngine.UI.Button>();
-                btn.transition = UnityEngine.UI.Selectable.Transition.None;
-
-                btn.onClick.AddListener(() =>
-                {
-                    if (_popupManager != null && _popupManager.HasActivePopup) return;
-                    var contents = _inGameView?.GetSlotContents();
-                    if (contents == null || slotIdx >= contents.Length) return;
-                    if (!contents[slotIdx].HasValue) return;
-                    int pid = contents[slotIdx].Value;
-                    Debug.Log($"[SlotButton] Slot {slotIdx} tapped, piece {pid}");
-                    _inGameView?.NotifyPieceTapped(pid);
-                });
-
-                _slotButtons[i] = btn;
-            }
         }
     }
 }
