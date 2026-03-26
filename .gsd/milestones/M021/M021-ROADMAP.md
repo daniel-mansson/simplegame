@@ -48,16 +48,16 @@ This milestone is complete only when all are true:
 
 ## Slices
 
-- [ ] **S01: Extract PuzzleStageController** `risk:medium` `depends:[]`
+- [x] **S01: Extract PuzzleStageController** `risk:medium` `depends:[]`
   > After this: 3D pieces spawn, tray layout runs, slot buttons work — InGame scene plays identically; PuzzleStageController is a self-contained MonoBehaviour wired via SerializeField on InGameSceneController
 
-- [ ] **S02: Extract InGameFlowPresenter** `risk:medium` `depends:[S01]`
+- [x] **S02: Extract InGameFlowPresenter** `risk:medium` `depends:[S01]`
   > After this: win/lose/retry/popup flows work; InGameSceneController is ≤80 lines; all InGameTests pass against the new presenter seams
 
-- [ ] **S03: Slim MainMenuSceneController** `risk:low` `depends:[]`
+- [x] **S03: Slim MainMenuSceneController** `risk:low` `depends:[]`
   > After this: main menu plays identically; MainMenuSceneController is ≤80 lines; SceneControllerTests pass
 
-- [ ] **S04: Wire, verify, and commit** `risk:low` `depends:[S01,S02,S03]`
+- [x] **S04: Wire, verify, and commit** `risk:low` `depends:[S01,S02,S03]`
   > After this: all tests pass, all three scene controllers meet the line-count target, full game session verified end-to-end in editor
 
 ## Boundary Map
