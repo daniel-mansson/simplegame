@@ -47,3 +47,4 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 - [x] M017: Unity Ads Integration — rewarded and interstitial ads with graceful failure handling
 - [x] M018: Consent & ATT — first-launch ToS acceptance gate and iOS App Tracking Transparency dialog
 - [x] M019: Real IAP — Unity Purchasing + PlayFab receipt validation for coin purchases (iOS + Android)
+- [ ] M020: Feature-Cohesion Restructure — reorganise Services/ and Popup/ into feature-cohesive folders (IAP/, Ads/, ATT/, Economy/, Save/, PlayFab/, Progression/, Shop/, LevelFlow/, ConfirmDialog/)
