@@ -67,6 +67,12 @@ namespace SimpleGame.Game.InGame
         private int _currentGridRows;
         private int _currentGridCols;
 
+        /// <summary>
+        /// Piece IDs currently mid-shake. LateUpdate skips repositioning these so the
+        /// shake tween can animate position freely without being overwritten each frame.
+        /// </summary>
+        private readonly HashSet<int> _shakingPieces = new();
+
         /// <summary>Runtime GridLayoutConfig created per SpawnLevel; destroyed on Reset.</summary>
         private SimpleJigsaw.GridLayoutConfig _runtimeGridConfig;
 
@@ -204,16 +210,23 @@ namespace SimpleGame.Game.InGame
                 if (desc.Id == seedPieceId) continue;
                 if (!_pieceObjects.TryGetValue(desc.Id, out var go)) continue;
 
-                // All non-seed pieces start off-screen — deck panel buttons are the visual
-                // while pieces are in the deck. Pieces only appear on the board when placed.
-                go.transform.SetParent(null, worldPositionStays: false);
-                go.transform.position   = hiddenPos;
-                go.transform.localScale = _traySlotScales[slotCount - 1];
+                Vector3 pos, scale;
+                if (deckSlotIndex.TryGetValue(desc.Id, out int slotIdx))
+                {
+                    pos   = _traySlotPositions[slotIdx];
+                    scale = _traySlotScales[slotIdx];
+                }
+                else
+                {
+                    pos   = hiddenPos;
+                    scale = _traySlotScales[slotCount - 1];
+                }
 
-                // Record tray slot data for retry reset (slot pieces stay hidden on retry too)
-                int slotIdx = deckSlotIndex.TryGetValue(desc.Id, out var si) ? si : -1;
-                var storedPos = slotIdx >= 0 ? _traySlotPositions[slotIdx] : hiddenPos;
-                _traySlotData[desc.Id] = (hiddenPos, _traySlotScales[slotCount - 1]);
+                go.transform.SetParent(null, worldPositionStays: false);
+                go.transform.position   = pos;
+                go.transform.localScale = scale;
+
+                _traySlotData[desc.Id] = (pos, scale);
             }
 
             _initialTrayData = new Dictionary<int, (Vector3, Vector3)>(_traySlotData);
@@ -226,12 +239,6 @@ namespace SimpleGame.Game.InGame
                     onRevealPiece:     RevealPiece,
                     onShakePiece:      ShakePieceInSlot
                 );
-
-                // Provide piece GO lookup so InGameView can hand pieces to DeckPreviewManager
-                _inGameView.SetPieceGoLookup(pid =>
-                    _pieceObjects != null && _pieceObjects.TryGetValue(pid, out var go) ? go : null);
-
-                _inGameView.SetHiddenPos(hiddenPos);
             }
 
             // Populate UGUI deck panel — one button per visible slot
@@ -329,14 +336,12 @@ namespace SimpleGame.Game.InGame
             return tp;
         }
 
-        // ── LateUpdate: reposition 3D tray slot pieces and deck hit-target buttons ────
+        // ── LateUpdate: reposition 3D tray slot pieces each frame ────────────────────
 
         private void LateUpdate()
         {
             if (_traySlotPositions == null || _traySlotPositions.Length == 0) return;
 
-            // LateUpdate only needs to update the tray slot position arrays for shake/reveal
-            // tween reference points. Pieces are off-screen while in the deck — no repositioning needed.
             var cam = Camera.main;
             if (cam == null) return;
 
@@ -355,21 +360,39 @@ namespace SimpleGame.Game.InGame
             float maxByWidth = slotCount > 0 ? (orthoW * 0.92f) / slotCount : orthoW;
             if (slotWorldW > maxByWidth) slotScale = maxByWidth / cellW;
 
-            float slotWorldWFinal = cellW * slotScale;
             float slotWorldHFinal = cellH * slotScale;
             float trayY = camY - orthoH * 0.5f + slotWorldHFinal * 0.5f + 0.1f;
 
             float totalTrayW  = orthoW * 0.92f;
+            float slotWorldWFinal = cellW * slotScale;
             float slotSpacing = slotCount > 1
                 ? (totalTrayW - slotWorldWFinal) / (slotCount - 1)
                 : 0f;
             float trayStartX  = camX - (slotSpacing * (slotCount - 1)) * 0.5f;
 
+            var slotContents = _inGameView?.GetSlotContents();
+
             for (int i = 0; i < slotCount; i++)
             {
-                float x = trayStartX + i * slotSpacing;
-                _traySlotPositions[i] = new Vector3(x, trayY, -2f);
-                _traySlotScales[i]    = Vector3.one * slotScale;
+                float x      = trayStartX + i * slotSpacing;
+                var newPos   = new Vector3(x, trayY, -2f);
+                var newScale = Vector3.one * slotScale;
+                _traySlotPositions[i] = newPos;
+                _traySlotScales[i]    = newScale;
+
+                if (slotContents != null && i < slotContents.Length && slotContents[i].HasValue)
+                {
+                    int pid = slotContents[i].Value;
+                    if (_pieceObjects != null && _pieceObjects.TryGetValue(pid, out var go))
+                    {
+                        if (!_shakingPieces.Contains(pid))
+                        {
+                            go.transform.position   = newPos;
+                            go.transform.localScale = newScale;
+                        }
+                        if (_traySlotData != null) _traySlotData[pid] = (newPos, newScale);
+                    }
+                }
             }
         }
 
@@ -377,24 +400,65 @@ namespace SimpleGame.Game.InGame
 
         private void MovePieceToTraySlot(int pieceId, int slotIndex)
         {
-            // DeckPreviewManager handles piece positioning when RefreshSlot is called.
-            // PuzzleStageController has no additional work to do here.
+            if (!_pieceObjects.TryGetValue(pieceId, out var go)) return;
+            if (_traySlotPositions == null || slotIndex >= _traySlotPositions.Length) return;
+
+            var pos   = _traySlotPositions[slotIndex];
+            var scale = _traySlotScales[slotIndex];
+
+            go.transform.SetParent(null, worldPositionStays: false);
+            PieceTweener.SlideToSlot(go, pos, scale, destroyCancellationToken).Forget();
+
+            if (_traySlotData != null)
+                _traySlotData[pieceId] = (pos, scale);
         }
 
         private void ShakePieceInSlot(int slotIndex)
         {
-            // Pieces are off-screen while in the deck — nothing to shake visually.
-            // Visual shake feedback on the deck button is a future polish task.
+            if (_traySlotPositions == null || slotIndex >= _traySlotPositions.Length) return;
+            var slotContents = _inGameView?.GetSlotContents();
+            if (slotContents == null || slotIndex >= slotContents.Length) return;
+            if (!slotContents[slotIndex].HasValue) return;
+            int pieceId = slotContents[slotIndex].Value;
+            if (!_pieceObjects.TryGetValue(pieceId, out var go)) return;
+
+            _shakingPieces.Add(pieceId);
+            ShakePieceAsync(go, pieceId, _traySlotPositions[slotIndex], destroyCancellationToken).Forget();
+        }
+
+        private async UniTaskVoid ShakePieceAsync(GameObject go, int pieceId, Vector3 restPos,
+                                                   CancellationToken ct)
+        {
+            try
+            {
+                await PieceTweener.ShakePiece(go, restPos, ct);
+            }
+            finally
+            {
+                _shakingPieces.Remove(pieceId);
+                if (go != null && _traySlotPositions != null)
+                {
+                    var contents = _inGameView?.GetSlotContents();
+                    if (contents != null)
+                    {
+                        for (int i = 0; i < contents.Length; i++)
+                        {
+                            if (contents[i] == pieceId && i < _traySlotPositions.Length)
+                            {
+                                go.transform.position   = _traySlotPositions[i];
+                                go.transform.localScale = _traySlotScales[i];
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         private void RevealPiece(int pieceId)
         {
             if (!_pieceObjects.TryGetValue(pieceId, out var go)) return;
             if (!_solvedWorldPositions.TryGetValue(pieceId, out var solved)) return;
-
-            // Reset layer to Default so the main camera renders the piece on the board.
-            // DeckPreviewManager may have set it to a DeckPreview layer while in the deck.
-            SetLayerRecursive(go, 0);
 
             var boardParent = _puzzleParent != null ? _puzzleParent : transform;
 
@@ -405,13 +469,6 @@ namespace SimpleGame.Game.InGame
             var targetLocal = boardParent.InverseTransformPoint(solved);
 
             PieceTweener.PlaceOnBoard(go, targetLocal, destroyCancellationToken).Forget();
-        }
-
-        private static void SetLayerRecursive(GameObject go, int layer)
-        {
-            go.layer = layer;
-            foreach (Transform child in go.transform)
-                SetLayerRecursive(child.gameObject, layer);
         }
     }
 }

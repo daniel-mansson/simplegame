@@ -3,7 +3,6 @@ using SimpleGame.Core.Unity.PopupManagement;
 using SimpleGame.Core.Unity.TransitionManagement;
 using SimpleGame.Game.Boot;
 using SimpleGame.Game.InGame;
-using SimpleGame.Game.InGame;
 using SimpleGame.Game.MainMenu;
 using SimpleGame.Game.Popup;
 using SimpleGame.Game.Settings;
@@ -406,7 +405,7 @@ public static class SceneSetup
             new Vector2(0.70f, 0.90f), new Vector2(0.98f, 0.99f), 26);
 
         // ── Deck Panel: bottom strip (y 0–18%) ───────────────────────────
-        // Background panel — pieces are invisible while in deck; buttons are the visual.
+        // Outer panel — background colour only; contains _pieceButtonContainer.
         var deckPanelGO = new GameObject("DeckPanel");
         deckPanelGO.transform.SetParent(canvas.transform, false);
         var deckPanelRect = deckPanelGO.AddComponent<RectTransform>();
@@ -435,6 +434,10 @@ public static class SceneSetup
         hlg.childAlignment         = TextAnchor.MiddleCenter;
         hlg.spacing                = 8f;
         hlg.padding                = new RectOffset(8, 8, 4, 4);
+
+        var csf = pieceButtonContainerGO.AddComponent<ContentSizeFitter>();
+        csf.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+        csf.verticalFit   = ContentSizeFitter.FitMode.Unconstrained;
 
         // ── Wire InGameView ────────────────────────────────────────────────
         var inGameView = canvas.gameObject.AddComponent<InGameView>();
@@ -583,14 +586,6 @@ internal class SceneSetupHelpers
         cam.farClipPlane = 100f;
         cam.depth = 0;
         go.transform.position = new Vector3(0f, 0f, -10f);
-
-        // Exclude all DeckPreview layers (6–10) so pieces inside preview cameras
-        // don't render through to the main view.
-        int deckPreviewMask = 0;
-        for (int i = 0; i < DeckPreviewManager.MaxSlots; i++)
-            deckPreviewMask |= 1 << (DeckPreviewManager.BaseLayer + i);
-        cam.cullingMask = ~deckPreviewMask; // everything except DeckPreview layers
-
         return cam;
     }
 
