@@ -8,15 +8,17 @@ namespace SimpleGame.Game.InGame
     /// Unity MonoBehaviour implementation of IInGameView.
     ///
     /// Layout:
-    ///   HUD        — Level label (centre), Hearts (left), Piece counter (right) — top strip
-    ///   Board      — 3D jigsaw pieces in world space (managed by PuzzleStageController)
-    ///   DeckPanel  — Bottom strip: UGUI HorizontalLayoutGroup with one Button per active
-    ///                tray slot. Buttons are created by <see cref="SetupDeckPanel"/> and
-    ///                kept in sync by <see cref="RefreshSlot"/>.
+    ///   HUD       — Level label (centre), Hearts (left), Piece counter (right) — top strip
+    ///   Board     — 3D jigsaw pieces in world space (managed by PuzzleStageController)
+    ///   DeckPanel — Transparent container; holds invisible UGUI hit-target buttons that
+    ///               are repositioned each frame (via <see cref="UpdateDeckButtonScreenPositions"/>)
+    ///               to exactly overlay the 3D tray-slot pieces in world space.
+    ///               The 3D pieces ARE the visual; the UGUI buttons are the tap surface.
     ///
-    /// PuzzleStageController calls <see cref="RegisterPieceCallbacks"/> after spawning so
-    /// this view can forward 3D-piece reposition requests without owning the GameObjects.
-    /// It also calls <see cref="SetupDeckPanel"/> to populate the deck button row.
+    /// PuzzleStageController calls:
+    ///   <see cref="RegisterPieceCallbacks"/> — after spawning, to wire 3D piece repositioning
+    ///   <see cref="SetupDeckPanel"/>         — to create N invisible hit-target buttons
+    ///   <see cref="UpdateDeckButtonScreenPositions"/> — every LateUpdate to track piece positions
     /// </summary>
     public class InGameView : MonoBehaviour, IInGameView
     {
@@ -25,8 +27,8 @@ namespace SimpleGame.Game.InGame
         [SerializeField] private Text _levelText;
 
         [Header("Deck Panel")]
-        [SerializeField] private GameObject    _deckPanel;            // bottom strip container
-        [SerializeField] private RectTransform _pieceButtonContainer; // HorizontalLayoutGroup child
+        [SerializeField] private GameObject    _deckPanel;            // transparent container (no visual)
+        [SerializeField] private RectTransform _pieceButtonContainer; // plain RectTransform parent for buttons
 
         public event Action<int> OnTapPiece;
 
@@ -38,21 +40,20 @@ namespace SimpleGame.Game.InGame
         // Per-slot tracking: slotIndex → current piece ID (null = empty)
         private int?[] _slotContents;
 
-        // Runtime deck buttons — one per slot, created by SetupDeckPanel
-        private Button[] _deckButtons;
+        // Runtime hit-target buttons — one per slot, positioned in LateUpdate to overlay 3D pieces
+        private Button[]        _deckButtons;
+        private RectTransform[] _deckButtonRects;
 
         // ── Registration ──────────────────────────────────────────────────
 
         /// <summary>
         /// Called by PuzzleStageController after piece GameObjects are spawned.
-        /// <paramref name="onMovePieceToSlot"/> (pieceId, slotIdx) repositions the 3D piece.
-        /// <paramref name="onRevealPiece"/> moves the piece to its solved board position.
         /// </summary>
         public void RegisterPieceCallbacks(
             Action<int, int> onMovePieceToSlot,
             Action<int>      onRevealPiece,
             Action<int>      onShakePiece = null,
-            Action           onHideTray   = null)   // onHideTray kept for scene compatibility
+            Action           onHideTray   = null)   // kept for scene compatibility
         {
             _onMovePieceToSlot = onMovePieceToSlot;
             _onRevealPiece     = onRevealPiece;
@@ -60,9 +61,10 @@ namespace SimpleGame.Game.InGame
         }
 
         /// <summary>
-        /// Creates <paramref name="slotCount"/> UGUI buttons inside
-        /// <see cref="_pieceButtonContainer"/>. Call once per level start (or retry)
-        /// from <see cref="PuzzleStageController.SpawnLevel"/>.
+        /// Creates <paramref name="slotCount"/> invisible UGUI hit-target buttons inside
+        /// <see cref="_pieceButtonContainer"/>. Buttons are transparent — the 3D pieces
+        /// are the visual. Positions are updated each frame by
+        /// <see cref="UpdateDeckButtonScreenPositions"/>.
         /// </summary>
         public void SetupDeckPanel(int slotCount)
         {
@@ -73,28 +75,33 @@ namespace SimpleGame.Game.InGame
                     Destroy(_pieceButtonContainer.GetChild(i).gameObject);
             }
 
-            _deckButtons = new Button[slotCount];
+            _deckButtons      = new Button[slotCount];
+            _deckButtonRects  = new RectTransform[slotCount];
 
             if (_pieceButtonContainer == null) return;
 
             for (int i = 0; i < slotCount; i++)
             {
-                int slotIdx = i; // capture for closure
+                int slotIdx = i;
 
-                // Button root
                 var btnGo = new GameObject($"PieceButton_{i}");
                 btnGo.transform.SetParent(_pieceButtonContainer, false);
 
-                var le = btnGo.AddComponent<LayoutElement>();
-                le.preferredWidth  = 120f;
-                le.preferredHeight = 80f;
-                le.flexibleWidth   = 1f;
+                // Anchor to bottom-left; position set each frame from world-space piece coords
+                var rt = btnGo.AddComponent<RectTransform>();
+                rt.anchorMin        = Vector2.zero;
+                rt.anchorMax        = Vector2.zero;
+                rt.pivot            = new Vector2(0.5f, 0.5f);
+                rt.anchoredPosition = Vector2.zero;
+                rt.sizeDelta        = new Vector2(100f, 100f);
 
+                // Transparent Image — required for Button raycast but visually invisible
                 var img = btnGo.AddComponent<Image>();
-                img.color = new Color(0.25f, 0.45f, 0.85f, 1f);
+                img.color = Color.clear;
 
                 var btn = btnGo.AddComponent<Button>();
                 btn.targetGraphic = img;
+                btn.transition    = Selectable.Transition.None;
 
                 btn.onClick.AddListener(() =>
                 {
@@ -103,27 +110,52 @@ namespace SimpleGame.Game.InGame
                     OnTapPiece?.Invoke(_slotContents[slotIdx].Value);
                 });
 
-                // Label text
-                var textGo = new GameObject("Label");
-                textGo.transform.SetParent(btnGo.transform, false);
+                _deckButtons[i]     = btn;
+                _deckButtonRects[i] = rt;
 
-                var textRect = textGo.AddComponent<RectTransform>();
-                textRect.anchorMin        = Vector2.zero;
-                textRect.anchorMax        = Vector2.one;
-                textRect.sizeDelta        = Vector2.zero;
-                textRect.anchoredPosition = Vector2.zero;
-
-                var text = textGo.AddComponent<Text>();
-                text.text           = "";
-                text.alignment      = TextAnchor.MiddleCenter;
-                text.fontSize       = 20;
-                text.color          = Color.white;
-                text.raycastTarget  = false;
-
-                _deckButtons[i] = btn;
-
-                // Start hidden — RefreshSlot will show it when a piece is assigned
+                // Start disabled — RefreshSlot enables when a piece occupies the slot
                 btnGo.SetActive(false);
+            }
+        }
+
+        /// <summary>
+        /// Repositions deck hit-target buttons to overlay the 3D tray-slot pieces.
+        /// Call from PuzzleStageController.LateUpdate after updating _traySlotPositions.
+        /// </summary>
+        /// <param name="cam">The scene camera (used for WorldToScreenPoint).</param>
+        /// <param name="slotWorldPositions">World-space centre of each tray slot.</param>
+        /// <param name="slotWorldW">World-space width of one slot (for button sizing).</param>
+        /// <param name="slotWorldH">World-space height of one slot (for button sizing).</param>
+        /// <param name="canvasScaleFactor">Canvas.scaleFactor of the parent canvas.</param>
+        public void UpdateDeckButtonScreenPositions(
+            Camera cam,
+            Vector3[] slotWorldPositions,
+            float slotWorldW,
+            float slotWorldH,
+            float canvasScaleFactor)
+        {
+            if (_deckButtonRects == null || cam == null) return;
+            if (canvasScaleFactor < 1e-4f) canvasScaleFactor = 1f;
+
+            int count = Mathf.Min(_deckButtonRects.Length, slotWorldPositions.Length);
+            for (int i = 0; i < count; i++)
+            {
+                var rt = _deckButtonRects[i];
+                if (rt == null) continue;
+
+                Vector3 screenPos  = cam.WorldToScreenPoint(slotWorldPositions[i]);
+                rt.anchoredPosition = new Vector2(screenPos.x / canvasScaleFactor,
+                                                  screenPos.y / canvasScaleFactor);
+
+                // Size button to match the world-space piece footprint
+                Vector3 rightEdge = cam.WorldToScreenPoint(slotWorldPositions[i] + Vector3.right * slotWorldW * 0.5f);
+                Vector3 leftEdge  = cam.WorldToScreenPoint(slotWorldPositions[i] - Vector3.right * slotWorldW * 0.5f);
+                Vector3 topEdge   = cam.WorldToScreenPoint(slotWorldPositions[i] + Vector3.up    * slotWorldH * 0.5f);
+                Vector3 botEdge   = cam.WorldToScreenPoint(slotWorldPositions[i] - Vector3.up    * slotWorldH * 0.5f);
+
+                float pxW = Mathf.Abs(rightEdge.x - leftEdge.x);
+                float pxH = Mathf.Abs(topEdge.y   - botEdge.y);
+                rt.sizeDelta = new Vector2(pxW / canvasScaleFactor, pxH / canvasScaleFactor);
             }
         }
 
@@ -134,12 +166,12 @@ namespace SimpleGame.Game.InGame
 
         /// <summary>
         /// Update a single tray slot. If <paramref name="pieceId"/> is null the slot becomes
-        /// visually empty (button hidden). Otherwise the piece is repositioned to that slot
-        /// and the deck button is shown and labelled.
+        /// empty (hit-target hidden). Otherwise the deck button is enabled and the 3D piece
+        /// is repositioned to that slot via the registered callback.
         /// </summary>
         public void RefreshSlot(int slotIndex, int? pieceId)
         {
-            // Grow tracking array on demand (slot count varies with config)
+            // Grow tracking array on demand
             if (_slotContents == null || slotIndex >= _slotContents.Length)
             {
                 var grown = new int?[slotIndex + 1];
@@ -151,17 +183,12 @@ namespace SimpleGame.Game.InGame
             var oldId = _slotContents[slotIndex];
             _slotContents[slotIndex] = pieceId;
 
-            // Update deck button for this slot
+            // Show/hide the hit-target button for this slot
             if (_deckButtons != null && slotIndex < _deckButtons.Length)
             {
                 var btn = _deckButtons[slotIndex];
                 if (btn != null)
-                {
                     btn.gameObject.SetActive(pieceId.HasValue);
-                    var label = btn.GetComponentInChildren<Text>();
-                    if (label != null)
-                        label.text = pieceId.HasValue ? $"Piece {pieceId.Value + 1}" : "";
-                }
             }
 
             if (pieceId == oldId) return;
@@ -199,7 +226,6 @@ namespace SimpleGame.Game.InGame
 
         public void ShakePiece(int slotIndex)
         {
-            // Resolve which piece ID is currently in this slot, then forward to the controller
             if (_slotContents == null || slotIndex >= _slotContents.Length) return;
             if (!_slotContents[slotIndex].HasValue) return;
             _onShakePiece?.Invoke(slotIndex);

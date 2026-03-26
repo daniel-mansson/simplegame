@@ -38,6 +38,7 @@ namespace SimpleGame.Game.InGame
 
         // ── View reference ────────────────────────────────────────────────────────────
         [SerializeField] private InGameView _inGameView;
+        private Canvas _inGameViewCanvas;  // cached canvas for scaleFactor lookup
         private SimpleGame.Core.PopupManagement.PopupManager<PopupId> _popupManager;
 
         // ── Piece tracking ────────────────────────────────────────────────────────────
@@ -94,6 +95,10 @@ namespace SimpleGame.Game.InGame
         public void SpawnLevel(SimpleJigsaw.PuzzleBoard rawBoard, int seedPieceId, int slotCount,
                                IReadOnlyList<int> deckOrder, int gridCols)
         {
+            // Cache the canvas that parents InGameView for scaleFactor lookup in LateUpdate
+            if (_inGameView != null && _inGameViewCanvas == null)
+                _inGameViewCanvas = _inGameView.GetComponentInParent<Canvas>();
+
             // Destroy pieces from previous level
             if (_spawnedPieces != null)
             {
@@ -336,7 +341,7 @@ namespace SimpleGame.Game.InGame
             return tp;
         }
 
-        // ── LateUpdate: reposition 3D tray slot pieces each frame ────────────────────
+        // ── LateUpdate: reposition 3D tray slot pieces and deck hit-target buttons ────
 
         private void LateUpdate()
         {
@@ -360,11 +365,11 @@ namespace SimpleGame.Game.InGame
             float maxByWidth = slotCount > 0 ? (orthoW * 0.92f) / slotCount : orthoW;
             if (slotWorldW > maxByWidth) slotScale = maxByWidth / cellW;
 
+            float slotWorldWFinal = cellW * slotScale;
             float slotWorldHFinal = cellH * slotScale;
             float trayY = camY - orthoH * 0.5f + slotWorldHFinal * 0.5f + 0.1f;
 
             float totalTrayW  = orthoW * 0.92f;
-            float slotWorldWFinal = cellW * slotScale;
             float slotSpacing = slotCount > 1
                 ? (totalTrayW - slotWorldWFinal) / (slotCount - 1)
                 : 0f;
@@ -393,6 +398,14 @@ namespace SimpleGame.Game.InGame
                         if (_traySlotData != null) _traySlotData[pid] = (newPos, newScale);
                     }
                 }
+            }
+
+            // Keep UGUI hit-target buttons aligned over the 3D tray pieces
+            if (_inGameView != null)
+            {
+                float canvasScale = _inGameViewCanvas != null ? _inGameViewCanvas.scaleFactor : 1f;
+                _inGameView.UpdateDeckButtonScreenPositions(
+                    cam, _traySlotPositions, slotWorldWFinal, slotWorldHFinal, canvasScale);
             }
         }
 
