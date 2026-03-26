@@ -32,6 +32,22 @@ Move Progression and PlayFab files, fully empty and remove `Services/`, run test
 8. Verify 340 pass, 0 fail
 9. `git add -A && git commit -m "refactor(S02): move Economy, Save, Progression, PlayFab, MetaProgressionService; remove Services/"`
 
+## Observability Impact
+
+This task performs only `git mv` renames and directory removal — no runtime behaviour changes.
+
+**What changes are visible to a future agent:**
+- `ls Assets/Scripts/Game/Services/` → "No such file or directory" (directory removed)
+- `ls Assets/Scripts/Game/{Progression,PlayFab}/` → lists expected files in each folder
+- `git status` → no untracked `Services.meta` after `git rm`
+- `git log --diff-filter=R --name-status -1` → all moved files show `R100` (rename 100%) entries, confirming blame history is intact rather than delete+add
+
+**Failure state surfaces:**
+- Mid-task failure: `git status` shows partial rename staging (files in both old and new locations); `git reset HEAD` restores clean state
+- rmdir failure ("directory not empty"): `ls Assets/Scripts/Game/Services/` reveals unmoved files; fix by moving them then retry
+- Compiler errors after moves: check `Editor.log` using K011 pattern to distinguish stale-cache errors from genuine ones (look for errors after the last `Starting:` line)
+- Test failure: `get_test_job` returns `failed > 0`; check test runner output for which tests broke and which files they reference
+
 ## Context
 
 - K006 test run method: stdin pipe to avoid UV_HANDLE_CLOSING crash on Windows

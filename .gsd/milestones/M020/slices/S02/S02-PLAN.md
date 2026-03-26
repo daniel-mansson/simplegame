@@ -20,7 +20,7 @@
   Save: IMetaSaveService, MetaSaveData, MetaSaveMerge, PlayerPrefsMetaSaveService.
   Meta: MetaProgressionService.cs (moved to existing Meta/ folder).
 
-- [ ] **T02: Move Progression (4) and PlayFab (16), remove Services/ folder, run tests, commit**
+- [x] **T02: Move Progression (4) and PlayFab (16), remove Services/ folder, run tests, commit**
   Progression: ProgressionService, GameService, GameSessionService, GameOutcome.
   PlayFab (14 from Services/): IPlayFabAuthService, PlayFabAuthService, ICloudSaveService, PlayFabCloudSaveService, IAnalyticsService, PlayFabAnalyticsService, IPlatformLinkService, PlayFabPlatformLinkService, IRemoteConfigService, PlayFabRemoteConfigService, GameRemoteConfig, ISingularService, SingularService, NullSingularService.
   PlayFab (2 from Popup/): IPlatformLinkView, PlatformLinkPresenter.
@@ -42,3 +42,5 @@ This slice performs only `git mv` renames — no runtime behaviour changes. Obse
 - **Compiler health:** Unity will auto-reimport moved files; compile errors in `Editor.log` are the failure signal. Use K011 to distinguish stale-cache errors from genuine ones.
 - **Test gate:** `run_tests EditMode` returning 340 passed with 0 failed is the go/no-go signal for T02 completion.
 - **Failure state:** If a `git mv` fails mid-task, `git status` shows partial rename staging; `git reset HEAD` restores clean state. No runtime state is affected — these are source file moves only.
+- **Partial-move diagnostic:** `git diff --cached --name-status | grep -E '^[AD]' | grep Services/` — any `D` without a corresponding `A` at the target path indicates a move that wrote a delete but not an add; `git reset HEAD <file>` to unstage and retry.
+- **Compiler error diagnostic:** Use K011 pattern: `python3 -c "log=open('C:/Users/Daniel/AppData/Local/Unity/Editor/Editor.log',errors='replace').read(); last=log.split('Starting: ')[-1]; errors=[l for l in last.split('\n') if 'error CS' in l]; print('\n'.join(errors) if errors else 'No errors in last compile run')"` to confirm whether any post-move compile errors are genuine or stale-cache artifacts.
