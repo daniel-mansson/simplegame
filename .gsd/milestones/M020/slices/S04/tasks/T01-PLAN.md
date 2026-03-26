@@ -43,3 +43,14 @@ Verify all structural invariants are met; fix any orphaned `.meta` files; run fi
 - If a `.meta` file is orphaned (its source was removed but .meta wasn't `git rm`'d), it will show as a tracked file with no counterpart — `git status` will show it as a deleted file. `git rm` it.
 - Missing-script warnings in Unity: these appear in Console as yellow warnings mentioning GUID. If any appear after opening Unity, it means a `.meta` GUID was not preserved — check if any move was done without `git mv`. Recovery: find the `.meta` file in git history, restore the GUID.
 - Total .cs file count should be unchanged: `find Assets/Scripts/Game -name "*.cs" | wc -l` before == after
+
+## Observability Impact
+
+This task produces no persistent runtime signals — it is a pure audit/verification task. Inspection surfaces are:
+
+- **Test run result:** `mcporter call unityMCP.get_test_job job_id=<id>` — `result.summary.passed/failed/total` is the authoritative verdict. If `status == "failed"`, `progress.failures_so_far[]` names the failing tests.
+- **Orphan scan output:** Python stdout — either `"No orphaned .meta files found."` or a list of orphaned paths with count. If orphans exist, `git status` will show them as `D` (deleted) entries.
+- **File count deviations:** Per-folder `find | wc -l` numbers. A deviation from the manifest means a file was added or missed in S01–S03. Check `git log --oneline -- <folder>` to trace the discrepancy.
+- **Compile state:** Use K011 method to read only errors after the last `Starting:` line in `Editor.log`. A clean compile shows zero `error CS` lines in that window.
+- **Failure artifact:** If the test job returns `status: "failed"` (vs `"succeeded"`), the `error` field contains the runner error. This is distinct from individual test failures, which appear in `failures_so_far`.
+- **Nothing is written to disk by this task** — all outputs are transient command output and Unity's internal test runner state.
