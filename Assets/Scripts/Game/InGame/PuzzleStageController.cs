@@ -248,6 +248,7 @@ namespace SimpleGame.Game.InGame
             }
 
             SpawnSlotButtons(slotCount);
+            _inGameView?.SetupDeckPanel(slotCount);
 
             Debug.Log($"[PuzzleStageController] Spawned {pieces.Count} pieces — 1 seed, {deckOrder.Count} in deck, {slotCount} visible slots. Board: {gridRows}x{gridCols}");
         }

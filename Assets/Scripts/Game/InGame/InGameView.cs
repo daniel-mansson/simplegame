@@ -8,15 +8,15 @@ namespace SimpleGame.Game.InGame
     /// Unity MonoBehaviour implementation of IInGameView.
     ///
     /// Layout:
-    ///   HUD  — Level label (centre), Hearts (left), Piece counter (right) — top strip
-    ///   Board — 3D jigsaw pieces in world space (managed by InGameSceneController)
-    ///   Tray  — Bottom strip: slot-indexed 3D meshes; no button
+    ///   HUD        — Level label (centre), Hearts (left), Piece counter (right) — top strip
+    ///   Board      — 3D jigsaw pieces in world space (managed by PuzzleStageController)
+    ///   DeckPanel  — Bottom strip: UGUI HorizontalLayoutGroup with one Button per active
+    ///                tray slot. Buttons are created by <see cref="SetupDeckPanel"/> and
+    ///                kept in sync by <see cref="RefreshSlot"/>.
     ///
-    /// InGameSceneController calls RegisterPieceCallbacks() after spawning so this view
-    /// can reposition GameObjects without holding a reference to them itself.
-    ///
-    /// <para>The presenter now calls <see cref="RefreshSlot"/> for targeted slot updates
-    /// instead of sending the full tray window each time.</para>
+    /// PuzzleStageController calls <see cref="RegisterPieceCallbacks"/> after spawning so
+    /// this view can forward 3D-piece reposition requests without owning the GameObjects.
+    /// It also calls <see cref="SetupDeckPanel"/> to populate the deck button row.
     /// </summary>
     public class InGameView : MonoBehaviour, IInGameView
     {
@@ -24,14 +24,13 @@ namespace SimpleGame.Game.InGame
         [SerializeField] private Text _pieceCounterText;
         [SerializeField] private Text _levelText;
 
-        [Header("Tray — serialized for scene wiring, not used at runtime")]
-        [SerializeField] private GameObject _deckPanel;   // kept for SceneSetup wiring; not toggled
-        [SerializeField] private Text       _deckLabel;   // optional status label
-        [SerializeField] private Button     _placeButton; // disabled at runtime
+        [Header("Deck Panel")]
+        [SerializeField] private GameObject    _deckPanel;            // bottom strip container
+        [SerializeField] private RectTransform _pieceButtonContainer; // HorizontalLayoutGroup child
 
         public event Action<int> OnTapPiece;
 
-        // Delegates wired by InGameSceneController after SpawnPieces
+        // Delegates wired by PuzzleStageController after SpawnLevel
         private Action<int, int> _onMovePieceToSlot;   // (pieceId, slotIndex)
         private Action<int>      _onRevealPiece;        // pieceId → board position
         private Action<int>      _onShakePiece;         // slotIndex → shake the piece in that slot
@@ -39,40 +38,104 @@ namespace SimpleGame.Game.InGame
         // Per-slot tracking: slotIndex → current piece ID (null = empty)
         private int?[] _slotContents;
 
-        // ── MonoBehaviour ─────────────────────────────────────────────────
-
-        private void Awake()
-        {
-            if (_deckPanel   != null) _deckPanel.SetActive(false);
-            if (_placeButton != null) _placeButton.gameObject.SetActive(false);
-        }
+        // Runtime deck buttons — one per slot, created by SetupDeckPanel
+        private Button[] _deckButtons;
 
         // ── Registration ──────────────────────────────────────────────────
 
         /// <summary>
-        /// Called by InGameSceneController after piece GameObjects are spawned.
-        /// <paramref name="onMovePieceToSlot"/> (pieceId, slotIdx) repositions the piece.
+        /// Called by PuzzleStageController after piece GameObjects are spawned.
+        /// <paramref name="onMovePieceToSlot"/> (pieceId, slotIdx) repositions the 3D piece.
         /// <paramref name="onRevealPiece"/> moves the piece to its solved board position.
         /// </summary>
         public void RegisterPieceCallbacks(
             Action<int, int> onMovePieceToSlot,
             Action<int>      onRevealPiece,
             Action<int>      onShakePiece = null,
-            Action           onHideTray = null)    // onHideTray kept for scene compatibility
+            Action           onHideTray   = null)   // onHideTray kept for scene compatibility
         {
             _onMovePieceToSlot = onMovePieceToSlot;
             _onRevealPiece     = onRevealPiece;
             _onShakePiece      = onShakePiece;
         }
 
-        /// <summary>Called by PieceTapHandler when a tray piece is tapped.</summary>
+        /// <summary>
+        /// Creates <paramref name="slotCount"/> UGUI buttons inside
+        /// <see cref="_pieceButtonContainer"/>. Call once per level start (or retry)
+        /// from <see cref="PuzzleStageController.SpawnLevel"/>.
+        /// </summary>
+        public void SetupDeckPanel(int slotCount)
+        {
+            // Destroy buttons from previous level
+            if (_pieceButtonContainer != null)
+            {
+                for (int i = _pieceButtonContainer.childCount - 1; i >= 0; i--)
+                    Destroy(_pieceButtonContainer.GetChild(i).gameObject);
+            }
+
+            _deckButtons = new Button[slotCount];
+
+            if (_pieceButtonContainer == null) return;
+
+            for (int i = 0; i < slotCount; i++)
+            {
+                int slotIdx = i; // capture for closure
+
+                // Button root
+                var btnGo = new GameObject($"PieceButton_{i}");
+                btnGo.transform.SetParent(_pieceButtonContainer, false);
+
+                var le = btnGo.AddComponent<LayoutElement>();
+                le.preferredWidth  = 120f;
+                le.preferredHeight = 80f;
+                le.flexibleWidth   = 1f;
+
+                var img = btnGo.AddComponent<Image>();
+                img.color = new Color(0.25f, 0.45f, 0.85f, 1f);
+
+                var btn = btnGo.AddComponent<Button>();
+                btn.targetGraphic = img;
+
+                btn.onClick.AddListener(() =>
+                {
+                    if (_slotContents == null || slotIdx >= _slotContents.Length) return;
+                    if (!_slotContents[slotIdx].HasValue) return;
+                    OnTapPiece?.Invoke(_slotContents[slotIdx].Value);
+                });
+
+                // Label text
+                var textGo = new GameObject("Label");
+                textGo.transform.SetParent(btnGo.transform, false);
+
+                var textRect = textGo.AddComponent<RectTransform>();
+                textRect.anchorMin        = Vector2.zero;
+                textRect.anchorMax        = Vector2.one;
+                textRect.sizeDelta        = Vector2.zero;
+                textRect.anchoredPosition = Vector2.zero;
+
+                var text = textGo.AddComponent<Text>();
+                text.text           = "";
+                text.alignment      = TextAnchor.MiddleCenter;
+                text.fontSize       = 20;
+                text.color          = Color.white;
+                text.raycastTarget  = false;
+
+                _deckButtons[i] = btn;
+
+                // Start hidden — RefreshSlot will show it when a piece is assigned
+                btnGo.SetActive(false);
+            }
+        }
+
+        /// <summary>Called by PieceTapHandler when a 3D tray piece is tapped (legacy path).</summary>
         public void NotifyPieceTapped(int pieceId) => OnTapPiece?.Invoke(pieceId);
 
         // ── IInGameView ───────────────────────────────────────────────────
 
         /// <summary>
-        /// Update a single tray slot. If <paramref name="pieceId"/> is null the slot
-        /// becomes visually empty. Otherwise the piece is repositioned to that slot.
+        /// Update a single tray slot. If <paramref name="pieceId"/> is null the slot becomes
+        /// visually empty (button hidden). Otherwise the piece is repositioned to that slot
+        /// and the deck button is shown and labelled.
         /// </summary>
         public void RefreshSlot(int slotIndex, int? pieceId)
         {
@@ -88,14 +151,23 @@ namespace SimpleGame.Game.InGame
             var oldId = _slotContents[slotIndex];
             _slotContents[slotIndex] = pieceId;
 
+            // Update deck button for this slot
+            if (_deckButtons != null && slotIndex < _deckButtons.Length)
+            {
+                var btn = _deckButtons[slotIndex];
+                if (btn != null)
+                {
+                    btn.gameObject.SetActive(pieceId.HasValue);
+                    var label = btn.GetComponentInChildren<Text>();
+                    if (label != null)
+                        label.text = pieceId.HasValue ? $"Piece {pieceId.Value + 1}" : "";
+                }
+            }
+
             if (pieceId == oldId) return;
 
             if (pieceId.HasValue)
                 _onMovePieceToSlot?.Invoke(pieceId.Value, slotIndex);
-
-            // Update status label when slot 0 changes (slot 0 = front/most prominent)
-            if (slotIndex == 0 && _deckLabel != null)
-                _deckLabel.text = pieceId.HasValue ? $"Piece {pieceId.Value + 1}" : "";
         }
 
         public void RevealPiece(int pieceId)

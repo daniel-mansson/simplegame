@@ -404,33 +404,48 @@ public static class SceneSetup
         var counterGO = CreateText("PieceCounterText","0/0",      canvas.transform,
             new Vector2(0.70f, 0.90f), new Vector2(0.98f, 0.99f), 26);
 
-        // ── Deck / Tray panel: bottom strip (y 0–18%) ─────────────────────
+        // ── Deck Panel: bottom strip (y 0–18%) ───────────────────────────
+        // Outer panel — background colour only; contains _pieceButtonContainer.
         var deckPanelGO = new GameObject("DeckPanel");
         deckPanelGO.transform.SetParent(canvas.transform, false);
         var deckPanelRect = deckPanelGO.AddComponent<RectTransform>();
-        deckPanelRect.anchorMin        = new Vector2(0f,    0f);
-        deckPanelRect.anchorMax        = new Vector2(1f,    0.18f);
+        deckPanelRect.anchorMin        = new Vector2(0f, 0f);
+        deckPanelRect.anchorMax        = new Vector2(1f, 0.18f);
         deckPanelRect.sizeDelta        = Vector2.zero;
         deckPanelRect.anchoredPosition = Vector2.zero;
         var deckBg = deckPanelGO.AddComponent<Image>();
         deckBg.color = new Color(0.1f, 0.1f, 0.15f, 0.85f);
 
-        // "Next piece" label — left half of tray
-        var deckLabelGO = CreateText("DeckLabel", "Next: Piece 1", deckPanelGO.transform,
-            new Vector2(0.02f, 0.15f), new Vector2(0.60f, 0.85f), 28);
+        // Inner container — HorizontalLayoutGroup that holds the per-slot buttons.
+        // InGameView.SetupDeckPanel() creates Button children here at runtime.
+        var pieceButtonContainerGO = new GameObject("PieceButtonContainer");
+        pieceButtonContainerGO.transform.SetParent(deckPanelGO.transform, false);
+        var containerRect = pieceButtonContainerGO.AddComponent<RectTransform>();
+        containerRect.anchorMin        = Vector2.zero;
+        containerRect.anchorMax        = Vector2.one;
+        containerRect.sizeDelta        = Vector2.zero;
+        containerRect.anchoredPosition = Vector2.zero;
 
-        // "Place" button — right third of tray
-        CreateButton("PlaceButton", "Place ▶", deckPanelGO.transform, out var placeButtonGO);
-        SetRect(placeButtonGO, new Vector2(0.62f, 0.10f), new Vector2(0.97f, 0.90f));
+        var hlg = pieceButtonContainerGO.AddComponent<HorizontalLayoutGroup>();
+        hlg.childForceExpandWidth  = false;
+        hlg.childForceExpandHeight = true;
+        hlg.childControlWidth      = true;
+        hlg.childControlHeight     = true;
+        hlg.childAlignment         = TextAnchor.MiddleCenter;
+        hlg.spacing                = 8f;
+        hlg.padding                = new RectOffset(8, 8, 4, 4);
+
+        var csf = pieceButtonContainerGO.AddComponent<ContentSizeFitter>();
+        csf.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+        csf.verticalFit   = ContentSizeFitter.FitMode.Unconstrained;
 
         // ── Wire InGameView ────────────────────────────────────────────────
         var inGameView = canvas.gameObject.AddComponent<InGameView>();
-        WireSerializedField(inGameView, "_heartsText",       heartsGO.GetComponent<Text>());
-        WireSerializedField(inGameView, "_pieceCounterText", counterGO.GetComponent<Text>());
-        WireSerializedField(inGameView, "_levelText",        levelGO.GetComponent<Text>());
-        WireSerializedField(inGameView, "_deckPanel",        deckPanelGO);
-        WireSerializedField(inGameView, "_deckLabel",        deckLabelGO.GetComponent<Text>());
-        WireSerializedField(inGameView, "_placeButton",      placeButtonGO.GetComponent<Button>());
+        WireSerializedField(inGameView, "_heartsText",            heartsGO.GetComponent<Text>());
+        WireSerializedField(inGameView, "_pieceCounterText",      counterGO.GetComponent<Text>());
+        WireSerializedField(inGameView, "_levelText",             levelGO.GetComponent<Text>());
+        WireSerializedField(inGameView, "_deckPanel",             deckPanelGO);
+        WireSerializedField(inGameView, "_pieceButtonContainer",  containerRect);
 
         // ── PuzzleParent — world-space root for 3-D piece meshes ──────────
         var puzzleParentGO = new GameObject("PuzzleParent");
