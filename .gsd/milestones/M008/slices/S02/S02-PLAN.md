@@ -21,10 +21,10 @@
 
 ## Tasks
 
-- [ ] **T01: Add TMP to asmdefs**
+- [x] **T01: Add TMP to asmdefs**
   Update SimpleGame.Game.asmdef and SimpleGame.Editor.asmdef to reference Unity.TextMeshPro / Unity.TextMeshPro.Editor. Verify compilation clean.
 
-- [ ] **T02: Create prefab assets via editor script**
+- [x] **T02: Create prefab assets via editor script**
   Write a one-shot editor utility (or extend SceneSetup) to create and save the 8 prefab assets programmatically. Prefabs created via `PrefabUtility.SaveAsPrefabAsset`. Directory `Assets/Prefabs/UI/` created if needed.
 
 ## Files Likely Touched

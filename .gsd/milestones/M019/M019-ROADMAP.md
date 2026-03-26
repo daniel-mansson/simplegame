@@ -61,6 +61,9 @@ This milestone is complete only when all are true:
 - [x] **S04: Wire presenters and UIFactory** `risk:low` `depends:[S03]`
   > After this: ShopPresenter and IAPPurchasePresenter both call IIAPService; IAPPurchase popup grants coins (not golden pieces); UIFactory and GameBootstrapper pass IIAPService through; full end-to-end purchase flow works in Editor (mock) and on device (real).
 
+- [x] **SR01: Restore MockIAPService in Editor runtime** `risk:low` `depends:[S04]` `remediation:true`
+  > After this: GameBootstrapper uses MockIAPService under #if UNITY_EDITOR so all four outcomes (Success, Cancelled, PaymentFailed, ValidationFailed) are selectable via IAPMockConfig.asset at runtime in the Editor — matching the success criterion and R166. UnityIAPService used on device only.
+
 ## Boundary Map
 
 ### S01 → S02

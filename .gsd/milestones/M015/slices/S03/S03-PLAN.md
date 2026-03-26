@@ -17,7 +17,7 @@
 
 ## Tasks
 
-- [ ] **T01: BuildScript Unity editor class**
+- [x] **T01: BuildScript Unity editor class**
   Create Assets/Editor/BuildScript.cs with BuildIOS() and BuildAndroid() static methods. Command-line arg parsing for outputPath and signing. BuildPipeline.BuildPlayer call with correct options.
 
 ## Files Likely Touched

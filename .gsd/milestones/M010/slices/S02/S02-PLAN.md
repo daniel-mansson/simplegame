@@ -16,7 +16,7 @@
 
 ## Tasks
 
-- [ ] **T01: Create demo assets and scene via Editor script**
+- [x] **T01: Create demo assets and scene via Editor script**
   Write an Editor script that creates all required ScriptableObject assets and the JigsawDemo scene, trigger it via Unity MCP.
 
 ## Files Likely Touched

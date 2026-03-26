@@ -14,7 +14,7 @@
 
 ## Tasks
 
-- [ ] **T01: Add submodule and register package**
+- [x] **T01: Add submodule and register package**
   Add the git submodule, update manifest.json with the local path entry and URP, verify Unity can see the package types.
 
 ## Files Likely Touched

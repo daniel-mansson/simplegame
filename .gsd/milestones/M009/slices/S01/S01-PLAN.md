@@ -24,10 +24,10 @@ depends: []
 
 ## Tasks
 
-- [ ] **T01: Core InSceneScreenManager**
+- [x] **T01: Core InSceneScreenManager**
   Add `IInSceneScreenManager<TScreenId>` interface and `InSceneScreenManager<TScreenId>` implementation to `Assets/Scripts/Core/ScreenManagement/`. Write EditMode tests in Core test assembly.
 
-- [ ] **T02: MainMenu wiring**
+- [x] **T02: MainMenu wiring**
   Add `MainMenuScreenId` enum, `OnShopClicked` to `IMainMenuView`/`MainMenuView`, wire `MainMenuSceneController` to create and use `InSceneScreenManager<MainMenuScreenId>`. SceneSetup adds Home/Shop panel GameObjects to MainMenu scene.
 
 ## Files Likely Touched

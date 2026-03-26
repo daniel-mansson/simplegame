@@ -19,13 +19,13 @@
 
 ## Tasks
 
-- [ ] **T01: Domain types and interfaces**
+- [x] **T01: Domain types and interfaces**
   Create `Assets/Scripts/Puzzle/` folder, `SimpleGame.Puzzle` asmdef with `noEngineReferences: true`, and all interfaces + enums: `IPuzzlePiece`, `IPuzzleBoard`, `IDeck`, `IPuzzleLevel`, `PlacementResult`.
 
-- [ ] **T02: Concrete implementations and PuzzleSession**
+- [x] **T02: Concrete implementations and PuzzleSession**
   Implement `PuzzlePiece`, `PuzzleBoard` (HashSet-backed), `Deck`, `PuzzleLevel`, and `PuzzleSession` with full placement logic, seed pre-placement, and `OnPlacementResolved` event.
 
-- [ ] **T03: EditMode tests**
+- [x] **T03: EditMode tests**
   Create `Assets/Tests/EditMode/Puzzle/` with `SimpleGame.Tests.Puzzle` asmdef and comprehensive tests covering all placement rules, deck draw, win detection, and event firing.
 
 ## Files Likely Touched

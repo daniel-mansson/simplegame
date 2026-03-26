@@ -1,7 +1,7 @@
 ﻿<Solution>
-  <Project Path="SimpleGame.Game.csproj" />
   <Project Path="SimpleGame.Tests.Game.csproj" />
   <Project Path="SimpleJigsaw.Runtime.csproj" />
+  <Project Path="SimpleGame.Game.csproj" />
   <Project Path="Assembly-CSharp.csproj" />
   <Project Path="PlayFab.csproj" />
   <Project Path="SimpleGame.Core.csproj" />

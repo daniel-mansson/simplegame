@@ -19,13 +19,13 @@
 
 ## Tasks
 
-- [ ] **T01: IPopupView + PopupViewBase + IInputBlocker contracts**
+- [x] **T01: IPopupView + PopupViewBase + IInputBlocker contracts**
   Add `AnimateInAsync`/`AnimateOutAsync` to `IPopupView`. Create `PopupViewBase` with LitMotion default implementations. Add `FadeInAsync`/`FadeOutAsync` to `IInputBlocker`. Update all 3 mocks. Existing views still compile (inherit MonoBehaviour for now — base class migration in T03).
 
-- [ ] **T02: UnityInputBlocker fade + PopupManager orchestration**
+- [x] **T02: UnityInputBlocker fade + PopupManager orchestration**
   Implement `FadeInAsync`/`FadeOutAsync` on `UnityInputBlocker` using LitMotion. Update `PopupManager.ShowPopupAsync`, `DismissPopupAsync`, and `DismissAllAsync` for the new async blocker + timing split.
 
-- [ ] **T03: UnityViewContainer animation wiring**
+- [x] **T03: UnityViewContainer animation wiring**
   Update `ShowPopupAsync`/`HidePopupAsync` in `UnityViewContainer` to call `AnimateInAsync`/`AnimateOutAsync`. Migrate all 6 existing `*View.cs` files to inherit `PopupViewBase` instead of `MonoBehaviour`.
 
 ## Files Likely Touched

@@ -15,7 +15,7 @@
 
 ## Tasks
 
-- [ ] **T01: Matchfile completion and certs lane wiring**
+- [x] **T01: Matchfile completion and certs lane wiring**
   Verify the ios certs lane in fastlane/Fastfile correctly calls match with all required params. Confirm Matchfile is complete. Write environment setup docs.
 
 ## Files Likely Touched
