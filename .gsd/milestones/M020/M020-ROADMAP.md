@@ -46,7 +46,7 @@ This milestone is complete only when all are true:
 
 ## Slices
 
-- [ ] **S01: Move IAP, Ads, and ATT feature groups** `risk:medium` `depends:[]`
+- [x] **S01: Move IAP, Ads, and ATT feature groups** `risk:medium` `depends:[]`
   > After this: `Assets/Scripts/Game/IAP/` (14 files), `Ads/` (7 files), `ATT/` (7 files) exist; those files no longer in `Services/` or `Popup/`; tests pass.
 
 - [ ] **S02: Move Economy, Save, Progression, and PlayFab feature groups** `risk:medium` `depends:[S01]`
