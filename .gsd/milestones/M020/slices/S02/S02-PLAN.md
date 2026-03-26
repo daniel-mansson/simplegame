@@ -11,10 +11,11 @@
 - `Economy/` (6 files), `Save/` (4 files), `Progression/` (4 files), `PlayFab/` (16 files) all exist
 - `Meta/` has gained `MetaProgressionService.cs`
 - 340 EditMode tests pass
+- `git log --diff-filter=R --name-status -1` shows rename entries (not delete+add) confirming blame history preserved
 
 ## Tasks
 
-- [ ] **T01: Move Economy (6), Save (4), MetaProgressionService to Meta/**
+- [x] **T01: Move Economy (6), Save (4), MetaProgressionService to Meta/**
   Economy: ICoinsService, CoinsService, IGoldenPieceService, GoldenPieceService, IHeartService, HeartService.
   Save: IMetaSaveService, MetaSaveData, MetaSaveMerge, PlayerPrefsMetaSaveService.
   Meta: MetaProgressionService.cs (moved to existing Meta/ folder).
@@ -30,3 +31,14 @@
 - `Assets/Scripts/Game/Services/` — emptied and removed
 - `Assets/Scripts/Game/Economy/`, `Save/`, `Progression/`, `PlayFab/` — created
 - `Assets/Scripts/Game/Meta/` — gains MetaProgressionService.cs
+
+## Observability / Diagnostics
+
+This slice performs only `git mv` renames — no runtime behaviour changes. Observable signals:
+
+- **File presence:** `ls Assets/Scripts/Game/{Economy,Save,Progression,PlayFab,Meta}/` — confirms files landed in target folders.
+- **Source removal:** `ls Assets/Scripts/Game/Services/` should return "No such file or directory" after T02.
+- **Git rename tracking:** `git log --diff-filter=R --name-status -1` on the slice commit confirms renames rather than delete+add pairs (preserves blame history).
+- **Compiler health:** Unity will auto-reimport moved files; compile errors in `Editor.log` are the failure signal. Use K011 to distinguish stale-cache errors from genuine ones.
+- **Test gate:** `run_tests EditMode` returning 340 passed with 0 failed is the go/no-go signal for T02 completion.
+- **Failure state:** If a `git mv` fails mid-task, `git status` shows partial rename staging; `git reset HEAD` restores clean state. No runtime state is affected — these are source file moves only.

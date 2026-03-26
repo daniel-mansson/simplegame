@@ -25,3 +25,12 @@ Create `Economy/` and `Save/` feature folders; move their files and MetaProgress
 
 - Do NOT commit yet — T02 completes the slice
 - After this task, Services/ still has Progression + PlayFab files (moved in T02)
+
+## Observability Impact
+
+This task performs only `git mv` renames — no runtime code changes. Inspection surfaces:
+
+- **File presence verification:** `ls Assets/Scripts/Game/Economy/` (expect 6 .cs files), `ls Assets/Scripts/Game/Save/` (expect 4 .cs files), `ls Assets/Scripts/Game/Meta/ | grep MetaProgression` (expect 1 file).
+- **Staged renames:** `git status --short` should show 11 `R` entries after all moves.
+- **Failure state:** If any `git mv` call fails (e.g. source file missing), `git status` reveals partial staging. Run `git reset HEAD` to restore clean state and investigate with `ls Services/` to find the actual filename.
+- **No runtime signals change** — these moves affect compiler input paths only; Unity will re-resolve namespaces on next import. Compile errors post-move would surface in `Editor.log` (see K011 for distinguishing stale-cache vs genuine errors).
