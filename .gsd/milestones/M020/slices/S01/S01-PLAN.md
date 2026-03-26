@@ -21,7 +21,7 @@
 - [x] **T02: Create Ads/ folder and move 7 Ads files**
   Move from `Services/` (IAdService, AdResult, UnityAdService, NullAdService) and `Popup/` (IRewardedAdView, RewardedAdPresenter, RewardedAdView) into `Assets/Scripts/Game/Ads/`.
 
-- [ ] **T03: Create ATT/ folder and move 7 ATT files**
+- [x] **T03: Create ATT/ folder and move 7 ATT files**
   Move from `Services/` (IATTService, ATTAuthorizationStatus, UnityATTService, NullATTService) and `Popup/` (IConsentGateView, ConsentGatePresenter, ConsentGateView) into `Assets/Scripts/Game/ATT/`. Run tests; commit.
 
 ## Files Likely Touched
@@ -42,3 +42,13 @@ This slice is a pure filesystem reorganisation — no runtime behaviour changes.
 - **Test gate:** `run_tests EditMode` — 340 tests must pass after T03 commits; failure here indicates a `.meta` GUID mismatch or stale Bee dag (see K011).
 - **Failure state detection:** If a `git mv` is accidentally omitted, `git status` will show the file as untracked in the old location and missing from the new one. Run `git status --short | grep "^R"` to confirm all expected renames are staged. To verify completeness per task: `find Assets/Scripts/Game/Ads -name "*.cs" | sort` and `find Assets/Scripts/Game/ATT -name "*.cs" | sort` — both must list exactly 7 files. If any file is missing, `git status` will show it as deleted/untracked; re-run the specific `git mv` for that file.
 - **No secrets involved** — no redaction constraints apply.
+
+### Structured Failure State
+
+| Failure symptom | How to detect | Recovery |
+|---|---|---|
+| File not moved (wrong location) | `git status --short` shows `D Assets/.../Services/X.cs` and `?? Assets/.../ATT/X.cs` | Re-run `git mv` for the missing pair; stage and commit |
+| `.meta` file left behind | `ls Assets/Scripts/Game/Services/*.meta 2>/dev/null` returns matches | `git rm` the orphaned `.meta` and commit |
+| Unity compile error after move | K011 python3 snippet shows `error CS` after last `Starting:` line | Check GUID: `cat Assets/.../ATT/X.cs.meta` and confirm `guid` matches what Unity serialized; if mismatch, restore via `git mv` undo |
+| Bee dag stuck on stale content hashes | Same error persists after source file was verified fixed on disk | Delete active dag files per K011, trigger `Assets/Refresh` |
+| Test count < 340 after commit | `get_test_job` result shows `failed > 0` or `total < 340` | Check Unity compile status first; if clean, stale Bee dag is most likely cause |
