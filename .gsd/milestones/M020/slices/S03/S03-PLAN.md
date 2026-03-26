@@ -17,7 +17,7 @@
   Meta/: IObjectRestoredView, ObjectRestoredPresenter, ObjectRestoredView (from Popup/).
   Shop/: IShopView, ShopPresenter, ShopView (from Popup/).
 
-- [ ] **T02: Create LevelFlow/ (7 files) and ConfirmDialog/ (3 files); run tests; commit**
+- [x] **T02: Create LevelFlow/ (7 files) and ConfirmDialog/ (3 files); run tests; commit**
   LevelFlow/: ILevelCompleteView, LevelCompletePresenter, LevelCompleteView, ILevelFailedView, LevelFailedPresenter, LevelFailedView, LevelFailedChoice.
   ConfirmDialog/: IConfirmDialogView, ConfirmDialogPresenter, ConfirmDialogView.
   Verify Popup/ contains only UnityViewContainer.cs. Run tests; commit.
