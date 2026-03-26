@@ -55,7 +55,7 @@ This milestone is complete only when all are true:
 - [x] **S03: Move remaining Popup feature files into feature folders** `risk:low` `depends:[S02]`
   > After this: `Meta/` gains `MetaProgressionService` + ObjectRestored popup trio; `Shop/` (3 files), `LevelFlow/` (7 files), `ConfirmDialog/` (3 files) created; tests pass. Note: All S03 moves are already committed on the branch ahead of schedule (confirmed by filesystem state after S02). S03 is a verification-only pass — confirm target folders match the boundary map, then close the slice.
 
-- [ ] **S04: Final verification — compile, tests, orphan cleanup** `risk:low` `depends:[S03]`
+- [x] **S04: Final verification — compile, tests, orphan cleanup** `risk:low` `depends:[S03]`
   > After this: zero orphaned `.meta` files, 347 tests confirmed passing, no missing-script warnings, all target folder manifests verified against expected file counts.
 
 ## Boundary Map
