@@ -404,10 +404,8 @@ public static class SceneSetup
         var counterGO = CreateText("PieceCounterText","0/0",      canvas.transform,
             new Vector2(0.70f, 0.90f), new Vector2(0.98f, 0.99f), 26);
 
-        // ── Deck Panel: transparent hit-target region ────────────────────
-        // The panel itself is invisible — the 3D pieces ARE the visual.
-        // PieceButtonContainer holds invisible UGUI buttons repositioned each
-        // frame by PuzzleStageController.LateUpdate to overlay the 3D pieces.
+        // ── Deck Panel: bottom strip (y 0–18%) ───────────────────────────
+        // Background panel — pieces are invisible while in deck; buttons are the visual.
         var deckPanelGO = new GameObject("DeckPanel");
         deckPanelGO.transform.SetParent(canvas.transform, false);
         var deckPanelRect = deckPanelGO.AddComponent<RectTransform>();
@@ -415,13 +413,11 @@ public static class SceneSetup
         deckPanelRect.anchorMax        = new Vector2(1f, 0.18f);
         deckPanelRect.sizeDelta        = Vector2.zero;
         deckPanelRect.anchoredPosition = Vector2.zero;
-        // Transparent — no visual background; pieces render through in world space
         var deckBg = deckPanelGO.AddComponent<Image>();
-        deckBg.color = Color.clear;
-        deckBg.raycastTarget = false;
+        deckBg.color = new Color(0.1f, 0.1f, 0.15f, 0.85f);
 
-        // Inner container — plain RectTransform parent for the hit-target buttons.
-        // No HorizontalLayoutGroup; buttons are positioned manually each frame.
+        // Inner container — HorizontalLayoutGroup that holds the per-slot buttons.
+        // InGameView.SetupDeckPanel() creates Button children here at runtime.
         var pieceButtonContainerGO = new GameObject("PieceButtonContainer");
         pieceButtonContainerGO.transform.SetParent(deckPanelGO.transform, false);
         var containerRect = pieceButtonContainerGO.AddComponent<RectTransform>();
@@ -429,6 +425,15 @@ public static class SceneSetup
         containerRect.anchorMax        = Vector2.one;
         containerRect.sizeDelta        = Vector2.zero;
         containerRect.anchoredPosition = Vector2.zero;
+
+        var hlg = pieceButtonContainerGO.AddComponent<HorizontalLayoutGroup>();
+        hlg.childForceExpandWidth  = false;
+        hlg.childForceExpandHeight = true;
+        hlg.childControlWidth      = true;
+        hlg.childControlHeight     = true;
+        hlg.childAlignment         = TextAnchor.MiddleCenter;
+        hlg.spacing                = 8f;
+        hlg.padding                = new RectOffset(8, 8, 4, 4);
 
         // ── Wire InGameView ────────────────────────────────────────────────
         var inGameView = canvas.gameObject.AddComponent<InGameView>();
