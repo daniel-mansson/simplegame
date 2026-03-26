@@ -49,8 +49,8 @@ This milestone is complete only when all are true:
 - [x] **S01: Move IAP, Ads, and ATT feature groups** `risk:medium` `depends:[]`
   > After this: `Assets/Scripts/Game/IAP/` (15 files), `Ads/` (7 files), `ATT/` (7 files) exist; those files no longer in `Services/` or `Popup/`; tests pass. Services/ and Popup/ cleanup completed ahead of schedule.
 
-- [ ] **S02: Move Economy, Save, Progression, and PlayFab feature groups** `risk:medium` `depends:[S01]`
-  > After this: `Economy/` (6 files), `Save/` (4 files), `Progression/` (4 files), `PlayFab/` (15 files) exist; tests pass. Note: `Services/` directory is already gone (removed in S01); no removal step needed.
+- [x] **S02: Move Economy, Save, Progression, and PlayFab feature groups** `risk:medium` `depends:[S01]`
+  > After this: `Economy/` (6 files), `Save/` (4 files), `Progression/` (4 files), `PlayFab/` (17 files) exist; tests pass (347). Services/ fully removed (was already gone from S01). IPlayFabCatalogService.cs swept in as extra file. S03 work partially committed on branch already.
 
 - [ ] **S03: Move remaining Popup feature files into feature folders** `risk:low` `depends:[S02]`
   > After this: `Meta/` gains `MetaProgressionService` + ObjectRestored popup trio; `Shop/` (3 files), `LevelFlow/` (7 files), `ConfirmDialog/` (3 files) created; tests pass. Note: `Popup/` already contains only `UnityViewContainer.cs` (cleanup completed in S01); verify that state is preserved and execute any remaining moves only. Risk downgraded from medium to low — Popup/ cleanup risk is already retired.
