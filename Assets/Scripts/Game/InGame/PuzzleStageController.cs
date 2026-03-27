@@ -38,6 +38,7 @@ namespace SimpleGame.Game.InGame
 
         // ── View reference ────────────────────────────────────────────────────────────
         [SerializeField] private InGameView _inGameView;
+        [SerializeField] private DeckView   _deckView;    // world-space deck canvas
         private SimpleGame.Core.PopupManagement.PopupManager<PopupId> _popupManager;
 
         // ── Piece tracking ────────────────────────────────────────────────────────────
@@ -336,7 +337,7 @@ namespace SimpleGame.Game.InGame
             return tp;
         }
 
-        // ── LateUpdate: reposition 3D tray slot pieces each frame ────────────────────
+        // ── LateUpdate: reposition 3D tray slot pieces on top of DeckView buttons ────
 
         private void LateUpdate()
         {
@@ -387,10 +388,40 @@ namespace SimpleGame.Game.InGame
                     {
                         if (!_shakingPieces.Contains(pid))
                         {
-                            go.transform.position   = newPos;
-                            go.transform.localScale = newScale;
+                            // If DeckView is available, snap piece to the button's world centre.
+                            // Otherwise fall back to the raw tray math position.
+                            Vector3 piecePos;
+                            if (_deckView != null)
+                            {
+                                var centre = _deckView.GetSlotWorldCentre(i);
+                                // Offset toward camera along the canvas's forward so the piece
+                                // sits visually in front of the button without blocking raycasts.
+                                piecePos = centre + _deckView.transform.forward * _deckView.PieceZOffset;
+                            }
+                            else
+                            {
+                                piecePos = newPos;
+                            }
+
+                            // Scale to fit the slot
+                            Vector3 pieceScale;
+                            if (_deckView != null)
+                            {
+                                var slotSize = _deckView.GetSlotWorldSize();
+                                float fitScale = slotSize.x > 0
+                                    ? Mathf.Min(slotSize.x, slotSize.y) / Mathf.Max(cellW, cellH) * 0.85f
+                                    : newScale.x;
+                                pieceScale = Vector3.one * fitScale;
+                            }
+                            else
+                            {
+                                pieceScale = newScale;
+                            }
+
+                            go.transform.position   = piecePos;
+                            go.transform.localScale = pieceScale;
                         }
-                        if (_traySlotData != null) _traySlotData[pid] = (newPos, newScale);
+                        if (_traySlotData != null) _traySlotData[pid] = (go.transform.position, go.transform.localScale);
                     }
                 }
             }

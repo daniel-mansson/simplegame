@@ -404,48 +404,28 @@ public static class SceneSetup
         var counterGO = CreateText("PieceCounterText","0/0",      canvas.transform,
             new Vector2(0.70f, 0.90f), new Vector2(0.98f, 0.99f), 26);
 
-        // ── Deck Panel: bottom strip (y 0–18%) ───────────────────────────
-        // Outer panel — background colour only; contains _pieceButtonContainer.
-        var deckPanelGO = new GameObject("DeckPanel");
-        deckPanelGO.transform.SetParent(canvas.transform, false);
-        var deckPanelRect = deckPanelGO.AddComponent<RectTransform>();
-        deckPanelRect.anchorMin        = new Vector2(0f, 0f);
-        deckPanelRect.anchorMax        = new Vector2(1f, 0.18f);
-        deckPanelRect.sizeDelta        = Vector2.zero;
-        deckPanelRect.anchoredPosition = Vector2.zero;
-        var deckBg = deckPanelGO.AddComponent<Image>();
-        deckBg.color = new Color(0.1f, 0.1f, 0.15f, 0.85f);
+        // ── DeckView — world-space canvas for the deck tray ──────────────
+        // Sits below the main camera frustum; DeckView.LateUpdate repositions it
+        // to cover the bottom 18% of screen with a slight perspective tilt.
+        var deckViewGO = new GameObject("DeckView");
+        var deckViewCanvas = deckViewGO.AddComponent<Canvas>();
+        deckViewCanvas.renderMode   = RenderMode.WorldSpace;
+        deckViewCanvas.sortingOrder = 5;
+        deckViewGO.AddComponent<GraphicRaycaster>();
+        var deckViewRT = deckViewGO.GetComponent<RectTransform>();
+        if (deckViewRT == null) deckViewRT = deckViewGO.AddComponent<RectTransform>();
+        // Initial size — will be resized each frame by DeckView.LateUpdate
+        deckViewRT.sizeDelta   = new Vector2(10f, 2f);
+        deckViewGO.transform.position = new Vector3(0f, -4f, 2f);
 
-        // Inner container — HorizontalLayoutGroup that holds the per-slot buttons.
-        // InGameView.SetupDeckPanel() creates Button children here at runtime.
-        var pieceButtonContainerGO = new GameObject("PieceButtonContainer");
-        pieceButtonContainerGO.transform.SetParent(deckPanelGO.transform, false);
-        var containerRect = pieceButtonContainerGO.AddComponent<RectTransform>();
-        containerRect.anchorMin        = Vector2.zero;
-        containerRect.anchorMax        = Vector2.one;
-        containerRect.sizeDelta        = Vector2.zero;
-        containerRect.anchoredPosition = Vector2.zero;
-
-        var hlg = pieceButtonContainerGO.AddComponent<HorizontalLayoutGroup>();
-        hlg.childForceExpandWidth  = false;
-        hlg.childForceExpandHeight = true;
-        hlg.childControlWidth      = true;
-        hlg.childControlHeight     = true;
-        hlg.childAlignment         = TextAnchor.MiddleCenter;
-        hlg.spacing                = 8f;
-        hlg.padding                = new RectOffset(8, 8, 4, 4);
-
-        var csf = pieceButtonContainerGO.AddComponent<ContentSizeFitter>();
-        csf.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
-        csf.verticalFit   = ContentSizeFitter.FitMode.Unconstrained;
+        var deckView = deckViewGO.AddComponent<DeckView>();
 
         // ── Wire InGameView ────────────────────────────────────────────────
         var inGameView = canvas.gameObject.AddComponent<InGameView>();
-        WireSerializedField(inGameView, "_heartsText",            heartsGO.GetComponent<Text>());
-        WireSerializedField(inGameView, "_pieceCounterText",      counterGO.GetComponent<Text>());
-        WireSerializedField(inGameView, "_levelText",             levelGO.GetComponent<Text>());
-        WireSerializedField(inGameView, "_deckPanel",             deckPanelGO);
-        WireSerializedField(inGameView, "_pieceButtonContainer",  containerRect);
+        WireSerializedField(inGameView, "_heartsText",       heartsGO.GetComponent<Text>());
+        WireSerializedField(inGameView, "_pieceCounterText", counterGO.GetComponent<Text>());
+        WireSerializedField(inGameView, "_levelText",        levelGO.GetComponent<Text>());
+        WireSerializedField(inGameView, "_deckView",         deckView);
 
         // ── PuzzleParent — world-space root for 3-D piece meshes ──────────
         var puzzleParentGO = new GameObject("PuzzleParent");
@@ -455,6 +435,7 @@ public static class SceneSetup
         var stageGO = new GameObject("PuzzleStageController");
         var stage = stageGO.AddComponent<PuzzleStageController>();
         WireSerializedField(stage, "_inGameView",   inGameView);
+        WireSerializedField(stage, "_deckView",     deckView);
         WireSerializedField(stage, "_puzzleParent", puzzleParentGO.transform);
 
         var gridConfig   = AssetDatabase.LoadAssetAtPath<GridLayoutConfig>("Assets/Data/DefaultGridConfig.asset");
