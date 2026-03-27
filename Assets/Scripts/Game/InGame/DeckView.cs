@@ -73,6 +73,15 @@ namespace SimpleGame.Game.InGame
             _canvas.sortingOrder = 5;
         }
 
+        private void Start()
+        {
+            // worldCamera must be set on a World Space Canvas so GraphicRaycaster
+            // can unproject pointer events into world space. Camera.main is not
+            // available during Awake in all scene-load orders, so assign here.
+            if (_canvas.worldCamera == null)
+                _canvas.worldCamera = Camera.main;
+        }
+
         private void LateUpdate()
         {
             RepositionToScreen();

@@ -411,6 +411,7 @@ public static class SceneSetup
         var deckViewCanvas = deckViewGO.AddComponent<Canvas>();
         deckViewCanvas.renderMode   = RenderMode.WorldSpace;
         deckViewCanvas.sortingOrder = 5;
+        deckViewCanvas.worldCamera  = cam;   // required for GraphicRaycaster to unproject pointer rays
         deckViewGO.AddComponent<GraphicRaycaster>();
         var deckViewRT = deckViewGO.GetComponent<RectTransform>();
         if (deckViewRT == null) deckViewRT = deckViewGO.AddComponent<RectTransform>();
