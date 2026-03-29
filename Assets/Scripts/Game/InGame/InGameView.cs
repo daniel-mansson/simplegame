@@ -55,11 +55,10 @@ namespace SimpleGame.Game.InGame
         {
             if (_deckView == null) return;
 
-            _deckView.Setup(slotCount);
+            _deckView.Init(slotCount);
 
-            // Forward tap events
-            _deckView.OnTapPiece -= HandleTapPiece;
-            _deckView.OnTapPiece += HandleTapPiece;
+            _deckView.OnPiecePressed -= HandleTapPiece;
+            _deckView.OnPiecePressed += HandleTapPiece;
         }
 
         private void HandleTapPiece(int pieceId) => OnTapPiece?.Invoke(pieceId);
@@ -68,7 +67,7 @@ namespace SimpleGame.Game.InGame
 
         public void RefreshSlot(int slotIndex, int? pieceId)
         {
-            _deckView?.SetSlotActive(slotIndex, pieceId);
+            _deckView?.SetSlot(slotIndex, pieceId);
 
             if (pieceId.HasValue)
                 _onMovePieceToSlot?.Invoke(pieceId.Value, slotIndex);
@@ -76,12 +75,11 @@ namespace SimpleGame.Game.InGame
 
         public void RevealPiece(int pieceId)
         {
-            // Find and clear the slot
             var contents = _deckView?.GetSlotContents();
             if (contents != null)
                 for (int i = 0; i < contents.Length; i++)
                     if (contents[i] == pieceId)
-                        _deckView.SetSlotActive(i, null);
+                        _deckView.SetSlot(i, null);
 
             _onRevealPiece?.Invoke(pieceId);
         }

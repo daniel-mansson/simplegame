@@ -388,34 +388,26 @@ namespace SimpleGame.Game.InGame
                     {
                         if (!_shakingPieces.Contains(pid))
                         {
-                            // If DeckView is available, snap piece to the button's world centre.
-                            // Otherwise fall back to the raw tray math position.
-                            Vector3 piecePos;
-                            if (_deckView != null)
-                            {
-                                var centre = _deckView.GetSlotWorldCentre(i);
-                                // Offset toward camera along the canvas's forward so the piece
-                                // sits visually in front of the button without blocking raycasts.
-                                piecePos = centre + _deckView.transform.forward * _deckView.PieceZOffset;
-                            }
-                            else
-                            {
-                                piecePos = newPos;
-                            }
+                            // Position piece over its deck button in world space.
+                            // GetSlotButton gives us the RectTransform whose world centre
+                            // is the button's position. Offset toward camera so piece renders
+                            // on top without blocking the canvas GraphicRaycaster.
+                            Vector3 piecePos   = newPos;
+                            Vector3 pieceScale = newScale;
 
-                            // Scale to fit the slot
-                            Vector3 pieceScale;
-                            if (_deckView != null)
+                            var slotBtn = _deckView?.GetSlotButton(i);
+                            if (slotBtn != null)
                             {
-                                var slotSize = _deckView.GetSlotWorldSize();
-                                float fitScale = slotSize.x > 0
-                                    ? Mathf.Min(slotSize.x, slotSize.y) / Mathf.Max(cellW, cellH) * 0.85f
+                                var rt     = slotBtn.GetComponent<RectTransform>();
+                                var centre = rt.TransformPoint(rt.rect.center);
+                                piecePos   = centre + _deckView.transform.forward * -0.5f;
+
+                                float slotW    = rt.rect.width  * rt.lossyScale.x;
+                                float slotH    = rt.rect.height * rt.lossyScale.y;
+                                float fitScale = slotW > 0
+                                    ? Mathf.Min(slotW, slotH) / Mathf.Max(cellW, cellH) * 0.85f
                                     : newScale.x;
                                 pieceScale = Vector3.one * fitScale;
-                            }
-                            else
-                            {
-                                pieceScale = newScale;
                             }
 
                             go.transform.position   = piecePos;

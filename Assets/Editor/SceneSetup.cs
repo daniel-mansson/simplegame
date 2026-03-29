@@ -405,21 +405,63 @@ public static class SceneSetup
             new Vector2(0.70f, 0.90f), new Vector2(0.98f, 0.99f), 26);
 
         // ── DeckView — world-space canvas for the deck tray ──────────────
-        // Sits below the main camera frustum; DeckView.LateUpdate repositions it
-        // to cover the bottom 18% of screen with a slight perspective tilt.
         var deckViewGO = new GameObject("DeckView");
         var deckViewCanvas = deckViewGO.AddComponent<Canvas>();
         deckViewCanvas.renderMode   = RenderMode.WorldSpace;
         deckViewCanvas.sortingOrder = 5;
-        deckViewCanvas.worldCamera  = cam;   // required for GraphicRaycaster to unproject pointer rays
+        deckViewCanvas.worldCamera  = cam;
         deckViewGO.AddComponent<GraphicRaycaster>();
         var deckViewRT = deckViewGO.GetComponent<RectTransform>();
         if (deckViewRT == null) deckViewRT = deckViewGO.AddComponent<RectTransform>();
-        // Initial size — will be resized each frame by DeckView.LateUpdate
-        deckViewRT.sizeDelta   = new Vector2(10f, 2f);
+        deckViewRT.sizeDelta          = new Vector2(10f, 2f);
         deckViewGO.transform.position = new Vector3(0f, -4f, 2f);
 
+        // HorizontalLayoutGroup container
+        var slotContainerGO = new GameObject("SlotContainer");
+        slotContainerGO.transform.SetParent(deckViewGO.transform, false);
+        var slotContainerRect = slotContainerGO.AddComponent<RectTransform>();
+        slotContainerRect.anchorMin        = Vector2.zero;
+        slotContainerRect.anchorMax        = Vector2.one;
+        slotContainerRect.offsetMin        = Vector2.zero;
+        slotContainerRect.offsetMax        = Vector2.zero;
+        var hlg = slotContainerGO.AddComponent<HorizontalLayoutGroup>();
+        hlg.childForceExpandWidth  = true;
+        hlg.childForceExpandHeight = true;
+        hlg.childControlWidth      = true;
+        hlg.childControlHeight     = true;
+        hlg.childAlignment         = TextAnchor.MiddleCenter;
+        hlg.spacing                = 0f;
+        hlg.padding                = new RectOffset(4, 4, 4, 4);
+
+        // Pre-placed slot buttons — one per max supported slot count.
+        // DeckView.Init(n) activates the first n and deactivates the rest.
+        const int maxSlots = 5;
+        var slotButtons = new Button[maxSlots];
+        for (int i = 0; i < maxSlots; i++)
+        {
+            var slotGO = new GameObject($"Slot_{i}");
+            slotGO.transform.SetParent(slotContainerGO.transform, false);
+            slotGO.AddComponent<RectTransform>();
+
+            var img = slotGO.AddComponent<Image>();
+            img.color = new Color(0.2f, 0.5f, 1.0f, 0.45f);
+
+            var btn = slotGO.AddComponent<Button>();
+            btn.targetGraphic = img;
+
+            // Tint states — keep semi-transparent for diagnostics
+            var cols = btn.colors;
+            cols.normalColor      = new Color(1f, 1f, 1f, 0.45f);
+            cols.highlightedColor = new Color(1f, 1f, 1f, 0.65f);
+            cols.pressedColor     = new Color(0.7f, 0.7f, 0.7f, 0.65f);
+            btn.colors            = cols;
+
+            slotGO.SetActive(false); // DeckView.Init enables the active ones
+            slotButtons[i] = btn;
+        }
+
         var deckView = deckViewGO.AddComponent<DeckView>();
+        WireSerializedField(deckView, "_slots", slotButtons);
 
         // ── Wire InGameView ────────────────────────────────────────────────
         var inGameView = canvas.gameObject.AddComponent<InGameView>();
@@ -505,6 +547,21 @@ public static class SceneSetup
         {
             Debug.LogWarning($"[SceneSetup] Field '{fieldName}' not found on {component.GetType().Name}");
         }
+    }
+
+    private static void WireSerializedField(Component component, string fieldName, Object[] values)
+    {
+        var so   = new SerializedObject(component);
+        var prop = so.FindProperty(fieldName);
+        if (prop == null || !prop.isArray)
+        {
+            Debug.LogWarning($"[SceneSetup] Array field '{fieldName}' not found on {component.GetType().Name}");
+            return;
+        }
+        prop.arraySize = values.Length;
+        for (int i = 0; i < values.Length; i++)
+            prop.GetArrayElementAtIndex(i).objectReferenceValue = values[i];
+        so.ApplyModifiedPropertiesWithoutUndo();
     }
 
     private static void CreateFullScreenCanvas(string name, int sortOrder, out Canvas result)
