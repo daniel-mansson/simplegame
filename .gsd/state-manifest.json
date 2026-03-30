@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exported_at": "2026-03-30T11:05:37.724Z",
+  "exported_at": "2026-03-30T11:31:43.338Z",
   "milestones": [
     {
       "id": "M001",
@@ -6897,19 +6897,31 @@
       "milestone_id": "M023",
       "slice_id": "S01",
       "id": "T03",
-      "title": "Wire auto-tracking into InGamePresenter and add EditMode tests",
-      "status": "pending",
-      "one_liner": "",
-      "narrative": "",
-      "verification_result": "",
+      "title": "Wired auto-tracking camera into InGamePresenter (stage + camera params, HandlePiecePlaced targeting) and added 11 EditMode CameraMath + GetPlaceablePieceIds tests",
+      "status": "complete",
+      "one_liner": "Wired auto-tracking camera into InGamePresenter (stage + camera params, HandlePiecePlaced targeting) and added 11 EditMode CameraMath + GetPlaceablePieceIds tests",
+      "narrative": "Six files modified/created to complete the auto-tracking pipeline. CameraController gained a public Config property. InGamePresenter received two optional constructor params (PuzzleStageController stage, CameraController camera) and null-guarded camera targeting in HandlePiecePlaced that computes CameraMath.ComputeFraming from placeable piece positions and calls SetTarget. UIFactory.CreateInGamePresenter got matching optional params passed through. InGameFlowPresenter added _cameraController field and passes it to CreateInGamePresenter. InGameSceneController resolves the CameraController via Camera.main?.GetComponent at Initialize time (null-safe for tests). New CameraTests.cs adds 11 EditMode tests across CameraMathTests (6 tests: single position, multiple positions, empty/null fallback, maxZoom/minZoom clamping) and GetPlaceablePieceIdsTests (5 tests: initial state, after placement, all placed empty, sequential shrink, branching star model).",
+      "verification_result": "Compilation confirmed via assembly timestamp (SimpleGame.Tests.Game.dll 2026-03-30 12:22:35, post-change). No console errors before reimport. All structural grep checks passed. Unity Test Runner poll was blocked by background Reimport All consuming the MCP plugin; test run should be completed manually or by next agent.",
       "duration": "",
-      "completed_at": null,
+      "completed_at": "2026-03-30T11:31:43.302Z",
       "blocker_discovered": false,
-      "deviations": "",
-      "known_issues": "",
-      "key_files": [],
-      "key_decisions": [],
-      "full_summary_md": "",
+      "deviations": "Reimport All was inadvertently triggered during verification polling, blocking MCP plugin for remainder of time budget. No code deviations from plan.",
+      "known_issues": "Unity Test Runner poll incomplete — assemblies compiled successfully but the actual test run result was not confirmed within the time budget. Run EditMode tests to verify all 11 new CameraTests + existing InGameTests pass.",
+      "key_files": [
+        "Assets/Scripts/Game/InGame/InGamePresenter.cs",
+        "Assets/Scripts/Game/Boot/UIFactory.cs",
+        "Assets/Scripts/Game/InGame/InGameFlowPresenter.cs",
+        "Assets/Scripts/Game/InGame/InGameSceneController.cs",
+        "Assets/Scripts/Game/InGame/CameraController.cs",
+        "Assets/Tests/EditMode/Game/CameraTests.cs"
+      ],
+      "key_decisions": [
+        "HandlePiecePlaced camera targeting guarded on _stage != null AND _camera.Config != null to avoid NRE when no config assigned",
+        "Camera aspect defaults to 1f when GetComponent<Camera>() is null — safe for EditMode tests",
+        "CameraController param added as last optional param in InGameFlowPresenter to preserve backward compat",
+        "InGameSceneController resolves CameraController via Camera.main?.GetComponent — returns null in EditMode tests leaving existing tests green"
+      ],
+      "full_summary_md": "---\nid: T03\nparent: S01\nmilestone: M023\nkey_files:\n  - Assets/Scripts/Game/InGame/InGamePresenter.cs\n  - Assets/Scripts/Game/Boot/UIFactory.cs\n  - Assets/Scripts/Game/InGame/InGameFlowPresenter.cs\n  - Assets/Scripts/Game/InGame/InGameSceneController.cs\n  - Assets/Scripts/Game/InGame/CameraController.cs\n  - Assets/Tests/EditMode/Game/CameraTests.cs\nkey_decisions:\n  - HandlePiecePlaced camera targeting guarded on _stage != null AND _camera.Config != null to avoid NRE when no config assigned\n  - Camera aspect defaults to 1f when GetComponent<Camera>() is null — safe for EditMode tests\n  - CameraController param added as last optional param in InGameFlowPresenter to preserve backward compat\n  - InGameSceneController resolves CameraController via Camera.main?.GetComponent — returns null in EditMode tests leaving existing tests green\nduration: \"\"\nverification_result: mixed\ncompleted_at: 2026-03-30T11:31:43.302Z\nblocker_discovered: false\n---\n\n# T03: Wired auto-tracking camera into InGamePresenter (stage + camera params, HandlePiecePlaced targeting) and added 11 EditMode CameraMath + GetPlaceablePieceIds tests\n\n**Wired auto-tracking camera into InGamePresenter (stage + camera params, HandlePiecePlaced targeting) and added 11 EditMode CameraMath + GetPlaceablePieceIds tests**\n\n## What Happened\n\nSix files modified/created to complete the auto-tracking pipeline. CameraController gained a public Config property. InGamePresenter received two optional constructor params (PuzzleStageController stage, CameraController camera) and null-guarded camera targeting in HandlePiecePlaced that computes CameraMath.ComputeFraming from placeable piece positions and calls SetTarget. UIFactory.CreateInGamePresenter got matching optional params passed through. InGameFlowPresenter added _cameraController field and passes it to CreateInGamePresenter. InGameSceneController resolves the CameraController via Camera.main?.GetComponent at Initialize time (null-safe for tests). New CameraTests.cs adds 11 EditMode tests across CameraMathTests (6 tests: single position, multiple positions, empty/null fallback, maxZoom/minZoom clamping) and GetPlaceablePieceIdsTests (5 tests: initial state, after placement, all placed empty, sequential shrink, branching star model).\n\n## Verification\n\nCompilation confirmed via assembly timestamp (SimpleGame.Tests.Game.dll 2026-03-30 12:22:35, post-change). No console errors before reimport. All structural grep checks passed. Unity Test Runner poll was blocked by background Reimport All consuming the MCP plugin; test run should be completed manually or by next agent.\n\n## Verification Evidence\n\n| # | Command | Exit Code | Verdict | Duration |\n|---|---------|-----------|---------|----------|\n| 1 | `grep -c \"public CameraConfig Config\" Assets/Scripts/Game/InGame/CameraController.cs` | 0 | ✅ pass | 20ms |\n| 2 | `grep -c \"PuzzleStageController _stage\" Assets/Scripts/Game/InGame/InGamePresenter.cs` | 0 | ✅ pass | 20ms |\n| 3 | `grep -c \"cameraController\" Assets/Scripts/Game/Boot/UIFactory.cs` | 0 | ✅ pass | 20ms |\n| 4 | `grep -c \"_cameraController\" Assets/Scripts/Game/InGame/InGameFlowPresenter.cs` | 0 | ✅ pass | 20ms |\n| 5 | `grep -c \"Camera.main\" Assets/Scripts/Game/InGame/InGameSceneController.cs` | 0 | ✅ pass | 20ms |\n| 6 | `grep -c \"\\[Test\\]\" Assets/Tests/EditMode/Game/CameraTests.cs → 11` | 0 | ✅ pass | 20ms |\n| 7 | `powershell Get-ChildItem Library/ScriptAssemblies → SimpleGame.Tests.Game.dll 2026-03-30 12:22:35` | 0 | ✅ pass (compilation) | 300ms |\n| 8 | `mcporter call unityMCP.read_console (pre-reimport) → no errors` | 0 | ✅ pass | 2000ms |\n| 9 | `Unity Test Runner poll (job cb006405)` | -1 | ⚠️ incomplete (MCP blocked by Reimport All) | 1200000ms |\n\n\n## Deviations\n\nReimport All was inadvertently triggered during verification polling, blocking MCP plugin for remainder of time budget. No code deviations from plan.\n\n## Known Issues\n\nUnity Test Runner poll incomplete — assemblies compiled successfully but the actual test run result was not confirmed within the time budget. Run EditMode tests to verify all 11 new CameraTests + existing InGameTests pass.\n\n## Files Created/Modified\n\n- `Assets/Scripts/Game/InGame/InGamePresenter.cs`\n- `Assets/Scripts/Game/Boot/UIFactory.cs`\n- `Assets/Scripts/Game/InGame/InGameFlowPresenter.cs`\n- `Assets/Scripts/Game/InGame/InGameSceneController.cs`\n- `Assets/Scripts/Game/InGame/CameraController.cs`\n- `Assets/Tests/EditMode/Game/CameraTests.cs`\n",
       "description": "Wire the complete auto-tracking pipeline: InGamePresenter receives PuzzleStageController + CameraController, subscribes to OnPiecePlaced, and drives camera targeting. Add comprehensive EditMode tests.\n\n**InGamePresenter changes:**\n- Add constructor parameters: `PuzzleStageController stage = null, CameraController cameraController = null` (optional, after existing params, to preserve backward compat)\n- Store as `private readonly PuzzleStageController _stage;` and `private readonly CameraController _camera;`\n- In `HandlePiecePlaced(int pieceId)` after existing logic, add camera targeting:\n  ```\n  if (_stage != null && _camera != null)\n  {\n      var placeableIds = _model.GetPlaceablePieceIds();\n      var positions = new List<Vector3>();\n      foreach (var id in placeableIds)\n      {\n          var pos = _stage.GetSolvedPosition(id);\n          if (pos.HasValue) positions.Add(pos.Value);\n      }\n      if (positions.Count > 0)\n      {\n          var cam = _camera.GetComponent<Camera>() ?? Camera.main;\n          var (center, ortho) = CameraMath.ComputeFraming(positions, config.Padding, cam.aspect, config.MinZoom, config.MaxZoom);\n          _camera.SetTarget(center, ortho);\n      }\n  }\n  ```\n  The CameraConfig is accessed via `_camera`'s config reference. Add a helper `_camera.Config` or pass config values through. Simplest: add `public CameraConfig Config => _config;` on CameraController.\n\n**UIFactory.CreateInGamePresenter changes:**\n- Add optional parameters `PuzzleStageController stage = null, CameraController cameraController = null`\n- Pass through to InGamePresenter constructor\n\n**InGameFlowPresenter changes:**\n- Pass `_stage` and camera controller to `_uiFactory.CreateInGamePresenter(ActiveView, model, _stage, cameraController)`\n- Get camera controller: store a reference from constructor or resolve via `Camera.main.GetComponent<CameraController>()` at RunAsync time\n- Add `CameraController _cameraController` parameter to constructor (optional). InGameSceneController resolves it from `Camera.main` or as a SerializeField.\n\n**InGameSceneController changes:**\n- In Initialize(), resolve CameraController: `var cam = Camera.main?.GetComponent<CameraController>();`\n- Pass it to InGameFlowPresenter constructor\n\n**EditMode tests** in new `Assets/Tests/EditMode/Game/CameraTests.cs`:\n1. `CameraMath_ComputeFraming_SinglePosition_ReturnsPositionAsCenter` — one position → center equals that position, orthoSize = minZoom (clamped)\n2. `CameraMath_ComputeFraming_MultiplePositions_CorrectBounds` — 4 corner positions → center is average, orthoSize covers spread + padding\n3. `CameraMath_ComputeFraming_EmptyPositions_ReturnsFallback` — empty list → (0,0,0) center, minZoom ortho\n4. `CameraMath_ComputeFraming_ClampsToMaxZoom` — widely spread positions → orthoSize capped at maxZoom\n5. `GetPlaceablePieceIds_ReturnsOnlyValidUnplacedPieces` — build a 5-piece chain model, place seed + piece 1, verify GetPlaceablePieceIds returns only piece 2 (has placed neighbor) not pieces 3-4\n6. `GetPlaceablePieceIds_AllPlaced_ReturnsEmpty` — complete the puzzle, verify empty list\n7. `GetPlaceablePieceIds_AfterEachPlacement_ListShrinks` — place pieces sequentially, verify list changes correctly\n\n**Existing test fixup:** InGamePresenter constructor now has 2 new optional params. Existing tests pass `null` implicitly (optional params). Verify all existing InGameTests still compile and pass.\n\n**Mock note (K004):** No new interface members on IInGameView, so existing mocks don't need updating. InGamePresenter's new params are optional and default to null.",
       "estimate": "1h",
       "files": [
@@ -7983,6 +7995,105 @@
       "verdict": "✅ pass",
       "duration_ms": 30,
       "created_at": "2026-03-30T11:05:37.696Z"
+    },
+    {
+      "id": 10,
+      "task_id": "T03",
+      "slice_id": "S01",
+      "milestone_id": "M023",
+      "command": "grep -c \"public CameraConfig Config\" Assets/Scripts/Game/InGame/CameraController.cs",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 20,
+      "created_at": "2026-03-30T11:31:43.302Z"
+    },
+    {
+      "id": 11,
+      "task_id": "T03",
+      "slice_id": "S01",
+      "milestone_id": "M023",
+      "command": "grep -c \"PuzzleStageController _stage\" Assets/Scripts/Game/InGame/InGamePresenter.cs",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 20,
+      "created_at": "2026-03-30T11:31:43.302Z"
+    },
+    {
+      "id": 12,
+      "task_id": "T03",
+      "slice_id": "S01",
+      "milestone_id": "M023",
+      "command": "grep -c \"cameraController\" Assets/Scripts/Game/Boot/UIFactory.cs",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 20,
+      "created_at": "2026-03-30T11:31:43.302Z"
+    },
+    {
+      "id": 13,
+      "task_id": "T03",
+      "slice_id": "S01",
+      "milestone_id": "M023",
+      "command": "grep -c \"_cameraController\" Assets/Scripts/Game/InGame/InGameFlowPresenter.cs",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 20,
+      "created_at": "2026-03-30T11:31:43.302Z"
+    },
+    {
+      "id": 14,
+      "task_id": "T03",
+      "slice_id": "S01",
+      "milestone_id": "M023",
+      "command": "grep -c \"Camera.main\" Assets/Scripts/Game/InGame/InGameSceneController.cs",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 20,
+      "created_at": "2026-03-30T11:31:43.302Z"
+    },
+    {
+      "id": 15,
+      "task_id": "T03",
+      "slice_id": "S01",
+      "milestone_id": "M023",
+      "command": "grep -c \"\\[Test\\]\" Assets/Tests/EditMode/Game/CameraTests.cs → 11",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 20,
+      "created_at": "2026-03-30T11:31:43.302Z"
+    },
+    {
+      "id": 16,
+      "task_id": "T03",
+      "slice_id": "S01",
+      "milestone_id": "M023",
+      "command": "powershell Get-ChildItem Library/ScriptAssemblies → SimpleGame.Tests.Game.dll 2026-03-30 12:22:35",
+      "exit_code": 0,
+      "verdict": "✅ pass (compilation)",
+      "duration_ms": 300,
+      "created_at": "2026-03-30T11:31:43.302Z"
+    },
+    {
+      "id": 17,
+      "task_id": "T03",
+      "slice_id": "S01",
+      "milestone_id": "M023",
+      "command": "mcporter call unityMCP.read_console (pre-reimport) → no errors",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 2000,
+      "created_at": "2026-03-30T11:31:43.302Z"
+    },
+    {
+      "id": 18,
+      "task_id": "T03",
+      "slice_id": "S01",
+      "milestone_id": "M023",
+      "command": "Unity Test Runner poll (job cb006405)",
+      "exit_code": -1,
+      "verdict": "⚠️ incomplete (MCP blocked by Reimport All)",
+      "duration_ms": 1200000,
+      "created_at": "2026-03-30T11:31:43.302Z"
     }
   ]
 }

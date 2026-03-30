@@ -46,6 +46,9 @@ namespace SimpleGame.Game.InGame
 
             _stage?.SetContext(popupManager);
 
+            // Resolve the CameraController from the main camera (may be null in tests).
+            var cameraController = Camera.main?.GetComponent<CameraController>();
+
             _flowPresenter = new InGameFlowPresenter(
                 serializedView:          _inGameView,
                 stage:                   _stage,
@@ -63,7 +66,8 @@ namespace SimpleGame.Game.InGame
                 adService:               adService,
                 defaultLevelId:          _defaultLevelId,
                 defaultTotalPieces:      _defaultTotalPieces,
-                goldenPiecesPerWin:      _goldenPiecesPerWin);
+                goldenPiecesPerWin:      _goldenPiecesPerWin,
+                cameraController:        cameraController);
 
             if (remoteConfig.HasValue)
                 _flowPresenter.ApplyRemoteConfig(remoteConfig.Value);

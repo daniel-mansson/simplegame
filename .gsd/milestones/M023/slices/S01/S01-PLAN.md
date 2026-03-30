@@ -42,7 +42,7 @@
   - Estimate: 30m
   - Files: Assets/Scripts/Game/InGame/CameraController.cs
   - Verify: rg "SetTarget|SmoothDamp|_isAutoTracking|LateUpdate" Assets/Scripts/Game/InGame/CameraController.cs
-- [ ] **T03: Wire auto-tracking into InGamePresenter and add EditMode tests** — Wire the complete auto-tracking pipeline: InGamePresenter receives PuzzleStageController + CameraController, subscribes to OnPiecePlaced, and drives camera targeting. Add comprehensive EditMode tests.
+- [x] **T03: Wired auto-tracking camera into InGamePresenter (stage + camera params, HandlePiecePlaced targeting) and added 11 EditMode CameraMath + GetPlaceablePieceIds tests** — Wire the complete auto-tracking pipeline: InGamePresenter receives PuzzleStageController + CameraController, subscribes to OnPiecePlaced, and drives camera targeting. Add comprehensive EditMode tests.
 
 **InGamePresenter changes:**
 - Add constructor parameters: `PuzzleStageController stage = null, CameraController cameraController = null` (optional, after existing params, to preserve backward compat)

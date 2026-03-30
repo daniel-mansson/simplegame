@@ -41,6 +41,7 @@ namespace SimpleGame.Game.InGame
         private readonly IAnalyticsService _analytics;
         private readonly IAdService _adService;
         private readonly PuzzleStageController _stage;
+        private readonly CameraController _cameraController;
 
         // ── Config ────────────────────────────────────────────────────────
         private readonly int _defaultLevelId;
@@ -109,7 +110,8 @@ namespace SimpleGame.Game.InGame
             int defaultTotalPieces = 10,
             int goldenPiecesPerWin = 5,
             int continueCostCoins = 100,
-            int interstitialEveryNLevels = 3)
+            int interstitialEveryNLevels = 3,
+            CameraController cameraController = null)
         {
             _serializedView           = serializedView;
             _stage                    = stage;
@@ -130,6 +132,7 @@ namespace SimpleGame.Game.InGame
             _goldenPiecesPerWin       = goldenPiecesPerWin;
             _continueCostCoins        = continueCostCoins;
             _interstitialEveryNLevels = interstitialEveryNLevels;
+            _cameraController         = cameraController;
         }
 
         // ── Test seam API ─────────────────────────────────────────────────
@@ -204,7 +207,7 @@ namespace SimpleGame.Game.InGame
             while (true)
             {
                 var model     = modelFactory();
-                var presenter = _uiFactory.CreateInGamePresenter(ActiveView, model);
+                var presenter = _uiFactory.CreateInGamePresenter(ActiveView, model, _stage, _cameraController);
                 presenter.Initialize();
                 _analytics?.TrackLevelStarted(_session.CurrentLevelId.ToString());
                 try

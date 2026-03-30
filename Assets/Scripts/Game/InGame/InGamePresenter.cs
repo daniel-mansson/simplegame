@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using SimpleGame.Core.MVP;
@@ -30,18 +31,24 @@ namespace SimpleGame.Game.InGame
         private readonly IHeartService      _hearts;
         private readonly PuzzleModel        _model;
         private readonly int                _initialHearts;
+        private readonly PuzzleStageController _stage;
+        private readonly CameraController      _camera;
 
         private UniTaskCompletionSource<InGameAction> _actionTcs;
 
         public InGamePresenter(IInGameView view, GameSessionService session,
                                IHeartService hearts, PuzzleModel model,
-                               int initialHearts = 3)
+                               int initialHearts = 3,
+                               PuzzleStageController stage = null,
+                               CameraController cameraController = null)
             : base(view)
         {
             _session       = session;
             _hearts        = hearts;
             _model         = model;
             _initialHearts = initialHearts;
+            _stage         = stage;
+            _camera        = cameraController;
         }
 
         public override void Initialize()
@@ -144,6 +151,30 @@ namespace SimpleGame.Game.InGame
 
             _session.CurrentScore = _model.PlacedCount;
             View.UpdatePieceCounter($"{_model.PlacedCount}/{_model.TotalNonSeedCount}");
+
+            // Auto-tracking camera: frame all currently placeable positions.
+            if (_stage != null && _camera != null)
+            {
+                var config = _camera.Config;
+                if (config != null)
+                {
+                    var placeableIds = _model.GetPlaceablePieceIds();
+                    var positions = new List<Vector3>(placeableIds.Count);
+                    foreach (var id in placeableIds)
+                    {
+                        var pos = _stage.GetSolvedPosition(id);
+                        if (pos.HasValue) positions.Add(pos.Value);
+                    }
+                    if (positions.Count > 0)
+                    {
+                        var cam = _camera.GetComponent<Camera>();
+                        float aspect = cam != null ? cam.aspect : 1f;
+                        var (center, ortho) = CameraMath.ComputeFraming(
+                            positions, config.Padding, aspect, config.MinZoom, config.MaxZoom);
+                        _camera.SetTarget(center, ortho);
+                    }
+                }
+            }
         }
 
         private void HandleRejected(int slotIndex, int pieceId)

@@ -164,6 +164,9 @@ namespace SimpleGame.Game.InGame
         /// <summary>True while the camera is auto-tracking toward a target.</summary>
         public bool IsAutoTracking => _isAutoTracking;
 
+        /// <summary>The active CameraConfig (may be null if not yet assigned).</summary>
+        public CameraConfig Config => _config;
+
         // ── LateUpdate ─────────────────────────────────────────────────────
 
         private void LateUpdate()

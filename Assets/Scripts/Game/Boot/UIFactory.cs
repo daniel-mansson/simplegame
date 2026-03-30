@@ -59,9 +59,12 @@ namespace SimpleGame.Game.Boot
             return new ConfirmDialogPresenter(view);
         }
 
-        public InGamePresenter CreateInGamePresenter(IInGameView view, PuzzleModel model)
+        public InGamePresenter CreateInGamePresenter(IInGameView view, PuzzleModel model,
+                                                      PuzzleStageController stage = null,
+                                                      CameraController cameraController = null)
         {
-            return new InGamePresenter(view, _session, _hearts, model, _initialHearts);
+            return new InGamePresenter(view, _session, _hearts, model, _initialHearts,
+                                       stage, cameraController);
         }
 
         /// <summary>Override initial heart count from remote config.</summary>
