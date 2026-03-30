@@ -405,6 +405,7 @@ public static class SceneSetup
             new Vector2(0.70f, 0.90f), new Vector2(0.98f, 0.99f), 26);
 
         // ── DeckView — world-space canvas for the deck tray ──────────────
+        // Parented under the camera so it follows camera pan/zoom automatically.
         var deckViewGO = new GameObject("DeckView");
         var deckViewCanvas = deckViewGO.AddComponent<Canvas>();
         deckViewCanvas.renderMode   = RenderMode.WorldSpace;
@@ -413,8 +414,15 @@ public static class SceneSetup
         deckViewGO.AddComponent<GraphicRaycaster>();
         var deckViewRT = deckViewGO.GetComponent<RectTransform>();
         if (deckViewRT == null) deckViewRT = deckViewGO.AddComponent<RectTransform>();
-        deckViewRT.sizeDelta          = new Vector2(10f, 2f);
-        deckViewGO.transform.position = new Vector3(0f, -4f, 2f);
+
+        // Parent under camera — DeckView must remain a child of the camera so it
+        // follows pan/zoom (see M023 context: "must remain attached").
+        deckViewGO.transform.SetParent(cam.transform, false);
+        deckViewRT.localRotation     = Quaternion.Euler(35.972f, 0f, 0f);
+        deckViewRT.localScale        = new Vector3(0.01f, 0.01f, 0.01f);
+        deckViewRT.localPosition     = new Vector3(0f, 0f, 11.17f);
+        deckViewRT.anchoredPosition  = new Vector2(0f, -5.15f);
+        deckViewRT.sizeDelta         = new Vector2(628.27f, 200f);
 
         // HorizontalLayoutGroup container
         var slotContainerGO = new GameObject("SlotContainer");
