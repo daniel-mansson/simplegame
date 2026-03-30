@@ -508,6 +508,21 @@ public static class SceneSetup
         WireSerializedField(inGameController, "_inGameView", inGameView);
         WireSerializedField(inGameController, "_stage",      stage);
 
+        // ── CameraConfig ──────────────────────────────────────────────────
+        // CameraController._config must be wired so the level-start sequence
+        // (overview snap → hold → zoom to first placement area) runs correctly.
+        var cameraConfigPath = "Assets/Data/CameraConfig.asset";
+        var cameraConfig = AssetDatabase.LoadAssetAtPath<CameraConfig>(cameraConfigPath);
+        if (cameraConfig == null)
+        {
+            cameraConfig = ScriptableObject.CreateInstance<CameraConfig>();
+            if (!System.IO.Directory.Exists("Assets/Data"))
+                System.IO.Directory.CreateDirectory("Assets/Data");
+            AssetDatabase.CreateAsset(cameraConfig, cameraConfigPath);
+        }
+        var camController = cam.gameObject.GetComponent<CameraController>();
+        WireSerializedField(camController, "_config", cameraConfig);
+
         bool saved = EditorSceneManager.SaveScene(scene, InGamePath);
         Debug.Log(saved ? "[SceneSetup] InGame scene saved." : "[SceneSetup] ERROR saving InGame scene.");
     }

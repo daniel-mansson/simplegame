@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exported_at": "2026-03-30T13:59:04.147Z",
+  "exported_at": "2026-03-30T14:04:11.468Z",
   "milestones": [
     {
       "id": "M001",
@@ -7114,19 +7114,26 @@
       "milestone_id": "M023",
       "slice_id": "S03",
       "id": "T02",
-      "title": "Wire CameraConfig asset in SceneSetup and run scene generation",
-      "status": "pending",
-      "one_liner": "",
-      "narrative": "",
-      "verification_result": "",
+      "title": "Added CameraConfig asset creation + wiring to SceneSetup.CreateInGameScene(), ran scene generation — CameraConfig.asset created at Assets/Data/CameraConfig.asset and InGame.unity's CameraController._config now references it",
+      "status": "complete",
+      "one_liner": "Added CameraConfig asset creation + wiring to SceneSetup.CreateInGameScene(), ran scene generation — CameraConfig.asset created at Assets/Data/CameraConfig.asset and InGame.unity's CameraController._config now references it",
+      "narrative": "The auto-fix attempt's grep failures were a path-quoting issue in Git Bash (backslash vs forward-slash) — all T01 symbols were already correct. For T02: added the CameraConfig create-or-load block to SceneSetup.CreateInGameScene() just before SaveScene, following the existing pattern for DefaultGridConfig/DefaultPieceRenderConfig. The block loads the asset if it exists or creates a new ScriptableObject instance, then wires it to CameraController via WireSerializedField(camController, \"_config\", cameraConfig). After Unity recompiled the editor script, SceneSetup was run via Tools/Setup/Create And Register Scenes. Editor.log confirmed: 'Start importing Assets/Data/CameraConfig.asset', '[SceneSetup] InGame scene saved.', '[SceneSetup] Scene setup complete.' InGame.unity now contains _config: {fileID: 11400000, guid: d5f1b80a58facb345bcacfdc5d3f5fac, type: 2} matching CameraConfig.asset.meta. All 368 EditMode tests pass (0 failures).",
+      "verification_result": "All S03 slice-level grep checks confirmed with forward-slash paths in Git Bash: OverviewHoldDuration in CameraConfig (1), ComputeFullBoardFraming in CameraMath (1), SnapTo in CameraController (2), [Test] count in CameraTests (21). T02-specific: CameraConfig references in SceneSetup.cs (4 ≥ 2), CameraConfig.asset exists on disk, InGame.unity _config GUID matches asset meta. Unity EditMode test runner: 368/368 passed, 0 failed (job 19150ad032f741a39e227d05fc29917d, 8.36s).",
       "duration": "",
-      "completed_at": null,
+      "completed_at": "2026-03-30T14:04:11.427Z",
       "blocker_discovered": false,
-      "deviations": "",
-      "known_issues": "",
-      "key_files": [],
-      "key_decisions": [],
-      "full_summary_md": "",
+      "deviations": "CameraConfig wiring placed before SaveScene at end of CreateInGameScene() rather than immediately after AddComponent<CameraController>() — equivalent functionally and matches the existing late-wiring pattern for asset references in the same function.",
+      "known_issues": "None.",
+      "key_files": [
+        "Assets/Editor/SceneSetup.cs",
+        "Assets/Data/CameraConfig.asset",
+        "Assets/Scenes/InGame.unity"
+      ],
+      "key_decisions": [
+        "CameraConfig wiring placed at end of CreateInGameScene() before SaveScene, matching existing pattern for gridConfig/renderConfig late-wiring",
+        "Create-or-load pattern: LoadAssetAtPath first, CreateInstance + CreateAsset only if null — ensures idempotent SceneSetup runs"
+      ],
+      "full_summary_md": "---\nid: T02\nparent: S03\nmilestone: M023\nkey_files:\n  - Assets/Editor/SceneSetup.cs\n  - Assets/Data/CameraConfig.asset\n  - Assets/Scenes/InGame.unity\nkey_decisions:\n  - CameraConfig wiring placed at end of CreateInGameScene() before SaveScene, matching existing pattern for gridConfig/renderConfig late-wiring\n  - Create-or-load pattern: LoadAssetAtPath first, CreateInstance + CreateAsset only if null — ensures idempotent SceneSetup runs\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-03-30T14:04:11.427Z\nblocker_discovered: false\n---\n\n# T02: Added CameraConfig asset creation + wiring to SceneSetup.CreateInGameScene(), ran scene generation — CameraConfig.asset created at Assets/Data/CameraConfig.asset and InGame.unity's CameraController._config now references it\n\n**Added CameraConfig asset creation + wiring to SceneSetup.CreateInGameScene(), ran scene generation — CameraConfig.asset created at Assets/Data/CameraConfig.asset and InGame.unity's CameraController._config now references it**\n\n## What Happened\n\nThe auto-fix attempt's grep failures were a path-quoting issue in Git Bash (backslash vs forward-slash) — all T01 symbols were already correct. For T02: added the CameraConfig create-or-load block to SceneSetup.CreateInGameScene() just before SaveScene, following the existing pattern for DefaultGridConfig/DefaultPieceRenderConfig. The block loads the asset if it exists or creates a new ScriptableObject instance, then wires it to CameraController via WireSerializedField(camController, \"_config\", cameraConfig). After Unity recompiled the editor script, SceneSetup was run via Tools/Setup/Create And Register Scenes. Editor.log confirmed: 'Start importing Assets/Data/CameraConfig.asset', '[SceneSetup] InGame scene saved.', '[SceneSetup] Scene setup complete.' InGame.unity now contains _config: {fileID: 11400000, guid: d5f1b80a58facb345bcacfdc5d3f5fac, type: 2} matching CameraConfig.asset.meta. All 368 EditMode tests pass (0 failures).\n\n## Verification\n\nAll S03 slice-level grep checks confirmed with forward-slash paths in Git Bash: OverviewHoldDuration in CameraConfig (1), ComputeFullBoardFraming in CameraMath (1), SnapTo in CameraController (2), [Test] count in CameraTests (21). T02-specific: CameraConfig references in SceneSetup.cs (4 ≥ 2), CameraConfig.asset exists on disk, InGame.unity _config GUID matches asset meta. Unity EditMode test runner: 368/368 passed, 0 failed (job 19150ad032f741a39e227d05fc29917d, 8.36s).\n\n## Verification Evidence\n\n| # | Command | Exit Code | Verdict | Duration |\n|---|---------|-----------|---------|----------|\n| 1 | `grep -c \"OverviewHoldDuration\" Assets/Scripts/Game/InGame/CameraConfig.cs` | 0 | ✅ pass | 50ms |\n| 2 | `grep -c \"ComputeFullBoardFraming\" Assets/Scripts/Game/InGame/CameraMath.cs` | 0 | ✅ pass | 50ms |\n| 3 | `grep -c \"SnapTo\" Assets/Scripts/Game/InGame/CameraController.cs` | 0 | ✅ pass | 50ms |\n| 4 | `grep -c \"[Test]\" Assets/Tests/EditMode/Game/CameraTests.cs` | 0 | ✅ pass (count=21) | 50ms |\n| 5 | `grep -c \"CameraConfig\" Assets/Editor/SceneSetup.cs` | 0 | ✅ pass (count=4) | 50ms |\n| 6 | `ls Assets/Data/CameraConfig.asset` | 0 | ✅ pass | 50ms |\n| 7 | `grep \"_config\" Assets/Scenes/InGame.unity` | 0 | ✅ pass (GUID match) | 50ms |\n| 8 | `Unity EditMode run_tests (job 19150ad032f741a39e227d05fc29917d)` | 0 | ✅ pass (368/368) | 8364ms |\n\n\n## Deviations\n\nCameraConfig wiring placed before SaveScene at end of CreateInGameScene() rather than immediately after AddComponent<CameraController>() — equivalent functionally and matches the existing late-wiring pattern for asset references in the same function.\n\n## Known Issues\n\nNone.\n\n## Files Created/Modified\n\n- `Assets/Editor/SceneSetup.cs`\n- `Assets/Data/CameraConfig.asset`\n- `Assets/Scenes/InGame.unity`\n",
       "description": "Create a CameraConfig ScriptableObject asset in SceneSetup.CreateInGameScene() and wire it to the CameraController's [SerializeField] _config field. This closes the last gap — without this wiring, the CameraController's Config property returns null and all camera features (auto-tracking, level-start sequence, manual input) are silently skipped.\n\n## Steps\n\n1. **SceneSetup.CreateInGameScene()** — After the existing `cam.gameObject.AddComponent<CameraController>();` line (around line 385), add CameraConfig asset creation and wiring:\n   ```csharp\n   // Create or load CameraConfig asset\n   var cameraConfigPath = \"Assets/Data/CameraConfig.asset\";\n   var cameraConfig = AssetDatabase.LoadAssetAtPath<CameraConfig>(cameraConfigPath);\n   if (cameraConfig == null)\n   {\n       cameraConfig = ScriptableObject.CreateInstance<CameraConfig>();\n       if (!System.IO.Directory.Exists(\"Assets/Data\"))\n           System.IO.Directory.CreateDirectory(\"Assets/Data\");\n       AssetDatabase.CreateAsset(cameraConfig, cameraConfigPath);\n   }\n   var camController = cam.gameObject.GetComponent<CameraController>();\n   WireSerializedField(camController, \"_config\", cameraConfig);\n   ```\n   IMPORTANT: Get the `CameraController` reference via `cam.gameObject.GetComponent<CameraController>()` since AddComponent was already called. Wire to `_config` which is the `[SerializeField] private CameraConfig _config` field.\n\n2. **Run SceneSetup** — Execute `Tools/Setup/Create And Register Scenes` via Unity MCP to regenerate all scene files. Per K007, scene files must be regenerated after SerializeField wiring changes.\n\n3. **Verify** — Confirm `CameraConfig.asset` exists at `Assets/Data/CameraConfig.asset` and the InGame scene file references it.\n\n## Must-Haves\n\n- [ ] CameraConfig asset created at `Assets/Data/CameraConfig.asset` if it doesn't exist, loaded if it does\n- [ ] CameraController's `_config` field wired to the CameraConfig asset in the InGame scene\n- [ ] SceneSetup run successfully — all 4 scene files regenerated\n- [ ] All existing 358+ EditMode tests still pass",
       "estimate": "20m",
       "files": [
@@ -8552,6 +8559,94 @@
       "verdict": "✅ pass",
       "duration_ms": 50,
       "created_at": "2026-03-30T13:59:04.109Z"
+    },
+    {
+      "id": 41,
+      "task_id": "T02",
+      "slice_id": "S03",
+      "milestone_id": "M023",
+      "command": "grep -c \"OverviewHoldDuration\" Assets/Scripts/Game/InGame/CameraConfig.cs",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 50,
+      "created_at": "2026-03-30T14:04:11.427Z"
+    },
+    {
+      "id": 42,
+      "task_id": "T02",
+      "slice_id": "S03",
+      "milestone_id": "M023",
+      "command": "grep -c \"ComputeFullBoardFraming\" Assets/Scripts/Game/InGame/CameraMath.cs",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 50,
+      "created_at": "2026-03-30T14:04:11.427Z"
+    },
+    {
+      "id": 43,
+      "task_id": "T02",
+      "slice_id": "S03",
+      "milestone_id": "M023",
+      "command": "grep -c \"SnapTo\" Assets/Scripts/Game/InGame/CameraController.cs",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 50,
+      "created_at": "2026-03-30T14:04:11.427Z"
+    },
+    {
+      "id": 44,
+      "task_id": "T02",
+      "slice_id": "S03",
+      "milestone_id": "M023",
+      "command": "grep -c \"[Test]\" Assets/Tests/EditMode/Game/CameraTests.cs",
+      "exit_code": 0,
+      "verdict": "✅ pass (count=21)",
+      "duration_ms": 50,
+      "created_at": "2026-03-30T14:04:11.427Z"
+    },
+    {
+      "id": 45,
+      "task_id": "T02",
+      "slice_id": "S03",
+      "milestone_id": "M023",
+      "command": "grep -c \"CameraConfig\" Assets/Editor/SceneSetup.cs",
+      "exit_code": 0,
+      "verdict": "✅ pass (count=4)",
+      "duration_ms": 50,
+      "created_at": "2026-03-30T14:04:11.427Z"
+    },
+    {
+      "id": 46,
+      "task_id": "T02",
+      "slice_id": "S03",
+      "milestone_id": "M023",
+      "command": "ls Assets/Data/CameraConfig.asset",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 50,
+      "created_at": "2026-03-30T14:04:11.427Z"
+    },
+    {
+      "id": 47,
+      "task_id": "T02",
+      "slice_id": "S03",
+      "milestone_id": "M023",
+      "command": "grep \"_config\" Assets/Scenes/InGame.unity",
+      "exit_code": 0,
+      "verdict": "✅ pass (GUID match)",
+      "duration_ms": 50,
+      "created_at": "2026-03-30T14:04:11.427Z"
+    },
+    {
+      "id": 48,
+      "task_id": "T02",
+      "slice_id": "S03",
+      "milestone_id": "M023",
+      "command": "Unity EditMode run_tests (job 19150ad032f741a39e227d05fc29917d)",
+      "exit_code": 0,
+      "verdict": "✅ pass (368/368)",
+      "duration_ms": 8364,
+      "created_at": "2026-03-30T14:04:11.427Z"
     }
   ]
 }

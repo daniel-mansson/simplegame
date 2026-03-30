@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "taskId": "T01",
+  "unitId": "M023/S03/T01",
+  "timestamp": 1774879154550,
+  "passed": false,
+  "discoverySource": "task-plan",
+  "checks": [
+    {
+      "command": "grep -c \"OverviewHoldDuration\" Assets/Scripts/Game/InGame/CameraConfig.cs returns >= 1",
+      "exitCode": 1,
+      "durationMs": 16,
+      "verdict": "fail"
+    },
+    {
+      "command": "grep -c \"ComputeFullBoardFraming\" Assets/Scripts/Game/InGame/CameraMath.cs returns >= 1",
+      "exitCode": 1,
+      "durationMs": 15,
+      "verdict": "fail"
+    },
+    {
+      "command": "grep -c \"SnapTo\" Assets/Scripts/Game/InGame/CameraController.cs returns >= 1",
+      "exitCode": 1,
+      "durationMs": 16,
+      "verdict": "fail"
+    },
+    {
+      "command": "grep -c \"\\[Test\\]\" Assets/Tests/EditMode/Game/CameraTests.cs returns >= 21",
+      "exitCode": 1,
+      "durationMs": 15,
+      "verdict": "fail"
+    }
+  ],
+  "retryAttempt": 1,
+  "maxRetries": 2
+}
