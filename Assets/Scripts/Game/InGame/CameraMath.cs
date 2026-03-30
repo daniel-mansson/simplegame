@@ -10,6 +10,34 @@ namespace SimpleGame.Game.InGame
     public static class CameraMath
     {
         /// <summary>
+        /// Compute the camera center and orthographic size needed to frame an entire
+        /// puzzle board defined by <paramref name="boardRect"/>.
+        /// </summary>
+        /// <param name="boardRect">World-space rect of the board.</param>
+        /// <param name="padding">World-unit margin added around the rect on every side.</param>
+        /// <param name="aspect">Camera aspect ratio (width / height).</param>
+        /// <param name="minZoom">Minimum orthographic size (most zoomed-in).</param>
+        /// <param name="maxZoom">Maximum orthographic size (most zoomed-out).</param>
+        /// <returns>
+        /// A tuple of <c>(center, orthoSize)</c> where <c>center</c> is the centre of
+        /// <paramref name="boardRect"/> and <c>orthoSize</c> is clamped to
+        /// [<paramref name="minZoom"/>, <paramref name="maxZoom"/>].
+        /// </returns>
+        public static (Vector3 center, float orthoSize) ComputeFullBoardFraming(
+            Rect boardRect, float padding, float aspect, float minZoom, float maxZoom)
+        {
+            var center = new Vector3(boardRect.center.x, boardRect.center.y, 0f);
+
+            float requiredByHeight = (boardRect.height + 2f * padding) * 0.5f;
+            float requiredByWidth  = (boardRect.width  + 2f * padding) / (2f * aspect);
+            float orthoSize        = Mathf.Max(requiredByHeight, requiredByWidth);
+
+            orthoSize = Mathf.Clamp(orthoSize, minZoom, maxZoom);
+
+            return (center, orthoSize);
+        }
+
+        /// <summary>
         /// Compute the camera center and orthographic size needed to frame all
         /// <paramref name="positions"/> with the given <paramref name="padding"/>.
         /// </summary>

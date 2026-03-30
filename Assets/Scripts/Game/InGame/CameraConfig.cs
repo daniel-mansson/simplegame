@@ -32,5 +32,11 @@ namespace SimpleGame.Game.InGame
         /// manually zooms. Larger values feel snappier.
         /// </summary>
         [SerializeField] public float ZoomSpeed = 5f;
+
+        /// <summary>
+        /// How long (in seconds) the camera holds the full-board overview shot at level start
+        /// before animating to the first valid placement area.
+        /// </summary>
+        [SerializeField] public float OverviewHoldDuration = 1.0f;
     }
 }

@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "taskId": "T02",
+  "unitId": "M023/S02/T02",
+  "timestamp": 1774878520152,
+  "passed": false,
+  "discoverySource": "task-plan",
+  "checks": [
+    {
+      "command": "grep -c \"mouseScrollDelta\" Assets/Scripts/Game/InGame/CameraController.cs",
+      "exitCode": 1,
+      "durationMs": 12,
+      "verdict": "fail"
+    },
+    {
+      "command": "grep -c \"_isAutoTracking = false\" Assets/Scripts/Game/InGame/CameraController.cs",
+      "exitCode": 1,
+      "durationMs": 10,
+      "verdict": "fail"
+    },
+    {
+      "command": "grep -c \"SetBoardBounds\" Assets/Scripts/Game/InGame/CameraController.cs",
+      "exitCode": 1,
+      "durationMs": 11,
+      "verdict": "fail"
+    },
+    {
+      "command": "grep -c \"ClampToBounds\" Assets/Scripts/Game/InGame/CameraController.cs",
+      "exitCode": 1,
+      "durationMs": 10,
+      "verdict": "fail"
+    }
+  ],
+  "retryAttempt": 1,
+  "maxRetries": 2
+}

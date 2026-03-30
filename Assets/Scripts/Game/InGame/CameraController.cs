@@ -226,6 +226,31 @@ namespace SimpleGame.Game.InGame
         /// <summary>The active CameraConfig (may be null if not yet assigned).</summary>
         public CameraConfig Config => _config;
 
+        /// <summary>
+        /// Instantly teleport the camera to <paramref name="center"/> at <paramref name="orthoSize"/>
+        /// with no SmoothDamp animation. Cancels any active auto-tracking and resets velocity refs
+        /// so a subsequent <see cref="SetTarget"/> starts from a clean state.
+        /// </summary>
+        /// <param name="center">World-space camera position (XY used; Z preserved).</param>
+        /// <param name="orthoSize">Target orthographic size; clamped to [MinZoom, MaxZoom] when Config is set.</param>
+        public void SnapTo(Vector3 center, float orthoSize)
+        {
+            if (_camera == null) return;
+
+            transform.position = new Vector3(center.x, center.y, transform.position.z);
+
+            float clamped = _config != null
+                ? Mathf.Clamp(orthoSize, _config.MinZoom, _config.MaxZoom)
+                : orthoSize;
+            _camera.orthographicSize = clamped;
+
+            _isAutoTracking = false;
+            _posVelocity    = Vector3.zero;
+            _sizeVelocity   = 0f;
+
+            Debug.Log($"[CameraController] SnapTo center=({center.x},{center.y}) ortho={clamped}");
+        }
+
         // ── LateUpdate ─────────────────────────────────────────────────────
 
         private void LateUpdate()

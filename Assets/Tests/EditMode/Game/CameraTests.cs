@@ -344,4 +344,68 @@ namespace SimpleGame.Tests.Game
             Assert.AreEqual(0f, rect.center.y, 0.001f, "Board rect should be centred on Y=0");
         }
     }
+
+    // ---------------------------------------------------------------------------
+    // CameraMath.ComputeFullBoardFraming tests
+    // ---------------------------------------------------------------------------
+
+    [TestFixture]
+    internal class ComputeFullBoardFramingTests
+    {
+        private const float Aspect  = 1.0f;
+        private const float MinZoom = 2f;
+        private const float MaxZoom = 15f;
+        private const float Padding = 1.0f;
+
+        [Test]
+        public void ComputeFullBoardFraming_SquareBoard_ReturnsCorrectFraming()
+        {
+            // 1×1 board centred at origin
+            var boardRect = new Rect(-0.5f, -0.5f, 1f, 1f);
+
+            var (center, orthoSize) = CameraMath.ComputeFullBoardFraming(
+                boardRect, Padding, Aspect, MinZoom, MaxZoom);
+
+            Assert.AreEqual(0f, center.x, 0.001f, "Center X should be 0 for origin-centred board");
+            Assert.AreEqual(0f, center.y, 0.001f, "Center Y should be 0 for origin-centred board");
+            Assert.AreEqual(0f, center.z, 0.001f, "Center Z should be 0");
+
+            // requiredByHeight = (1 + 2*1) * 0.5 = 1.5
+            // requiredByWidth  = (1 + 2*1) / (2*1) = 1.5
+            // orthoSize = max(1.5, 1.5) = 1.5 → clamped to MinZoom=2
+            Assert.AreEqual(MinZoom, orthoSize, 0.001f, "OrthoSize should be clamped to MinZoom for small board");
+        }
+
+        [Test]
+        public void ComputeFullBoardFraming_RectangularBoard_AdjustsForAspect()
+        {
+            // 2×1 board centred at origin, aspect=1
+            var boardRect = new Rect(-1f, -0.5f, 2f, 1f);
+
+            var (center, orthoSize) = CameraMath.ComputeFullBoardFraming(
+                boardRect, Padding, Aspect, MinZoom, MaxZoom);
+
+            Assert.AreEqual(0f, center.x, 0.001f, "Center X should be 0");
+            Assert.AreEqual(0f, center.y, 0.001f, "Center Y should be 0");
+
+            // requiredByHeight = (1 + 2*1) * 0.5 = 1.5
+            // requiredByWidth  = (2 + 2*1) / (2*1) = 2.0
+            // orthoSize = max(1.5, 2.0) = 2.0 → clamped to [2,15] → 2.0
+            float expected = Mathf.Clamp((2f + 2f * Padding) / (2f * Aspect), MinZoom, MaxZoom);
+            Assert.AreEqual(expected, orthoSize, 0.001f, "OrthoSize should account for the wider dimension");
+        }
+
+        [Test]
+        public void ComputeFullBoardFraming_TinyBoard_ClampsToMinZoom()
+        {
+            // Very small board (0.1×0.1) with zero padding — required ortho << MinZoom
+            var boardRect = new Rect(-0.05f, -0.05f, 0.1f, 0.1f);
+
+            var (_, orthoSize) = CameraMath.ComputeFullBoardFraming(
+                boardRect, padding: 0f, aspect: Aspect, minZoom: MinZoom, maxZoom: MaxZoom);
+
+            // requiredByHeight = 0.1 * 0.5 = 0.05 → clamped to MinZoom=2
+            Assert.AreEqual(MinZoom, orthoSize, 0.001f, "Tiny board orthoSize must be clamped to MinZoom");
+        }
+    }
 }

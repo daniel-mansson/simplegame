@@ -1,10 +1,12 @@
-# S03: Level Start Sequence & Polish
+---
+estimated_steps: 64
+estimated_files: 5
+skills_used: []
+---
 
-**Goal:** Level begins with full board overview, then smoothly zooms into the first valid placement area. Edge cases (extreme aspect ratios, very large boards) handled gracefully by existing ComputeFraming math.
-**Demo:** After this: After this: level begins with full board overview, then smoothly zooms into the first valid placement area. Edge cases (extreme aspect ratios, very large boards) handled gracefully.
+# T01: Add OverviewHoldDuration, ComputeFullBoardFraming, SnapTo, level-start sequence, and tests
 
-## Tasks
-- [x] **T01: Added overview hold duration field, full-board framing math, instant-snap API, and wired the level-start camera sequence (snap overview → hold → animate to first placement area) with 3 new EditMode tests** — Add the CameraConfig field, CameraMath convenience method, CameraController instant-teleport API, wire the level-start camera sequence into InGameFlowPresenter.RunAsync, and add EditMode tests covering the new helpers.
+Add the CameraConfig field, CameraMath convenience method, CameraController instant-teleport API, wire the level-start camera sequence into InGameFlowPresenter.RunAsync, and add EditMode tests covering the new helpers.
 
 ## Steps
 
@@ -80,40 +82,23 @@
 - [ ] Existing `_boardBoundsSet` guard in InGamePresenter left as redundant safety net
 - [ ] 3 new EditMode tests for ComputeFullBoardFraming pass
 - [ ] All existing 358+ tests pass with no regressions
-  - Estimate: 45m
-  - Files: Assets/Scripts/Game/InGame/CameraConfig.cs, Assets/Scripts/Game/InGame/CameraMath.cs, Assets/Scripts/Game/InGame/CameraController.cs, Assets/Scripts/Game/InGame/InGameFlowPresenter.cs, Assets/Tests/EditMode/Game/CameraTests.cs
-  - Verify: grep -c "OverviewHoldDuration" Assets/Scripts/Game/InGame/CameraConfig.cs returns >= 1 && grep -c "ComputeFullBoardFraming" Assets/Scripts/Game/InGame/CameraMath.cs returns >= 1 && grep -c "SnapTo" Assets/Scripts/Game/InGame/CameraController.cs returns >= 1 && grep -c "OverviewHoldDuration\|ComputeFullBoardFraming\|SnapTo" Assets/Scripts/Game/InGame/InGameFlowPresenter.cs returns >= 2 && grep -c "\[Test\]" Assets/Tests/EditMode/Game/CameraTests.cs returns >= 21 && Unity EditMode test runner: all tests pass (0 failures)
-- [ ] **T02: Wire CameraConfig asset in SceneSetup and run scene generation** — Create a CameraConfig ScriptableObject asset in SceneSetup.CreateInGameScene() and wire it to the CameraController's [SerializeField] _config field. This closes the last gap — without this wiring, the CameraController's Config property returns null and all camera features (auto-tracking, level-start sequence, manual input) are silently skipped.
 
-## Steps
+## Inputs
 
-1. **SceneSetup.CreateInGameScene()** — After the existing `cam.gameObject.AddComponent<CameraController>();` line (around line 385), add CameraConfig asset creation and wiring:
-   ```csharp
-   // Create or load CameraConfig asset
-   var cameraConfigPath = "Assets/Data/CameraConfig.asset";
-   var cameraConfig = AssetDatabase.LoadAssetAtPath<CameraConfig>(cameraConfigPath);
-   if (cameraConfig == null)
-   {
-       cameraConfig = ScriptableObject.CreateInstance<CameraConfig>();
-       if (!System.IO.Directory.Exists("Assets/Data"))
-           System.IO.Directory.CreateDirectory("Assets/Data");
-       AssetDatabase.CreateAsset(cameraConfig, cameraConfigPath);
-   }
-   var camController = cam.gameObject.GetComponent<CameraController>();
-   WireSerializedField(camController, "_config", cameraConfig);
-   ```
-   IMPORTANT: Get the `CameraController` reference via `cam.gameObject.GetComponent<CameraController>()` since AddComponent was already called. Wire to `_config` which is the `[SerializeField] private CameraConfig _config` field.
+- ``Assets/Scripts/Game/InGame/CameraConfig.cs` — existing ScriptableObject with SmoothTime, MinZoom, MaxZoom, Padding, BoundaryMargin, ZoomSpeed fields`
+- ``Assets/Scripts/Game/InGame/CameraMath.cs` — existing pure static class with ComputeFraming, ClampToBounds, ComputeBoardRect`
+- ``Assets/Scripts/Game/InGame/CameraController.cs` — existing MonoBehaviour with SetTarget, SetBoardBounds, Config property, LateUpdate SmoothDamp`
+- ``Assets/Scripts/Game/InGame/InGameFlowPresenter.cs` — existing flow presenter with RunAsync game loop, _cameraController and _stage fields`
+- ``Assets/Tests/EditMode/Game/CameraTests.cs` — existing 18 EditMode tests across CameraMathTests, GetPlaceablePieceIdsTests, CameraClampAndBoardRectTests`
 
-2. **Run SceneSetup** — Execute `Tools/Setup/Create And Register Scenes` via Unity MCP to regenerate all scene files. Per K007, scene files must be regenerated after SerializeField wiring changes.
+## Expected Output
 
-3. **Verify** — Confirm `CameraConfig.asset` exists at `Assets/Data/CameraConfig.asset` and the InGame scene file references it.
+- ``Assets/Scripts/Game/InGame/CameraConfig.cs` — OverviewHoldDuration field added`
+- ``Assets/Scripts/Game/InGame/CameraMath.cs` — ComputeFullBoardFraming static method added`
+- ``Assets/Scripts/Game/InGame/CameraController.cs` — SnapTo public method added`
+- ``Assets/Scripts/Game/InGame/InGameFlowPresenter.cs` — level-start camera sequence inserted in RunAsync`
+- ``Assets/Tests/EditMode/Game/CameraTests.cs` — 3 new ComputeFullBoardFraming tests added (total [Test] count >= 21)`
 
-## Must-Haves
+## Verification
 
-- [ ] CameraConfig asset created at `Assets/Data/CameraConfig.asset` if it doesn't exist, loaded if it does
-- [ ] CameraController's `_config` field wired to the CameraConfig asset in the InGame scene
-- [ ] SceneSetup run successfully — all 4 scene files regenerated
-- [ ] All existing 358+ EditMode tests still pass
-  - Estimate: 20m
-  - Files: Assets/Editor/SceneSetup.cs, Assets/Data/CameraConfig.asset, Assets/Scenes/InGame.unity
-  - Verify: grep -c "CameraConfig" Assets/Editor/SceneSetup.cs returns >= 2 && test -f Assets/Data/CameraConfig.asset (after SceneSetup run) && Unity EditMode test runner: all tests pass (0 failures)
+grep -c "OverviewHoldDuration" Assets/Scripts/Game/InGame/CameraConfig.cs returns >= 1 && grep -c "ComputeFullBoardFraming" Assets/Scripts/Game/InGame/CameraMath.cs returns >= 1 && grep -c "SnapTo" Assets/Scripts/Game/InGame/CameraController.cs returns >= 1 && grep -c "OverviewHoldDuration\|ComputeFullBoardFraming\|SnapTo" Assets/Scripts/Game/InGame/InGameFlowPresenter.cs returns >= 2 && grep -c "\[Test\]" Assets/Tests/EditMode/Game/CameraTests.cs returns >= 21 && Unity EditMode test runner: all tests pass (0 failures)

@@ -209,6 +209,44 @@ namespace SimpleGame.Game.InGame
                 var model     = modelFactory();
                 var presenter = _uiFactory.CreateInGamePresenter(ActiveView, model, _stage, _cameraController);
                 presenter.Initialize();
+
+                // Level-start camera sequence
+                if (_cameraController != null && _stage != null && _cameraController.Config != null)
+                {
+                    var config = _cameraController.Config;
+                    var cam    = _cameraController.GetComponent<UnityEngine.Camera>();
+                    float aspect = cam != null ? cam.aspect : 1f;
+
+                    // Wire board bounds early (before first piece placement)
+                    _cameraController.SetBoardBounds(_stage.GetBoardRect());
+
+                    // Snap to full-board overview (no animation)
+                    var boardRect = _stage.GetBoardRect();
+                    var (overviewCenter, overviewOrtho) = CameraMath.ComputeFullBoardFraming(
+                        boardRect, config.Padding, aspect, config.MinZoom, config.MaxZoom);
+                    _cameraController.SnapTo(overviewCenter, overviewOrtho);
+
+                    // Hold for overview duration
+                    await UniTask.Delay(
+                        System.TimeSpan.FromSeconds(config.OverviewHoldDuration),
+                        cancellationToken: ct);
+
+                    // Animate to first valid placement area
+                    var placeableIds = model.GetPlaceablePieceIds();
+                    var positions    = new System.Collections.Generic.List<UnityEngine.Vector3>();
+                    foreach (var id in placeableIds)
+                    {
+                        var pos = _stage.GetSolvedPosition(id);
+                        if (pos.HasValue) positions.Add(pos.Value);
+                    }
+                    if (positions.Count > 0)
+                    {
+                        var (center, ortho) = CameraMath.ComputeFraming(
+                            positions, config.Padding, aspect, config.MinZoom, config.MaxZoom);
+                        _cameraController.SetTarget(center, ortho);
+                    }
+                }
+
                 _analytics?.TrackLevelStarted(_session.CurrentLevelId.ToString());
                 try
                 {
