@@ -17,10 +17,20 @@ namespace SimpleGame.Game.InGame
     /// </summary>
     public class CameraController : MonoBehaviour
     {
+        // ── Drag-pan state ─────────────────────────────────────────────────
         private bool    _isPanning;
         private Vector2 _lastScreenPos; // screen-pixel position from the previous frame
 
         private Camera _camera;
+
+        // ── Auto-tracking state ────────────────────────────────────────────
+        [SerializeField] private CameraConfig _config;
+
+        private bool  _isAutoTracking;
+        private Vector3 _targetPosition;
+        private float _targetOrthoSize;
+        private Vector3 _posVelocity;
+        private float _sizeVelocity;
 
         private void Awake()
         {
@@ -118,5 +128,53 @@ namespace SimpleGame.Game.InGame
         private static bool IsOverUI(int pointerId)
             => EventSystem.current != null
             && EventSystem.current.IsPointerOverGameObject(pointerId);
+
+        // ── Auto-tracking public API ───────────────────────────────────────
+
+        /// <summary>Inject a CameraConfig at runtime (e.g. from SceneSetup or a presenter).</summary>
+        public void SetConfig(CameraConfig config)
+        {
+            _config = config;
+        }
+
+        /// <summary>
+        /// Point the auto-tracker at a world-space center and desired orthographic size.
+        /// Enables auto-tracking; velocity refs are reset so the camera starts smoothly
+        /// from its current position each time a new target is set.
+        /// </summary>
+        public void SetTarget(Vector3 center, float orthoSize)
+        {
+            // Preserve the camera's current Z depth.
+            _targetPosition = new Vector3(center.x, center.y, transform.position.z);
+
+            if (_config != null)
+                _targetOrthoSize = Mathf.Clamp(orthoSize, _config.MinZoom, _config.MaxZoom);
+            else
+                _targetOrthoSize = orthoSize;
+
+            // Reset velocity refs so SmoothDamp starts from a clean state.
+            _posVelocity  = Vector3.zero;
+            _sizeVelocity = 0f;
+
+            _isAutoTracking = true;
+
+            Debug.Log($"[CameraController] SetTarget center=({center.x},{center.y}) ortho={_targetOrthoSize}");
+        }
+
+        /// <summary>True while the camera is auto-tracking toward a target.</summary>
+        public bool IsAutoTracking => _isAutoTracking;
+
+        // ── LateUpdate ─────────────────────────────────────────────────────
+
+        private void LateUpdate()
+        {
+            if (!_isAutoTracking || _config == null || _camera == null) return;
+
+            transform.position = Vector3.SmoothDamp(
+                transform.position, _targetPosition, ref _posVelocity, _config.SmoothTime);
+
+            _camera.orthographicSize = Mathf.SmoothDamp(
+                _camera.orthographicSize, _targetOrthoSize, ref _sizeVelocity, _config.SmoothTime);
+        }
     }
 }

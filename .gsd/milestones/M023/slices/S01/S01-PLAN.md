@@ -16,7 +16,7 @@
   - Estimate: 45m
   - Files: Assets/Scripts/Game/InGame/CameraConfig.cs, Assets/Scripts/Game/InGame/CameraMath.cs, Assets/Scripts/Puzzle/PuzzleModel.cs, Assets/Scripts/Game/InGame/PuzzleStageController.cs
   - Verify: rg "class CameraConfig" Assets/Scripts/ && rg "ComputeFraming" Assets/Scripts/Game/InGame/CameraMath.cs && rg "GetPlaceablePieceIds" Assets/Scripts/Puzzle/PuzzleModel.cs && rg "GetSolvedPosition" Assets/Scripts/Game/InGame/PuzzleStageController.cs
-- [ ] **T02: Extend CameraController with SmoothDamp auto-tracking** — Add auto-tracking state and SmoothDamp update loop to the existing CameraController MonoBehaviour.
+- [x] **T02: Extended CameraController with SmoothDamp auto-tracking: SetTarget/SetConfig/IsAutoTracking API and LateUpdate loop, existing drag-pan logic untouched** — Add auto-tracking state and SmoothDamp update loop to the existing CameraController MonoBehaviour.
 
 **New state fields:**
 - `[SerializeField] private CameraConfig _config;` — assigned at runtime or via SceneSetup

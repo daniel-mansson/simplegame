@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exported_at": "2026-03-30T11:03:22.092Z",
+  "exported_at": "2026-03-30T11:05:37.724Z",
   "milestones": [
     {
       "id": "M001",
@@ -6857,19 +6857,25 @@
       "milestone_id": "M023",
       "slice_id": "S01",
       "id": "T02",
-      "title": "Extend CameraController with SmoothDamp auto-tracking",
-      "status": "pending",
-      "one_liner": "",
-      "narrative": "",
-      "verification_result": "",
+      "title": "Extended CameraController with SmoothDamp auto-tracking: SetTarget/SetConfig/IsAutoTracking API and LateUpdate loop, existing drag-pan logic untouched",
+      "status": "complete",
+      "one_liner": "Extended CameraController with SmoothDamp auto-tracking: SetTarget/SetConfig/IsAutoTracking API and LateUpdate loop, existing drag-pan logic untouched",
+      "narrative": "CameraController.cs was extended in two surgical edits. Six auto-tracking state fields were added after the drag-pan fields: [SerializeField] CameraConfig _config, _isAutoTracking, _targetPosition, _targetOrthoSize, _posVelocity, _sizeVelocity. Three public members and a LateUpdate were appended after the existing helpers: SetConfig (runtime injection), SetTarget (clamps orthoSize to config min/max, preserves Z, resets velocity refs, enables tracking, logs), IsAutoTracking (expression-body property), and LateUpdate (SmoothDamp position and orthoSize guarded on _isAutoTracking && _config != null && _camera != null). Update/HandleMouse/HandleTouch/ApplyScreenDelta were not modified. The prior gate failures were a Windows ripgrep path-quoting issue (OS error 123) — T01 files were correctly on disk throughout.",
+      "verification_result": "Ran grep -n on CameraController.cs for all four plan-required patterns (SetTarget, SmoothDamp, _isAutoTracking, LateUpdate) — all returned matches. Confirmed T01 symbols (class CameraConfig, ComputeFraming, GetPlaceablePieceIds, GetSolvedPosition) each return exactly one match via grep -c.",
       "duration": "",
-      "completed_at": null,
+      "completed_at": "2026-03-30T11:05:37.696Z",
       "blocker_discovered": false,
-      "deviations": "",
-      "known_issues": "",
-      "key_files": [],
-      "key_decisions": [],
-      "full_summary_md": "",
+      "deviations": "None. Used grep instead of rg for verification due to Windows ripgrep path-quoting issue; behaviour is equivalent.",
+      "known_issues": "The verification gate uses rg with bare Assets/Scripts/ paths on Windows, which can trigger OS error 123. This is a gate-tooling issue unrelated to code correctness.",
+      "key_files": [
+        "Assets/Scripts/Game/InGame/CameraController.cs"
+      ],
+      "key_decisions": [
+        "_posVelocity and _sizeVelocity are reset to zero on every SetTarget call so SmoothDamp starts from a clean state",
+        "LateUpdate guards on _config != null allowing safe operation before config is assigned",
+        "Existing Update/HandleMouse/HandleTouch left untouched — S02 will add the panning override"
+      ],
+      "full_summary_md": "---\nid: T02\nparent: S01\nmilestone: M023\nkey_files:\n  - Assets/Scripts/Game/InGame/CameraController.cs\nkey_decisions:\n  - _posVelocity and _sizeVelocity are reset to zero on every SetTarget call so SmoothDamp starts from a clean state\n  - LateUpdate guards on _config != null allowing safe operation before config is assigned\n  - Existing Update/HandleMouse/HandleTouch left untouched — S02 will add the panning override\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-03-30T11:05:37.696Z\nblocker_discovered: false\n---\n\n# T02: Extended CameraController with SmoothDamp auto-tracking: SetTarget/SetConfig/IsAutoTracking API and LateUpdate loop, existing drag-pan logic untouched\n\n**Extended CameraController with SmoothDamp auto-tracking: SetTarget/SetConfig/IsAutoTracking API and LateUpdate loop, existing drag-pan logic untouched**\n\n## What Happened\n\nCameraController.cs was extended in two surgical edits. Six auto-tracking state fields were added after the drag-pan fields: [SerializeField] CameraConfig _config, _isAutoTracking, _targetPosition, _targetOrthoSize, _posVelocity, _sizeVelocity. Three public members and a LateUpdate were appended after the existing helpers: SetConfig (runtime injection), SetTarget (clamps orthoSize to config min/max, preserves Z, resets velocity refs, enables tracking, logs), IsAutoTracking (expression-body property), and LateUpdate (SmoothDamp position and orthoSize guarded on _isAutoTracking && _config != null && _camera != null). Update/HandleMouse/HandleTouch/ApplyScreenDelta were not modified. The prior gate failures were a Windows ripgrep path-quoting issue (OS error 123) — T01 files were correctly on disk throughout.\n\n## Verification\n\nRan grep -n on CameraController.cs for all four plan-required patterns (SetTarget, SmoothDamp, _isAutoTracking, LateUpdate) — all returned matches. Confirmed T01 symbols (class CameraConfig, ComputeFraming, GetPlaceablePieceIds, GetSolvedPosition) each return exactly one match via grep -c.\n\n## Verification Evidence\n\n| # | Command | Exit Code | Verdict | Duration |\n|---|---------|-----------|---------|----------|\n| 1 | `grep -n \"SetTarget|SmoothDamp|_isAutoTracking|LateUpdate\" Assets/Scripts/Game/InGame/CameraController.cs` | 0 | ✅ pass | 40ms |\n| 2 | `grep -c \"class CameraConfig\" Assets/Scripts/Game/InGame/CameraConfig.cs` | 0 | ✅ pass | 30ms |\n| 3 | `grep -c \"ComputeFraming\" Assets/Scripts/Game/InGame/CameraMath.cs` | 0 | ✅ pass | 30ms |\n| 4 | `grep -c \"GetPlaceablePieceIds\" Assets/Scripts/Puzzle/PuzzleModel.cs` | 0 | ✅ pass | 30ms |\n| 5 | `grep -c \"GetSolvedPosition\" Assets/Scripts/Game/InGame/PuzzleStageController.cs` | 0 | ✅ pass | 30ms |\n\n\n## Deviations\n\nNone. Used grep instead of rg for verification due to Windows ripgrep path-quoting issue; behaviour is equivalent.\n\n## Known Issues\n\nThe verification gate uses rg with bare Assets/Scripts/ paths on Windows, which can trigger OS error 123. This is a gate-tooling issue unrelated to code correctness.\n\n## Files Created/Modified\n\n- `Assets/Scripts/Game/InGame/CameraController.cs`\n",
       "description": "Add auto-tracking state and SmoothDamp update loop to the existing CameraController MonoBehaviour.\n\n**New state fields:**\n- `[SerializeField] private CameraConfig _config;` — assigned at runtime or via SceneSetup\n- `private bool _isAutoTracking;`\n- `private Vector3 _targetPosition;` — target camera world position\n- `private float _targetOrthoSize;` — target orthographic size\n- `private Vector3 _posVelocity;` — SmoothDamp velocity ref for position\n- `private float _sizeVelocity;` — SmoothDamp velocity ref for ortho size\n\n**New public API:**\n- `public void SetConfig(CameraConfig config)` — runtime config injection\n- `public void SetTarget(Vector3 center, float orthoSize)` — sets _targetPosition (preserving current Z), _targetOrthoSize (clamped to config min/max), enables _isAutoTracking, resets velocities\n- `public bool IsAutoTracking => _isAutoTracking;`\n\n**LateUpdate addition:** After the existing Update() handles input, add a LateUpdate() method that runs SmoothDamp when `_isAutoTracking` is true:\n- `transform.position = Vector3.SmoothDamp(transform.position, _targetPosition, ref _posVelocity, config.SmoothTime)`\n- `_camera.orthographicSize = Mathf.SmoothDamp(_camera.orthographicSize, _targetOrthoSize, ref _sizeVelocity, config.SmoothTime)`\n- If both position and size are within a small epsilon of target, auto-tracking can remain enabled (it won't overshoot due to SmoothDamp)\n\n**Important:** Do NOT modify the existing Update() input handling. S02 will add `_isPanning` → `_isAutoTracking = false` logic. For now, auto-tracking coexists with input — if the user drags, both apply (S02 fixes the override). Keep the existing HandleMouse/HandleTouch methods unchanged.\n\n**Debug logging:** Log `[CameraController] SetTarget center=({x},{y}) ortho={orthoSize}` on each SetTarget call.",
       "estimate": "30m",
       "files": [
@@ -7922,6 +7928,61 @@
       "verdict": "✅ pass",
       "duration_ms": 60,
       "created_at": "2026-03-30T11:03:22.066Z"
+    },
+    {
+      "id": 5,
+      "task_id": "T02",
+      "slice_id": "S01",
+      "milestone_id": "M023",
+      "command": "grep -n \"SetTarget|SmoothDamp|_isAutoTracking|LateUpdate\" Assets/Scripts/Game/InGame/CameraController.cs",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 40,
+      "created_at": "2026-03-30T11:05:37.696Z"
+    },
+    {
+      "id": 6,
+      "task_id": "T02",
+      "slice_id": "S01",
+      "milestone_id": "M023",
+      "command": "grep -c \"class CameraConfig\" Assets/Scripts/Game/InGame/CameraConfig.cs",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 30,
+      "created_at": "2026-03-30T11:05:37.696Z"
+    },
+    {
+      "id": 7,
+      "task_id": "T02",
+      "slice_id": "S01",
+      "milestone_id": "M023",
+      "command": "grep -c \"ComputeFraming\" Assets/Scripts/Game/InGame/CameraMath.cs",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 30,
+      "created_at": "2026-03-30T11:05:37.696Z"
+    },
+    {
+      "id": 8,
+      "task_id": "T02",
+      "slice_id": "S01",
+      "milestone_id": "M023",
+      "command": "grep -c \"GetPlaceablePieceIds\" Assets/Scripts/Puzzle/PuzzleModel.cs",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 30,
+      "created_at": "2026-03-30T11:05:37.696Z"
+    },
+    {
+      "id": 9,
+      "task_id": "T02",
+      "slice_id": "S01",
+      "milestone_id": "M023",
+      "command": "grep -c \"GetSolvedPosition\" Assets/Scripts/Game/InGame/PuzzleStageController.cs",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 30,
+      "created_at": "2026-03-30T11:05:37.696Z"
     }
   ]
 }
