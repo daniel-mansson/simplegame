@@ -412,6 +412,9 @@ namespace SimpleGame.Game.InGame
 
                             go.transform.position   = piecePos;
                             go.transform.localScale = pieceScale;
+                            // Match the deck canvas rotation so the piece looks placed in the tray
+                            if (_deckView != null)
+                                go.transform.rotation = _deckView.transform.rotation;
                         }
                         if (_traySlotData != null) _traySlotData[pid] = (go.transform.position, go.transform.localScale);
                     }
@@ -491,7 +494,8 @@ namespace SimpleGame.Game.InGame
             go.transform.SetParent(boardParent, worldPositionStays: true);
             var targetLocal = boardParent.InverseTransformPoint(solved);
 
-            PieceTweener.PlaceOnBoard(go, targetLocal, destroyCancellationToken).Forget();
+            // Pieces sit flat on the board — solved local rotation is identity.
+            PieceTweener.PlaceOnBoard(go, targetLocal, Quaternion.identity, destroyCancellationToken).Forget();
         }
     }
 }

@@ -36,20 +36,23 @@ namespace SimpleGame.Game.InGame
 
         /// <summary>
         /// Anticipation wind-up → fly to <paramref name="targetLocal"/> in board space
-        /// → settle with a slight squash.
+        /// → settle with a slight squash. Rotation tweens from current to
+        /// <paramref name="targetRotation"/> (local space) across the fly phase.
         /// The piece must already be reparented to boardParent before calling.
         /// </summary>
         public static async UniTaskVoid PlaceOnBoard(
             GameObject piece,
-            Vector3 targetLocal,
+            Vector3    targetLocal,
+            Quaternion targetRotation,
             CancellationToken ct)
         {
             if (piece == null) return;
             var t = piece.transform;
 
-            Vector3 startLocal = t.localPosition;
-            Vector3 startScale = t.localScale;
-            Vector3 finalScale = Vector3.one;
+            Vector3    startLocal    = t.localPosition;
+            Vector3    startScale    = t.localScale;
+            Quaternion startRotation = t.localRotation;
+            Vector3    finalScale    = Vector3.one;
 
             // ── Phase 1: Windup — scale up, pull toward camera (−z in world = −z local here) ──
             float windupZ    = startLocal.z - OvershootZ;
@@ -82,16 +85,16 @@ namespace SimpleGame.Game.InGame
                 if (piece == null) return;
                 elapsed += Time.deltaTime;
                 float f = Mathf.Clamp01(elapsed / FlySec);
-                float ep = EaseInOutBack(f);   // slight overshoot on arrive
+                float ep = EaseInOutBack(f);
                 float es = EaseOutQuad(f);
 
-                // Position: blend with a small z-arc (piece dips forward at peak)
                 Vector3 basePos = Vector3.LerpUnclamped(flyStart, targetLocal, ep);
-                float   arc     = Mathf.Sin(f * Mathf.PI) * 0.3f; // world-unit forward pop
+                float   arc     = Mathf.Sin(f * Mathf.PI) * 0.3f;
                 basePos.z -= arc;
 
                 t.localPosition = basePos;
                 t.localScale    = Vector3.LerpUnclamped(flyScale, finalScale, es);
+                t.localRotation = Quaternion.Slerp(startRotation, targetRotation, EaseOutQuad(f));
                 await UniTask.Yield(PlayerLoopTiming.Update, ct);
             }
             if (piece == null) return;
@@ -120,6 +123,7 @@ namespace SimpleGame.Game.InGame
             // Snap to exact final values
             t.localPosition = targetLocal;
             t.localScale    = finalScale;
+            t.localRotation = targetRotation;
         }
 
         /// <summary>
