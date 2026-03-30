@@ -187,3 +187,44 @@ On Windows, `rg "pattern" Assets/Scripts/` (with a forward-slash path) can retur
 **Workaround:** Replace `rg` with `grep -rn` for path-based searches, or use backslash paths on Windows (`Assets\Scripts\`). The `grep` built-in in Git Bash handles forward-slash paths correctly. Alternatively, pipe file content: `grep -c "pattern" path/to/file.cs`.
 
 **Rule:** In verification commands on Windows, prefer `grep -c "pattern" path/to/file` over `rg "pattern" path/` for single-file checks. For directory-wide searches, `rg` is fine with explicit file paths but fragile with trailing slash directory arguments.
+
+---
+
+### K013 — Windows shell: never use Unix `grep`, `test`, `find` builtins in Bash tool calls
+**Date:** 2026-03-30
+
+In the Git Bash environment used by this project, `grep`, `test`, and `find` behave unexpectedly:
+
+- `grep` is not on PATH in some shells — `'grep' is not recognized as an internal or external command`.
+- `test` is similarly missing — `'test' is not recognized`.
+- Piping into `find` (e.g. `... | find /c /v ""`) invokes Git Bash's `find` filesystem utility instead of Windows `find.exe`, causing it to walk the entire filesystem from `/`.
+
+**Rule:** Never use `grep`, `test`, or `find` for verification in `Bash` tool calls. Use Python one-liners instead:
+- **File existence:** `python3 -c "import os; print(os.path.isfile('path/to/file'))"`
+- **String count in file:** `python3 -c "print(open('file', encoding='utf-8').read().count('pattern'))"`
+- **Directory listing:** `dir path\to\dir` (Windows) or `ls` (works in Git Bash)
+
+`python3` is reliably available in this environment and handles encoding correctly with `encoding='utf-8'`.
+
+---
+
+### K014 — SceneSetup regeneration unparents manually-parented UI objects
+**Date:** 2026-03-30
+
+When `Tools/Setup/Create And Register Scenes` re-runs `SceneSetup.CreateInGameScene()`, it regenerates the scene from scratch. Any manually-set parent-child relationships that are not encoded in SceneSetup (e.g. `DeckView` parented to `InGameCamera`) are silently lost.
+
+**Symptom:** After SceneSetup, a UI object that was explicitly parented to a scene camera or canvas appears at root level (unparented), causing layout or depth-sorting issues.
+
+**Rule:** After any SceneSetup run that touches an existing scene, verify the parent hierarchy of all UI objects that have non-default parents. Either (a) encode the parenting explicitly in SceneSetup, or (b) add a post-run checklist item. Prefer (a) — add `deckViewGO.transform.SetParent(cameraGO.transform, false)` in `CreateInGameScene()` so re-runs are idempotent.
+
+---
+
+### K015 — Optional constructor param + triple null-guard scales to async flows
+**Date:** 2026-03-30
+
+The optional-param wiring pattern (add scene-level dependencies as last optional constructor params, default null, null-guard all usage) works cleanly in async `UniTask` flows. `InGameFlowPresenter.RunAsync` uses a single `if (_cameraController != null && _stage != null && _cameraController.Config != null)` guard to gate the entire level-start camera sequence. This gives:
+- Zero regressions in EditMode tests (no camera or stage in test constructors)
+- Silent no-op in partial scenes or test runners
+- Single readable guard at the top of the async block rather than scattered null checks
+
+**Rule:** For any new async or sequential scene behaviour that depends on optional components, use a single compound null-guard at the top of the code block. Do not null-check inside each individual call — group the guard at the entry point.

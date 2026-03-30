@@ -10,7 +10,7 @@ The puzzle placement mechanic — slot-based piece drawing with neighbour-adjace
 
 ## Current State
 
-Core game loop is complete and stable (M012–M014). Solvable deck shuffle (M013), puzzle controls and layout (M014), and Fastlane distribution pipeline (M015) are all complete. M016 adds PlayFab backend integration: anonymous accounts, cloud save, platform linking, and analytics.
+Core game loop is complete and stable (M012–M014). Solvable deck shuffle (M013), puzzle controls and layout (M014), and Fastlane distribution pipeline (M015) are all complete. M016 adds PlayFab backend integration: anonymous accounts, cloud save, platform linking, and analytics. M023 adds a complete in-game camera system: auto-tracking frames valid placement positions after each piece is placed, manual drag-pan/pinch/scroll-to-zoom override with boundary clamping, and a level-start full-board overview sequence — all config-driven via CameraConfig.asset.
 
 ## Architecture / Key Patterns
 
@@ -50,4 +50,4 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 - [x] M020: Feature-Cohesion Restructure — reorganise Services/ and Popup/ into feature-cohesive folders (IAP/, Ads/, ATT/, Economy/, Save/, PlayFab/, Progression/, Shop/, LevelFlow/, ConfirmDialog/)
 - [x] M021: Scene Controller Composition Refactor
 - [x] M022: In-Game Deck Panel — UGUI piece buttons in horizontal layout replacing the invisible overlay tap system — slim InGameSceneController (1085→133 lines) and MainMenuSceneController (391→82 lines) by extracting PuzzleStageController (3D/tray) and InGameFlowPresenter (game loop/popups)
-- [ ] M023: In-Game Camera Movement — auto-tracking camera that frames valid placement positions, smooth zoom/pan, manual override with drag/pinch, boundary clamping
+- [x] M023: In-Game Camera Movement — auto-tracking camera that frames valid placement positions, smooth zoom/pan, manual override with drag/pinch, boundary clamping, level-start overview sequence

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "taskId": "T02",
+  "unitId": "M023/S03/T02",
+  "timestamp": 1774879466187,
+  "passed": false,
+  "discoverySource": "task-plan",
+  "checks": [
+    {
+      "command": "grep -c \"CameraConfig\" Assets/Editor/SceneSetup.cs returns >= 2",
+      "exitCode": 1,
+      "durationMs": 15,
+      "verdict": "fail"
+    },
+    {
+      "command": "test -f Assets/Data/CameraConfig.asset (after SceneSetup run)",
+      "exitCode": 1,
+      "durationMs": 21,
+      "verdict": "fail"
+    }
+  ],
+  "retryAttempt": 1,
+  "maxRetries": 2
+}
