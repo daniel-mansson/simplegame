@@ -323,6 +323,20 @@ namespace SimpleGame.Game.InGame
         }
 
         /// <summary>
+        /// Returns the world-space Rect that encloses the current puzzle board, computed
+        /// from the grid dimensions stored during <see cref="SpawnLevel"/>. Uses the same
+        /// unit convention as <see cref="CameraMath.ComputeBoardRect"/> (longest side = 1 unit,
+        /// centred on the origin).
+        /// Returns a default 1×1 rect centred on the origin if SpawnLevel has not yet run.
+        /// </summary>
+        public Rect GetBoardRect()
+        {
+            int rows = _currentGridRows > 0 ? _currentGridRows : 1;
+            int cols = _currentGridCols > 0 ? _currentGridCols : 1;
+            return CameraMath.ComputeBoardRect(rows, cols);
+        }
+
+        /// <summary>
         /// Returns the wired transition player, or creates a minimal runtime one.
         /// Returns null if running in EditMode test context (no game loop available).
         /// </summary>

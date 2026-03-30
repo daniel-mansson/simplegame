@@ -20,5 +20,17 @@ namespace SimpleGame.Game.InGame
 
         /// <summary>World-unit padding added around the bounding box of target positions.</summary>
         [SerializeField] public float Padding = 1.5f;
+
+        /// <summary>
+        /// Extra world-unit margin kept between the viewport edge and the board boundary
+        /// when clamping manual pan. Prevents the camera from drifting entirely off-board.
+        /// </summary>
+        [SerializeField] public float BoundaryMargin = 0.5f;
+
+        /// <summary>
+        /// Multiplier applied to the raw scroll/pinch delta each frame when the player
+        /// manually zooms. Larger values feel snappier.
+        /// </summary>
+        [SerializeField] public float ZoomSpeed = 5f;
     }
 }

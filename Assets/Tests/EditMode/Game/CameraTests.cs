@@ -239,4 +239,109 @@ namespace SimpleGame.Tests.Game
             CollectionAssert.Contains(ids, 3);
         }
     }
+
+    // ---------------------------------------------------------------------------
+    // CameraMath.ClampToBounds and CameraMath.ComputeBoardRect tests
+    // ---------------------------------------------------------------------------
+
+    [TestFixture]
+    internal class CameraClampAndBoardRectTests
+    {
+        private const float Aspect = 1.0f;
+
+        // ── ClampToBounds ─────────────────────────────────────────────────
+
+        [Test]
+        public void ClampToBounds_PositionInsideBounds_Unchanged()
+        {
+            // 10×10 board centred at origin; camera at (0,0) with orthoSize=2 (viewport 4×4)
+            var bounds = new Rect(-5f, -5f, 10f, 10f);
+            var cam    = new Vector3(0f, 0f, -10f);
+
+            var result = CameraMath.ClampToBounds(cam, orthoSize: 2f, aspect: Aspect, bounds: bounds, margin: 0f);
+
+            Assert.AreEqual(0f, result.x, 0.001f, "X should be unchanged when inside bounds");
+            Assert.AreEqual(0f, result.y, 0.001f, "Y should be unchanged when inside bounds");
+            Assert.AreEqual(cam.z, result.z, 0.001f, "Z should be preserved");
+        }
+
+        [Test]
+        public void ClampToBounds_PositionBeyondRight_ClampsX()
+        {
+            // 10×10 board; camera pushed far right (x=20) — should be pulled back so viewport edge aligns with board edge
+            var bounds = new Rect(-5f, -5f, 10f, 10f);
+            var cam    = new Vector3(20f, 0f, -10f);
+
+            var result = CameraMath.ClampToBounds(cam, orthoSize: 2f, aspect: Aspect, bounds: bounds, margin: 0f);
+
+            // halfW = 2*1 = 2; maxX = 5 - 0 - 2 = 3
+            Assert.AreEqual(3f, result.x, 0.001f, "X should be clamped to keep right viewport edge on board");
+        }
+
+        [Test]
+        public void ClampToBounds_PositionBeyondLeft_ClampsX()
+        {
+            // 10×10 board; camera pushed far left (x=-20)
+            var bounds = new Rect(-5f, -5f, 10f, 10f);
+            var cam    = new Vector3(-20f, 0f, -10f);
+
+            var result = CameraMath.ClampToBounds(cam, orthoSize: 2f, aspect: Aspect, bounds: bounds, margin: 0f);
+
+            // halfW = 2; minX = -5 + 0 + 2 = -3
+            Assert.AreEqual(-3f, result.x, 0.001f, "X should be clamped to keep left viewport edge on board");
+        }
+
+        [Test]
+        public void ClampToBounds_ViewportLargerThanBoard_CentresOnBoard()
+        {
+            // 2×2 board centred at (1,1); camera with orthoSize=10 (viewport 20×20 — far bigger)
+            var bounds = new Rect(0f, 0f, 2f, 2f);
+            var cam    = new Vector3(99f, -99f, -10f);
+
+            var result = CameraMath.ClampToBounds(cam, orthoSize: 10f, aspect: Aspect, bounds: bounds, margin: 0f);
+
+            Assert.AreEqual(bounds.center.x, result.x, 0.001f, "X should be board centre when viewport exceeds board");
+            Assert.AreEqual(bounds.center.y, result.y, 0.001f, "Y should be board centre when viewport exceeds board");
+        }
+
+        [Test]
+        public void ClampToBounds_MarginReducesAllowedRange()
+        {
+            // 10×10 board; margin=1 shrinks the allowed movement range by 1 unit each side
+            var bounds = new Rect(-5f, -5f, 10f, 10f);
+            // Push camera to the right past the margin-adjusted edge
+            var cam    = new Vector3(20f, 0f, -10f);
+
+            var result = CameraMath.ClampToBounds(cam, orthoSize: 2f, aspect: Aspect, bounds: bounds, margin: 1f);
+
+            // halfW=2, margin=1: maxX = 5 - 1 - 2 = 2
+            Assert.AreEqual(2f, result.x, 0.001f, "Margin should further restrict the clamp range");
+        }
+
+        // ── ComputeBoardRect ──────────────────────────────────────────────
+
+        [Test]
+        public void ComputeBoardRect_SquareGrid_ReturnsUnitSquare()
+        {
+            // 4×4 grid — longest side = 4, so each axis spans 4/4 = 1 world unit
+            var rect = CameraMath.ComputeBoardRect(4, 4);
+
+            Assert.AreEqual(1f, rect.width,  0.001f, "Square grid width should be 1 world unit");
+            Assert.AreEqual(1f, rect.height, 0.001f, "Square grid height should be 1 world unit");
+            Assert.AreEqual(0f, rect.center.x, 0.001f, "Board rect should be centred on X=0");
+            Assert.AreEqual(0f, rect.center.y, 0.001f, "Board rect should be centred on Y=0");
+        }
+
+        [Test]
+        public void ComputeBoardRect_RectangularGrid_CorrectAspect()
+        {
+            // 2 rows × 4 cols — longest side = 4. Width = 4/4 = 1, height = 2/4 = 0.5
+            var rect = CameraMath.ComputeBoardRect(2, 4);
+
+            Assert.AreEqual(1f,   rect.width,  0.001f, "Width (longest side) should be 1");
+            Assert.AreEqual(0.5f, rect.height, 0.001f, "Height should be 0.5 for a 2×4 grid");
+            Assert.AreEqual(0f, rect.center.x, 0.001f, "Board rect should be centred on X=0");
+            Assert.AreEqual(0f, rect.center.y, 0.001f, "Board rect should be centred on Y=0");
+        }
+    }
 }

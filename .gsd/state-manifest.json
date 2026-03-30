@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exported_at": "2026-03-30T11:31:43.338Z",
+  "exported_at": "2026-03-30T13:45:25.524Z",
   "milestones": [
     {
       "id": "M001",
@@ -2407,14 +2407,14 @@
       "milestone_id": "M023",
       "id": "S01",
       "title": "Auto-Tracking Camera Core",
-      "status": "pending",
+      "status": "complete",
       "risk": "high",
       "depends": [],
       "demo": "After this: camera smoothly pans and zooms to frame all valid placement positions after each piece is placed. CameraConfig ScriptableObject controls speed and zoom limits.",
       "created_at": "2026-03-30T10:55:15.763Z",
-      "completed_at": null,
-      "full_summary_md": "",
-      "full_uat_md": "",
+      "completed_at": "2026-03-30T13:37:39.705Z",
+      "full_summary_md": "---\nid: S01\nparent: M023\nmilestone: M023\nprovides:\n  - CameraConfig ScriptableObject — config asset for all camera tuning in S02 and S03\n  - CameraMath.ComputeFraming — reusable framing helper for S03 level-start overview sequence\n  - CameraController.SetTarget/IsAutoTracking/Config — full auto-tracking API that S02 builds override logic on top of\n  - PuzzleModel.GetPlaceablePieceIds() — query method reusable by any system that needs to know what pieces are currently playable\n  - PuzzleStageController.GetSolvedPosition(int) — world position lookup reusable by S03 for first-placement zoom target\nrequires:\n  []\naffects:\n  - S02 — builds panning override and boundary clamping on top of _isAutoTracking flag and SetTarget API established here\n  - S03 — uses CameraMath.ComputeFraming and GetSolvedPosition for level-start overview sequence\nkey_files:\n  - Assets/Scripts/Game/InGame/CameraConfig.cs\n  - Assets/Scripts/Game/InGame/CameraMath.cs\n  - Assets/Scripts/Game/InGame/CameraController.cs\n  - Assets/Scripts/Puzzle/PuzzleModel.cs\n  - Assets/Scripts/Game/InGame/PuzzleStageController.cs\n  - Assets/Scripts/Game/InGame/InGamePresenter.cs\n  - Assets/Scripts/Game/Boot/UIFactory.cs\n  - Assets/Scripts/Game/InGame/InGameFlowPresenter.cs\n  - Assets/Scripts/Game/InGame/InGameSceneController.cs\n  - Assets/Tests/EditMode/Game/CameraTests.cs\nkey_decisions:\n  - CameraConfig uses [SerializeField] public fields (not properties) — Unity inspector serialization requires fields; public access lets CameraMath read without a wrapper layer (D112)\n  - CameraMath is a pure static class with zero MonoBehaviour dependency — safe for EditMode tests, no engine coupling\n  - CameraMath.ComputeFraming returns (Vector3.zero, minZoom) for empty input — board-center fallback when no placeable pieces remain\n  - _pieces stored as IReadOnlyList<IPuzzlePiece> in PuzzleModel — preserves existing constructor contract\n  - _posVelocity and _sizeVelocity reset to zero on every SetTarget call — SmoothDamp starts from clean state, no residual oscillation\n  - LateUpdate guards on _config != null — safe operation before config is assigned\n  - InGamePresenter optional params default to null — backward compat with all existing tests (D113)\n  - InGameSceneController resolves CameraController via Camera.main?.GetComponent — null in EditMode, leaving existing tests green\npatterns_established:\n  - CameraMath pure static framing helper pattern: pass IReadOnlyList<Vector3> + config scalars, receive (center, orthoSize) tuple — no MonoBehaviour dependency, fully testable in EditMode\n  - Optional wiring pattern for new scene-level dependencies: add as last optional constructor params (default null), guard all usage with null checks — existing tests never notice\n  - Auto-tracking state machine in MonoBehaviour: SetTarget enables tracking, SmoothDamp converges in LateUpdate, S02 will disable on input — clean separation of concern between setting destination and consuming it\nobservability_surfaces:\n  - [CameraController] SetTarget center=({x},{y}) ortho={orthoSize} — logged on every SetTarget call, visible in Unity console during play\ndrill_down_paths:\n  - .gsd/milestones/M023/slices/S01/tasks/T01-SUMMARY.md\n  - .gsd/milestones/M023/slices/S01/tasks/T02-SUMMARY.md\n  - .gsd/milestones/M023/slices/S01/tasks/T03-SUMMARY.md\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-03-30T13:37:39.705Z\nblocker_discovered: false\n---\n\n# S01: Auto-Tracking Camera Core\n\n**Camera smoothly pans and zooms to frame valid placement positions after each piece is placed; CameraConfig ScriptableObject controls speed and zoom limits; 11 new EditMode tests cover all framing and placement-query logic; 358/358 tests pass.**\n\n## What Happened\n\nS01 delivered the complete auto-tracking camera pipeline across three tasks.\n\n**T01 — Foundation types:** Created `CameraConfig.cs` (ScriptableObject with SmoothTime=1.2, MinZoom=2, MaxZoom=15, Padding=1.5 as [SerializeField] public fields), `CameraMath.cs` (pure static class with `ComputeFraming` that computes bounding-box center and clamped orthoSize from world positions, returning (Vector3.zero, minZoom) for empty input), `PuzzleModel.GetPlaceablePieceIds()` (filters pieces by !IsPlaced && CanPlace, backed by a new `_pieces` private field stored from the constructor), and `PuzzleStageController.GetSolvedPosition(int)` (null-safe lookup in the pre-existing `_solvedWorldPositions` dictionary).\n\n**T02 — CameraController auto-tracking:** Extended the existing CameraController MonoBehaviour with six new state fields (`_config`, `_isAutoTracking`, `_targetPosition`, `_targetOrthoSize`, `_posVelocity`, `_sizeVelocity`) and three new public members (`SetConfig`, `SetTarget`, `IsAutoTracking`) plus a `LateUpdate` that SmoothDamps position and orthographic size when `_isAutoTracking && _config != null && _camera != null`. `SetTarget` clamps orthoSize to config min/max, preserves camera Z, resets velocity refs, enables tracking, and logs the target. Existing `Update`/`HandleMouse`/`HandleTouch`/`ApplyScreenDelta` were not touched — S02 will add the panning override. A `public CameraConfig Config => _config` property was also added for T03's use.\n\n**T03 — Wiring and tests:** InGamePresenter received two optional constructor params (`PuzzleStageController stage = null, CameraController cameraController = null`). In `HandlePiecePlaced`, after existing logic, it queries `_model.GetPlaceablePieceIds()`, maps each to `_stage.GetSolvedPosition(id)`, runs `CameraMath.ComputeFraming` with `_camera.Config` values, and calls `_camera.SetTarget`. UIFactory.CreateInGamePresenter passes the optional params through. InGameFlowPresenter stores a `_cameraController` field (optional, last param) and passes it to CreateInGamePresenter. InGameSceneController resolves the CameraController via `Camera.main?.GetComponent<CameraController>()` at Initialize time (null-safe for EditMode). CameraTests.cs adds 11 EditMode tests: 6 in CameraMathTests (single position, multiple positions, empty/null fallback, maxZoom clamping, minZoom clamping, aspect ratio correctness) and 5 in GetPlaceablePieceIdsTests (initial state, after placement, all placed empty, sequential shrink, branching star model). All 358 EditMode tests pass (confirmed via Unity Test Runner job 20da92eca2fc4d928487f7a15767b60a, status=succeeded, 0 failures).\n\n## Verification\n\nAll slice plan verification commands passed:\n- `grep -c \"class CameraConfig\" CameraConfig.cs` → 1 ✅\n- `grep -c \"ComputeFraming\" CameraMath.cs` → 1 ✅\n- `grep -c \"GetPlaceablePieceIds\" PuzzleModel.cs` → 1 ✅\n- `grep -c \"GetSolvedPosition\" PuzzleStageController.cs` → 1 ✅\n- `grep -c \"SetTarget|SmoothDamp|_isAutoTracking|LateUpdate\" CameraController.cs` → 11 ✅\n- `grep -c \"[Test]\" CameraTests.cs` → 11 ✅\n- Unity Test Runner EditMode: 358 passed / 0 failed / 0 skipped ✅ (job 20da92eca2fc4d928487f7a15767b60a)\n\n## Requirements Advanced\n\n- R060 — Auto-tracking camera wired into piece placement event (HandlePiecePlaced → GetPlaceablePieceIds → GetSolvedPosition → ComputeFraming → SetTarget), completing the camera layer of the tap-driven gameplay loop\n\n## Requirements Validated\n\nNone.\n\n## New Requirements Surfaced\n\n- CameraConfig asset must be wired in scene (SetConfig called) before auto-tracking activates — currently no scene wiring; this is a follow-up for InGameSceneController or SceneSetup\n\n## Requirements Invalidated or Re-scoped\n\nNone.\n\n## Deviations\n\nT03 test runner confirmation was delayed to slice-close time (Unity MCP was offline when T03 completed). No code deviations from plan. T02 used `grep` instead of `rg` for Windows path-quoting compatibility (K012 added). GetSolvedPosition in T01 needed only a null-safe wrapper since `_solvedWorldPositions` already existed in PuzzleStageController.\n\n## Known Limitations\n\nAuto-tracking and drag-pan currently coexist without override: if the user drags while auto-tracking is active, both SmoothDamp (LateUpdate) and drag-pan (Update) apply simultaneously. This is by design — S02 will add `_isAutoTracking = false` when panning starts. CameraConfig asset must be assigned in the InGame scene (via InGameSceneController → InGameFlowPresenter → SetConfig) before auto-tracking activates; a missing config silently skips tracking rather than erroring.\n\n## Follow-ups\n\nS02 must add `_isAutoTracking = false` in HandleMouse/HandleTouch when a pan gesture begins, and `_isAutoTracking` resumes on next piece placement (already handled by SetTarget). S02 should also add boundary clamping (board bounds + margin). S03 will add the level-start full-board overview sequence. InGameSceneController needs a SerializeField or scene wiring to pass CameraConfig to InGameFlowPresenter → SetConfig (not yet wired — SetConfig is available but not called from the scene controller).\n\n## Files Created/Modified\n\n- `Assets/Scripts/Game/InGame/CameraConfig.cs` — New ScriptableObject with SmoothTime, MinZoom, MaxZoom, Padding fields\n- `Assets/Scripts/Game/InGame/CameraMath.cs` — New pure static class with ComputeFraming bounding-box framing helper\n- `Assets/Scripts/Puzzle/PuzzleModel.cs` — Added _pieces field and GetPlaceablePieceIds() query method\n- `Assets/Scripts/Game/InGame/PuzzleStageController.cs` — Added GetSolvedPosition(int) null-safe world position lookup\n- `Assets/Scripts/Game/InGame/CameraController.cs` — Added auto-tracking state fields, SetConfig/SetTarget/IsAutoTracking/Config API, and LateUpdate SmoothDamp loop\n- `Assets/Scripts/Game/InGame/InGamePresenter.cs` — Added optional PuzzleStageController + CameraController params; camera targeting in HandlePiecePlaced\n- `Assets/Scripts/Game/Boot/UIFactory.cs` — CreateInGamePresenter extended with optional stage + cameraController params\n- `Assets/Scripts/Game/InGame/InGameFlowPresenter.cs` — Added _cameraController field, optional constructor param, pass-through to CreateInGamePresenter\n- `Assets/Scripts/Game/InGame/InGameSceneController.cs` — Resolves CameraController via Camera.main?.GetComponent at Initialize time\n- `Assets/Tests/EditMode/Game/CameraTests.cs` — New: 11 EditMode tests — 6 CameraMath + 5 GetPlaceablePieceIds\n- `.gsd/KNOWLEDGE.md` — Added K012: Windows ripgrep OS error 123 with trailing-slash directory paths\n- `.gsd/DECISIONS.md` — Added D112 (CameraConfig field style) and D113 (null-guard strategy)\n",
+      "full_uat_md": "# S01: Auto-Tracking Camera Core — UAT\n\n**Milestone:** M023\n**Written:** 2026-03-30T13:37:39.706Z\n\n## UAT: S01 — Auto-Tracking Camera Core\n\n### Preconditions\n- Unity Editor open with InGame scene loaded\n- A level loaded with at least 3 puzzle pieces (seed + 2+ neighbours)\n- CameraConfig ScriptableObject created (`Assets → Create → SimpleGame → Camera Config`) with default values (SmoothTime=1.2, MinZoom=2, MaxZoom=15, Padding=1.5)\n- CameraConfig assigned to CameraController (via Inspector SerializeField or SetConfig call)\n- InGameSceneController has PuzzleStageController wired in Inspector\n\n---\n\n### Test Cases\n\n#### TC-01: Auto-tracking activates on first piece placement\n**Steps:**\n1. Enter Play mode and start a level.\n2. Tap the current piece to place it on a valid board position.\n3. Observe the camera.\n\n**Expected:**\n- Camera smoothly pans toward the centroid of all currently placeable piece positions.\n- Camera orthographic size smoothly zooms to frame all valid positions with padding.\n- Unity console shows `[CameraController] SetTarget center=(x,y) ortho=z` log entry.\n\n---\n\n#### TC-02: Camera re-targets after each successive placement\n**Steps:**\n1. Place piece 1 → observe camera settle.\n2. Place piece 2 → observe camera move again.\n3. Place piece 3 → observe camera move again.\n\n**Expected:**\n- After each placement, camera re-targets the new set of placeable positions (the set changes as the puzzle progresses).\n- Each placement triggers a new `[CameraController] SetTarget` log line with different center/ortho values (unless the placeable set happens to be identical).\n- SmoothDamp produces smooth interpolation — no instant jump.\n\n---\n\n#### TC-03: Framing respects MinZoom (single valid position)\n**Steps:**\n1. Use a level where only one piece is placeable at a time (linear chain).\n2. Place a piece so exactly one position is valid.\n3. Observe camera orthoSize.\n\n**Expected:**\n- Camera orthoSize converges to no less than `MinZoom` (2 by default).\n- Camera center moves to that single position.\n\n---\n\n#### TC-04: Framing respects MaxZoom (many spread-out valid positions)\n**Steps:**\n1. Use a level with many simultaneously valid positions spread across the board (star graph topology).\n2. Place the seed piece to unlock many neighbours at once.\n3. Observe camera.\n\n**Expected:**\n- Camera orthoSize converges to no more than `MaxZoom` (15 by default) even if the positions are very spread out.\n\n---\n\n#### TC-05: Camera uses SmoothDamp (not instant snap)\n**Steps:**\n1. Place a piece; immediately observe the camera position and size.\n2. Wait 2–3 seconds.\n\n**Expected:**\n- Immediately after placement: camera has started moving but is not yet at target.\n- After ~1.2s (SmoothTime): camera position and size have converged to target values.\n- No overshoot or oscillation — SmoothDamp produces critically-damped motion.\n\n---\n\n#### TC-06: No camera movement before first piece placement\n**Steps:**\n1. Enter Play mode and start a level.\n2. Do NOT tap any piece. Wait 3 seconds.\n\n**Expected:**\n- Camera does not move.\n- No `[CameraController] SetTarget` log entries appear.\n- `IsAutoTracking` is false.\n\n---\n\n#### TC-07: Puzzle complete — no crash or NRE\n**Steps:**\n1. Play through an entire short level (3–4 pieces) to completion.\n2. Observe Unity console throughout.\n\n**Expected:**\n- After final piece placed, `GetPlaceablePieceIds()` returns an empty list.\n- No SetTarget is called (guard `if (positions.Count > 0)` suppresses it).\n- No NullReferenceException in console.\n- Win dialog appears normally.\n\n---\n\n#### TC-08: CameraConfig values are respected\n**Steps:**\n1. In Inspector, change CameraConfig `Padding` to 3.0, `SmoothTime` to 0.3, `MaxZoom` to 8.\n2. Enter Play mode and place a piece.\n\n**Expected:**\n- Camera converges faster (0.3s SmoothTime).\n- OrthoSize is capped at 8 even if positions are spread.\n- Framing feels more padded (larger empty space around pieces).\n\n---\n\n#### TC-09: EditMode CameraTests — all 11 pass\n**Steps:**\n1. Open Unity Test Runner (Window → General → Test Runner).\n2. Select EditMode tab.\n3. Run `CameraMathTests` and `GetPlaceablePieceIdsTests`.\n\n**Expected:**\n- All 11 tests pass (green) with no failures.\n- Total EditMode suite: 358/358 pass.\n\n**Specific tests to verify:**\n- `CameraMath_ComputeFraming_SinglePosition_ReturnsPositionAsCenter` ✅\n- `CameraMath_ComputeFraming_MultiplePositions_CorrectBounds` ✅\n- `CameraMath_ComputeFraming_EmptyPositions_ReturnsFallback` (returns Vector3.zero, minZoom) ✅\n- `CameraMath_ComputeFraming_ClampsToMaxZoom` ✅\n- `CameraMath_ComputeFraming_ClampsToMinZoom` ✅\n- `CameraMath_ComputeFraming_AspectRatioApplied` ✅\n- `GetPlaceablePieceIds_InitialState` ✅\n- `GetPlaceablePieceIds_AfterPlacement` ✅\n- `GetPlaceablePieceIds_AllPlaced_ReturnsEmpty` ✅\n- `GetPlaceablePieceIds_AfterEachPlacement_ListShrinks` ✅\n- `GetPlaceablePieceIds_BranchingStarModel` ✅\n\n---\n\n#### TC-10: Existing InGameTests unaffected\n**Steps:**\n1. Run EditMode → `InGameTests` suite.\n\n**Expected:**\n- All pre-existing InGame tests pass — optional constructor params defaulting to null means no test changes were needed.\n",
       "goal": "Camera smoothly pans and zooms to frame all valid placement positions after each piece is placed. CameraConfig ScriptableObject controls speed and zoom limits.",
       "success_criteria": "## Must-Haves\n\n- CameraConfig ScriptableObject with smoothTime, minZoom, maxZoom, padding fields\n- PuzzleModel exposes `GetPlaceablePieceIds()` returning all unplaced pieces that satisfy CanPlace\n- PuzzleStageController exposes `GetSolvedPosition(int pieceId)` returning world position for a given piece\n- Static `CameraMath` helper computes bounding box center and required orthographic size from a set of world positions + padding + aspect ratio\n- CameraController has `SetTarget(Vector3 center, float orthoSize)` API and SmoothDamp update loop for both position and orthoSize\n- InGamePresenter subscribes to OnPiecePlaced, queries valid targets, computes bounding box via CameraMath, and calls CameraController.SetTarget()\n- Camera auto-targets after each piece placement with ~1–1.5s smooth glide (per D111)\n- Zoom clamped to CameraConfig min/max values during auto-tracking\n- EditMode tests cover: CameraMath bounding box computation, GetPlaceablePieceIds filtering, integration wiring\n\n## Requirement Impact\n\n- **Requirements touched**: R173, R174, R175, R176, R182\n- **Re-verify**: Existing InGamePresenter tests must still pass (constructor signature changes). Existing CameraController drag-pan must still compile (extended, not replaced — S02 handles manual input).\n- **Decisions revisited**: D111 (SmoothDamp choice confirmed here, revisable if feel is wrong)\n\n## Proof Level\n\n- This slice proves: integration (camera reacts to model events via real presenter wiring)\n- Real runtime required: yes (SmoothDamp runs in Update loop, visual verification in Play mode)\n- Human/UAT required: yes (feel of camera movement needs human judgment)\n\n## Verification\n\n- `echo '{\"testMode\":\"EditMode\"}' | mcporter call unityMCP.run_tests --stdin` → poll → all tests pass including new CameraTests\n- `Assets/Tests/EditMode/Game/CameraTests.cs` — EditMode tests for CameraMath bounding box, GetPlaceablePieceIds, presenter wiring\n- `rg \"class CameraConfig\" Assets/Scripts/` confirms CameraConfig SO exists\n- `rg \"SetTarget\" Assets/Scripts/Game/InGame/CameraController.cs` confirms auto-tracking API exists\n- `rg \"GetPlaceablePieceIds\" Assets/Scripts/Puzzle/PuzzleModel.cs` confirms domain query exists\n- `rg \"GetSolvedPosition\" Assets/Scripts/Game/InGame/PuzzleStageController.cs` confirms position lookup exists\n\n## Integration Closure\n\n- Upstream surfaces consumed: `PuzzleModel.OnPiecePlaced` event, `PuzzleBoard.CanPlace()`, `PuzzleStageController._solvedWorldPositions`\n- New wiring introduced in this slice: InGamePresenter receives PuzzleStageController + CameraController references; HandlePiecePlaced calls SetTarget after computing bounding box\n- What remains before the milestone is truly usable end-to-end: S02 (manual input + boundary clamping), S03 (level start sequence + polish)",
       "proof_level": "integration",
@@ -2437,11 +2437,11 @@
       "completed_at": null,
       "full_summary_md": "",
       "full_uat_md": "",
-      "goal": "Add manual camera input (drag pan extension, pinch-to-zoom, scroll wheel), boundary clamping, and the auto/manual mode switching triggered by piece placement.",
-      "success_criteria": "Drag pans camera and enters manual mode. Pinch/scroll zooms within limits. Boundary clamping holds in both modes. Piece placement returns to auto-tracking. All tests pass.",
-      "proof_level": "Integration — manual input tested in Editor play mode, boundary holding verified visually",
-      "integration_closure": "CameraController handles all input, clamps position and zoom, switches mode on OnPiecePlaced. No changes to PuzzleStageController or InGameFlowPresenter beyond S01 wiring.",
-      "observability_impact": "Debug.Log on mode transitions (auto→manual, manual→auto).",
+      "goal": "Player can drag to pan and pinch/scroll to zoom, overriding auto-track. Zoom clamped to configured limits. Camera can't drift beyond board bounds + margin. Next placement resumes auto-tracking.",
+      "success_criteria": "**Must-Haves:**\n- `_isAutoTracking = false` set when drag-pan starts in both HandleMouse and HandleTouch (R178)\n- Scroll wheel zoom in HandleMouse: reads `Input.mouseScrollDelta.y`, scales by `_config.ZoomSpeed`, clamps to `[MinZoom, MaxZoom]` (R179)\n- Pinch-to-zoom in HandleTouch: two-finger distance delta adjusts `orthographicSize`, clamped (R179)\n- Zoom limits enforced after every manual zoom delta via `Mathf.Clamp` to `[_config.MinZoom, _config.MaxZoom]` (R176)\n- `CameraMath.ClampToBounds` static method clamps camera XY to keep viewport within board rect + margin (R177)\n- ClampToBounds applied at end of `ApplyScreenDelta`, after zoom changes, and at end of `LateUpdate` (after SmoothDamp) (R177)\n- `CameraConfig.BoundaryMargin` and `CameraConfig.ZoomSpeed` fields added\n- `CameraMath.ComputeBoardRect(rows, cols)` returns correct Rect matching GridPlanner convention\n- `PuzzleStageController.GetBoardRect()` exposes board rect from `_currentGridRows`/`_currentGridCols`\n- Board rect wired from InGamePresenter to CameraController via `SetBoardBounds`\n- Auto-tracking resumes on next piece placement (already handled by SetTarget — R180 inherently satisfied)\n- All existing 358+ EditMode tests pass; 6+ new ClampToBounds/ComputeBoardRect tests pass\n\n**Verification:**\n```bash\n# Structural checks\ngrep -c \"ClampToBounds\" Assets/Scripts/Game/InGame/CameraMath.cs        # >= 1\ngrep -c \"ComputeBoardRect\" Assets/Scripts/Game/InGame/CameraMath.cs     # >= 1\ngrep -c \"BoundaryMargin\" Assets/Scripts/Game/InGame/CameraConfig.cs     # >= 1\ngrep -c \"ZoomSpeed\" Assets/Scripts/Game/InGame/CameraConfig.cs          # >= 1\ngrep -c \"mouseScrollDelta\" Assets/Scripts/Game/InGame/CameraController.cs # >= 1\ngrep -c \"_isAutoTracking = false\" Assets/Scripts/Game/InGame/CameraController.cs # >= 2\ngrep -c \"GetBoardRect\" Assets/Scripts/Game/InGame/PuzzleStageController.cs # >= 1\ngrep -c \"SetBoardBounds\" Assets/Scripts/Game/InGame/CameraController.cs # >= 1\ngrep -c \"ClampToBounds\" Assets/Scripts/Game/InGame/CameraController.cs  # >= 3 (ApplyScreenDelta, zoom, LateUpdate)\n\n# EditMode tests — all pass (358+ existing + 6+ new)\necho '{\"testMode\":\"EditMode\"}' | mcporter call unityMCP.run_tests --stdin\n# Then poll with: mcporter call unityMCP.get_test_job job_id=<id>\n```",
+      "proof_level": "Contract — EditMode tests verify CameraMath pure math; structural grep verifies input/wiring code presence. Real runtime required for full input verification (S03 UAT), but contract-level proof is sufficient for this slice.",
+      "integration_closure": "**Upstream consumed:** CameraController (SetTarget, _isAutoTracking, Config, LateUpdate SmoothDamp) from S01; CameraConfig (SmoothTime, MinZoom, MaxZoom, Padding) from S01; PuzzleStageController (_currentGridRows/_currentGridCols) from S01; InGamePresenter (HandlePiecePlaced camera wiring) from S01.\n**New wiring:** InGamePresenter calls `_camera.SetBoardBounds(_stage.GetBoardRect())` once after first piece placement (or in Initialize). CameraController stores board Rect and applies ClampToBounds after every position/zoom change.\n**Remaining for milestone:** S03 adds level-start overview sequence and edge-case polish.",
+      "observability_impact": "Runtime signal: `[CameraController] SetTarget` log already exists from S01; boundary clamping is silent (pure math, no log needed — observable via camera staying within bounds). Manual override is observable via `IsAutoTracking` property returning false after user pans/zooms.",
       "sequence": 0,
       "replan_triggered_at": null
     },
@@ -6956,6 +6956,96 @@
       "observability_impact": "",
       "full_plan_md": "",
       "sequence": 0
+    },
+    {
+      "milestone_id": "M023",
+      "slice_id": "S02",
+      "id": "T01",
+      "title": "Added BoundaryMargin/ZoomSpeed to CameraConfig, ClampToBounds/ComputeBoardRect to CameraMath, GetBoardRect() to PuzzleStageController, and 7 new EditMode tests",
+      "status": "complete",
+      "one_liner": "Added BoundaryMargin/ZoomSpeed to CameraConfig, ClampToBounds/ComputeBoardRect to CameraMath, GetBoardRect() to PuzzleStageController, and 7 new EditMode tests",
+      "narrative": "CameraConfig received two new serialized fields: BoundaryMargin (float, default 0.5f) and ZoomSpeed (float, default 5f). CameraMath received two new pure static methods: ClampToBounds (clamps camera XY to keep viewport within a Rect+margin, centres the camera when viewport exceeds board) and ComputeBoardRect (returns a Rect centred on the origin using the same unitScale=max(rows,cols) convention as the existing SpawnLevel/LateUpdate code). PuzzleStageController.GetBoardRect() is a thin wrapper that reads _currentGridRows/_currentGridCols (stored during SpawnLevel) and delegates to CameraMath.ComputeBoardRect with defensive floor of 1. CameraTests.cs gained a new CameraClampAndBoardRectTests fixture with 7 tests covering all required scenarios.",
+      "verification_result": "Ran grep checks for all 6 required symbols: ClampToBounds (1), ComputeBoardRect (2), BoundaryMargin (1), ZoomSpeed (1), GetBoardRect (1), [Test] count 18 (was 11, +7 new). All passed exit code 0.",
+      "duration": "",
+      "completed_at": "2026-03-30T13:45:25.498Z",
+      "blocker_discovered": false,
+      "deviations": "None.",
+      "known_issues": "None.",
+      "key_files": [
+        "Assets/Scripts/Game/InGame/CameraConfig.cs",
+        "Assets/Scripts/Game/InGame/CameraMath.cs",
+        "Assets/Scripts/Game/InGame/PuzzleStageController.cs",
+        "Assets/Tests/EditMode/Game/CameraTests.cs"
+      ],
+      "key_decisions": [
+        "ClampToBounds centres the camera on the board when the viewport exceeds board+margin (rather than snapping to one edge), ensuring the board stays visible in all zoom levels",
+        "ComputeBoardRect uses the same unitScale=max(rows,cols) formula already used in SpawnLevel/LateUpdate to keep coordinate conventions consistent",
+        "GetBoardRect() treats 0-dimension defensively (floor to 1) so it returns a valid rect even before SpawnLevel runs"
+      ],
+      "full_summary_md": "---\nid: T01\nparent: S02\nmilestone: M023\nkey_files:\n  - Assets/Scripts/Game/InGame/CameraConfig.cs\n  - Assets/Scripts/Game/InGame/CameraMath.cs\n  - Assets/Scripts/Game/InGame/PuzzleStageController.cs\n  - Assets/Tests/EditMode/Game/CameraTests.cs\nkey_decisions:\n  - ClampToBounds centres the camera on the board when the viewport exceeds board+margin (rather than snapping to one edge), ensuring the board stays visible in all zoom levels\n  - ComputeBoardRect uses the same unitScale=max(rows,cols) formula already used in SpawnLevel/LateUpdate to keep coordinate conventions consistent\n  - GetBoardRect() treats 0-dimension defensively (floor to 1) so it returns a valid rect even before SpawnLevel runs\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-03-30T13:45:25.498Z\nblocker_discovered: false\n---\n\n# T01: Added BoundaryMargin/ZoomSpeed to CameraConfig, ClampToBounds/ComputeBoardRect to CameraMath, GetBoardRect() to PuzzleStageController, and 7 new EditMode tests\n\n**Added BoundaryMargin/ZoomSpeed to CameraConfig, ClampToBounds/ComputeBoardRect to CameraMath, GetBoardRect() to PuzzleStageController, and 7 new EditMode tests**\n\n## What Happened\n\nCameraConfig received two new serialized fields: BoundaryMargin (float, default 0.5f) and ZoomSpeed (float, default 5f). CameraMath received two new pure static methods: ClampToBounds (clamps camera XY to keep viewport within a Rect+margin, centres the camera when viewport exceeds board) and ComputeBoardRect (returns a Rect centred on the origin using the same unitScale=max(rows,cols) convention as the existing SpawnLevel/LateUpdate code). PuzzleStageController.GetBoardRect() is a thin wrapper that reads _currentGridRows/_currentGridCols (stored during SpawnLevel) and delegates to CameraMath.ComputeBoardRect with defensive floor of 1. CameraTests.cs gained a new CameraClampAndBoardRectTests fixture with 7 tests covering all required scenarios.\n\n## Verification\n\nRan grep checks for all 6 required symbols: ClampToBounds (1), ComputeBoardRect (2), BoundaryMargin (1), ZoomSpeed (1), GetBoardRect (1), [Test] count 18 (was 11, +7 new). All passed exit code 0.\n\n## Verification Evidence\n\n| # | Command | Exit Code | Verdict | Duration |\n|---|---------|-----------|---------|----------|\n| 1 | `grep -c \"ClampToBounds\" Assets/Scripts/Game/InGame/CameraMath.cs` | 0 | ✅ pass | 50ms |\n| 2 | `grep -c \"ComputeBoardRect\" Assets/Scripts/Game/InGame/CameraMath.cs` | 0 | ✅ pass | 45ms |\n| 3 | `grep -c \"BoundaryMargin\" Assets/Scripts/Game/InGame/CameraConfig.cs` | 0 | ✅ pass | 40ms |\n| 4 | `grep -c \"ZoomSpeed\" Assets/Scripts/Game/InGame/CameraConfig.cs` | 0 | ✅ pass | 40ms |\n| 5 | `grep -c \"GetBoardRect\" Assets/Scripts/Game/InGame/PuzzleStageController.cs` | 0 | ✅ pass | 45ms |\n| 6 | `grep -c \"\\[Test\\]\" Assets/Tests/EditMode/Game/CameraTests.cs` | 0 | ✅ pass (18 ≥ 17 required) | 40ms |\n\n\n## Deviations\n\nNone.\n\n## Known Issues\n\nNone.\n\n## Files Created/Modified\n\n- `Assets/Scripts/Game/InGame/CameraConfig.cs`\n- `Assets/Scripts/Game/InGame/CameraMath.cs`\n- `Assets/Scripts/Game/InGame/PuzzleStageController.cs`\n- `Assets/Tests/EditMode/Game/CameraTests.cs`\n",
+      "description": "Add BoundaryMargin and ZoomSpeed fields to CameraConfig. Add CameraMath.ClampToBounds (pure static — clamps camera XY to keep viewport within a Rect + margin, centering when viewport exceeds bounds) and CameraMath.ComputeBoardRect (returns Rect from rows/cols matching GridPlanner convention). Add PuzzleStageController.GetBoardRect() exposing _currentGridRows/_currentGridCols. Write 6+ EditMode tests in CameraTests.cs covering ClampToBounds (inside bounds unchanged, beyond right/left clamps, viewport larger than board centers) and ComputeBoardRect (square grid, rectangular grid).",
+      "estimate": "25m",
+      "files": [
+        "Assets/Scripts/Game/InGame/CameraConfig.cs",
+        "Assets/Scripts/Game/InGame/CameraMath.cs",
+        "Assets/Scripts/Game/InGame/PuzzleStageController.cs",
+        "Assets/Tests/EditMode/Game/CameraTests.cs"
+      ],
+      "verify": "grep -c \"ClampToBounds\" Assets/Scripts/Game/InGame/CameraMath.cs && grep -c \"ComputeBoardRect\" Assets/Scripts/Game/InGame/CameraMath.cs && grep -c \"BoundaryMargin\" Assets/Scripts/Game/InGame/CameraConfig.cs && grep -c \"ZoomSpeed\" Assets/Scripts/Game/InGame/CameraConfig.cs && grep -c \"GetBoardRect\" Assets/Scripts/Game/InGame/PuzzleStageController.cs && grep -c \"\\[Test\\]\" Assets/Tests/EditMode/Game/CameraTests.cs",
+      "inputs": [
+        "`Assets/Scripts/Game/InGame/CameraConfig.cs` — existing ScriptableObject with SmoothTime, MinZoom, MaxZoom, Padding fields",
+        "`Assets/Scripts/Game/InGame/CameraMath.cs` — existing pure static class with ComputeFraming method",
+        "`Assets/Scripts/Game/InGame/PuzzleStageController.cs` — has private _currentGridRows/_currentGridCols fields set in SpawnLevel",
+        "`Assets/Tests/EditMode/Game/CameraTests.cs` — existing 11 tests (CameraMathTests + GetPlaceablePieceIdsTests)"
+      ],
+      "expected_output": [
+        "`Assets/Scripts/Game/InGame/CameraConfig.cs` — two new fields: BoundaryMargin (float, default 0.5f) and ZoomSpeed (float, default 5f)",
+        "`Assets/Scripts/Game/InGame/CameraMath.cs` — two new static methods: ClampToBounds and ComputeBoardRect",
+        "`Assets/Scripts/Game/InGame/PuzzleStageController.cs` — new public Rect GetBoardRect() method",
+        "`Assets/Tests/EditMode/Game/CameraTests.cs` — 6+ new EditMode tests for ClampToBounds and ComputeBoardRect"
+      ],
+      "observability_impact": "",
+      "full_plan_md": "",
+      "sequence": 0
+    },
+    {
+      "milestone_id": "M023",
+      "slice_id": "S02",
+      "id": "T02",
+      "title": "Wire manual pan override, scroll/pinch zoom, and boundary clamping into CameraController",
+      "status": "pending",
+      "one_liner": "",
+      "narrative": "",
+      "verification_result": "",
+      "duration": "",
+      "completed_at": null,
+      "blocker_discovered": false,
+      "deviations": "",
+      "known_issues": "",
+      "key_files": [],
+      "key_decisions": [],
+      "full_summary_md": "",
+      "description": "Integrate all manual input handling and boundary enforcement into CameraController, then wire board bounds from InGamePresenter.\n\n**HandleMouse changes:**\n- Set `_isAutoTracking = false` when `_isPanning` first becomes true (alongside existing `_isPanning = true`)\n- After existing mouse handling, read `Input.mouseScrollDelta.y`; if abs > 0.01f and _config != null: set `_isAutoTracking = false`, adjust `_camera.orthographicSize -= scroll * _config.ZoomSpeed * Time.deltaTime`, clamp to [MinZoom, MaxZoom], then apply ClampToBounds\n\n**HandleTouch changes:**\n- Set `_isAutoTracking = false` when single-finger `_isPanning` starts\n- Add pinch-to-zoom branch: when `Input.touchCount >= 2`, set `_isAutoTracking = false`, compute previous/current two-finger distance, delta = prevDist - currDist, adjust `_camera.orthographicSize += delta * _config.ZoomSpeed * 0.01f`, clamp, apply ClampToBounds. When touchCount >= 2, skip single-finger pan to avoid conflicts.\n\n**ApplyScreenDelta change:** After setting `transform.position`, apply `CameraMath.ClampToBounds` if board rect is set.\n\n**LateUpdate change:** After SmoothDamp (existing), apply `CameraMath.ClampToBounds` if board rect is set.\n\n**New state:** `private Rect _boardRect; private bool _hasBoardRect;`\n**New API:** `public void SetBoardBounds(Rect boardRect)` stores the rect and sets the flag.\n\n**InGamePresenter wiring:** In HandlePiecePlaced, after existing camera targeting block, add a one-time call: if `_stage != null && _camera != null` and board bounds not yet set, call `_camera.SetBoardBounds(_stage.GetBoardRect())`.\n\nAll null guards: _config != null, _camera != null, _hasBoardRect checks before ClampToBounds calls.",
+      "estimate": "30m",
+      "files": [
+        "Assets/Scripts/Game/InGame/CameraController.cs",
+        "Assets/Scripts/Game/InGame/InGamePresenter.cs"
+      ],
+      "verify": "grep -c \"mouseScrollDelta\" Assets/Scripts/Game/InGame/CameraController.cs && grep -c \"_isAutoTracking = false\" Assets/Scripts/Game/InGame/CameraController.cs && grep -c \"SetBoardBounds\" Assets/Scripts/Game/InGame/CameraController.cs && grep -c \"ClampToBounds\" Assets/Scripts/Game/InGame/CameraController.cs && grep -c \"GetBoardRect\\|SetBoardBounds\" Assets/Scripts/Game/InGame/InGamePresenter.cs && echo '{}' | mcporter call unityMCP.refresh_asset_database --stdin",
+      "inputs": [
+        "`Assets/Scripts/Game/InGame/CameraController.cs` — existing CameraController with HandleMouse, HandleTouch, ApplyScreenDelta, LateUpdate, SetTarget, _isAutoTracking",
+        "`Assets/Scripts/Game/InGame/InGamePresenter.cs` — existing HandlePiecePlaced with camera targeting block using _stage and _camera",
+        "`Assets/Scripts/Game/InGame/CameraMath.cs` — T01 output: ClampToBounds and ComputeBoardRect static methods",
+        "`Assets/Scripts/Game/InGame/CameraConfig.cs` — T01 output: BoundaryMargin and ZoomSpeed fields",
+        "`Assets/Scripts/Game/InGame/PuzzleStageController.cs` — T01 output: GetBoardRect() method"
+      ],
+      "expected_output": [
+        "`Assets/Scripts/Game/InGame/CameraController.cs` — manual pan override (_isAutoTracking = false in HandleMouse + HandleTouch), scroll wheel zoom, pinch-to-zoom, SetBoardBounds API, ClampToBounds applied in ApplyScreenDelta + zoom handlers + LateUpdate",
+        "`Assets/Scripts/Game/InGame/InGamePresenter.cs` — SetBoardBounds call wired in HandlePiecePlaced"
+      ],
+      "observability_impact": "",
+      "full_plan_md": "",
+      "sequence": 0
     }
   ],
   "decisions": [
@@ -7894,6 +7984,30 @@
       "revisable": "Yes — interpolation curve can be changed if SmoothDamp doesn't feel right",
       "made_by": "human",
       "superseded_by": null
+    },
+    {
+      "seq": 83,
+      "id": "D112",
+      "when_context": "M023/S01/T01",
+      "scope": "pattern",
+      "decision": "CameraConfig field style for ScriptableObject",
+      "choice": "Use [SerializeField] public fields (not properties) on CameraConfig",
+      "rationale": "Unity inspector serialization requires fields, not properties. Public access allows CameraMath to read values without a property wrapper layer. Matches the established convention for ScriptableObject configs in this project.",
+      "revisable": "No",
+      "made_by": "agent",
+      "superseded_by": null
+    },
+    {
+      "seq": 84,
+      "id": "D113",
+      "when_context": "M023/S01/T03",
+      "scope": "pattern",
+      "decision": "Null-guard strategy for optional camera wiring in InGamePresenter",
+      "choice": "HandlePiecePlaced camera targeting guarded on _stage != null AND _camera.Config != null",
+      "rationale": "Both PuzzleStageController and CameraController are optional constructor params (default null) to preserve backward compat with existing InGame tests. Double null-guard prevents NRE when no config is assigned (e.g. EditMode tests). Camera aspect defaults to 1f when Camera component is absent — safe for test contexts.",
+      "revisable": "No",
+      "made_by": "agent",
+      "superseded_by": null
     }
   ],
   "verification_evidence": [
@@ -8094,6 +8208,72 @@
       "verdict": "⚠️ incomplete (MCP blocked by Reimport All)",
       "duration_ms": 1200000,
       "created_at": "2026-03-30T11:31:43.302Z"
+    },
+    {
+      "id": 19,
+      "task_id": "T01",
+      "slice_id": "S02",
+      "milestone_id": "M023",
+      "command": "grep -c \"ClampToBounds\" Assets/Scripts/Game/InGame/CameraMath.cs",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 50,
+      "created_at": "2026-03-30T13:45:25.498Z"
+    },
+    {
+      "id": 20,
+      "task_id": "T01",
+      "slice_id": "S02",
+      "milestone_id": "M023",
+      "command": "grep -c \"ComputeBoardRect\" Assets/Scripts/Game/InGame/CameraMath.cs",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 45,
+      "created_at": "2026-03-30T13:45:25.498Z"
+    },
+    {
+      "id": 21,
+      "task_id": "T01",
+      "slice_id": "S02",
+      "milestone_id": "M023",
+      "command": "grep -c \"BoundaryMargin\" Assets/Scripts/Game/InGame/CameraConfig.cs",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 40,
+      "created_at": "2026-03-30T13:45:25.498Z"
+    },
+    {
+      "id": 22,
+      "task_id": "T01",
+      "slice_id": "S02",
+      "milestone_id": "M023",
+      "command": "grep -c \"ZoomSpeed\" Assets/Scripts/Game/InGame/CameraConfig.cs",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 40,
+      "created_at": "2026-03-30T13:45:25.498Z"
+    },
+    {
+      "id": 23,
+      "task_id": "T01",
+      "slice_id": "S02",
+      "milestone_id": "M023",
+      "command": "grep -c \"GetBoardRect\" Assets/Scripts/Game/InGame/PuzzleStageController.cs",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 45,
+      "created_at": "2026-03-30T13:45:25.498Z"
+    },
+    {
+      "id": 24,
+      "task_id": "T01",
+      "slice_id": "S02",
+      "milestone_id": "M023",
+      "command": "grep -c \"\\[Test\\]\" Assets/Tests/EditMode/Game/CameraTests.cs",
+      "exit_code": 0,
+      "verdict": "✅ pass (18 ≥ 17 required)",
+      "duration_ms": 40,
+      "created_at": "2026-03-30T13:45:25.498Z"
     }
   ]
 }

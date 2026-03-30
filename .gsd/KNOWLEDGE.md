@@ -174,3 +174,16 @@ rm Library/Bee/tundra.scancache
 Then `Assets/Refresh` from the Unity Editor. Bee rebuilds the dag from scratch on next compile.
 
 **How to identify the active dag hash:** Check the `Starting:` lines in `Editor.log` — the hash appears in the path e.g. `Library/Bee/900b0aEDbg.dag.json` or `900b0aEDbg-inputdata.json`.
+
+---
+
+### K012 — Windows ripgrep path quoting: OS error 123 with bare paths
+**Date:** 2026-03-30
+
+On Windows, `rg "pattern" Assets/Scripts/` (with a forward-slash path) can return `OS error 123` ("The filename, directory name, or volume label syntax is incorrect") in certain shell environments (Git Bash / PowerShell with a Node-spawned subprocess).
+
+**Symptom:** Verification steps using `rg` exit with code 1 and `OS error 123` even when the target files exist and the pattern is correct.
+
+**Workaround:** Replace `rg` with `grep -rn` for path-based searches, or use backslash paths on Windows (`Assets\Scripts\`). The `grep` built-in in Git Bash handles forward-slash paths correctly. Alternatively, pipe file content: `grep -c "pattern" path/to/file.cs`.
+
+**Rule:** In verification commands on Windows, prefer `grep -c "pattern" path/to/file` over `rg "pattern" path/` for single-file checks. For directory-wide searches, `rg` is fine with explicit file paths but fragile with trailing slash directory arguments.
