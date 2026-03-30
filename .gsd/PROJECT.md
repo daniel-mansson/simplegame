@@ -49,4 +49,5 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement sta
 - [x] M019: Real IAP — Unity Purchasing + PlayFab receipt validation for coin purchases (iOS + Android)
 - [x] M020: Feature-Cohesion Restructure — reorganise Services/ and Popup/ into feature-cohesive folders (IAP/, Ads/, ATT/, Economy/, Save/, PlayFab/, Progression/, Shop/, LevelFlow/, ConfirmDialog/)
 - [x] M021: Scene Controller Composition Refactor
-- [ ] M022: In-Game Deck Panel — UGUI piece buttons in horizontal layout replacing the invisible overlay tap system — slim InGameSceneController (1085→133 lines) and MainMenuSceneController (391→82 lines) by extracting PuzzleStageController (3D/tray) and InGameFlowPresenter (game loop/popups)
+- [x] M022: In-Game Deck Panel — UGUI piece buttons in horizontal layout replacing the invisible overlay tap system — slim InGameSceneController (1085→133 lines) and MainMenuSceneController (391→82 lines) by extracting PuzzleStageController (3D/tray) and InGameFlowPresenter (game loop/popups)
+- [ ] M023: In-Game Camera Movement — auto-tracking camera that frames valid placement positions, smooth zoom/pan, manual override with drag/pinch, boundary clamping

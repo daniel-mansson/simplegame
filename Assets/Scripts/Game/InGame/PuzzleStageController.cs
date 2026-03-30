@@ -311,6 +311,18 @@ namespace SimpleGame.Game.InGame
         public bool HasGridLayoutConfig => _gridLayoutConfig != null;
 
         /// <summary>
+        /// Returns the solved world position for the given piece, or null if the piece
+        /// is unknown (not yet spawned, or SpawnLevel has not been called).
+        /// Used by the auto-tracking camera to frame placeable piece targets.
+        /// </summary>
+        public Vector3? GetSolvedPosition(int pieceId)
+        {
+            if (_solvedWorldPositions != null && _solvedWorldPositions.TryGetValue(pieceId, out var pos))
+                return pos;
+            return null;
+        }
+
+        /// <summary>
         /// Returns the wired transition player, or creates a minimal runtime one.
         /// Returns null if running in EditMode test context (no game loop available).
         /// </summary>

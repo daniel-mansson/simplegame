@@ -25,11 +25,12 @@ namespace SimpleGame.Puzzle
     {
         // ── Internal state ────────────────────────────────────────────────
 
-        private readonly PuzzleBoard _board;
-        private readonly Deck        _deck;
-        private readonly int?[]      _slots;
-        private readonly int         _totalNonSeedCount;
-        private readonly int         _seedCount;
+        private readonly PuzzleBoard               _board;
+        private readonly Deck                      _deck;
+        private readonly int?[]                    _slots;
+        private readonly int                       _totalNonSeedCount;
+        private readonly int                       _seedCount;
+        private readonly IReadOnlyList<IPuzzlePiece> _pieces;
 
         private int  _placedNonSeedCount;
         private bool _completed;
@@ -92,6 +93,7 @@ namespace SimpleGame.Puzzle
             _slots             = new int?[slotCount];
             _seedCount         = seedIds.Count;
             _totalNonSeedCount = deckOrder.Count;
+            _pieces            = pieces;
 
             // Pre-place seeds — they bypass the adjacency rule
             foreach (var id in seedIds)
@@ -184,6 +186,23 @@ namespace SimpleGame.Puzzle
             }
 
             return SlotTapResult.Placed;
+        }
+
+        /// <summary>
+        /// Returns the IDs of every piece that has not yet been placed AND can currently
+        /// be placed (i.e. at least one neighbour is already on the board).
+        /// These are the "valid placement positions" used by the auto-tracking camera.
+        /// </summary>
+        public IReadOnlyList<int> GetPlaceablePieceIds()
+        {
+            var result = new System.Collections.Generic.List<int>();
+            foreach (var piece in _pieces)
+            {
+                int id = piece.Id;
+                if (!_board.IsPlaced(id) && _board.CanPlace(id))
+                    result.Add(id);
+            }
+            return result;
         }
     }
 }

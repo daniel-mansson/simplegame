@@ -1481,7 +1481,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Validation: n/a
 - Notes: None.
 
-### R151 � Leaderboards and multiplayer
+### R151 � Leaderboards and multiplayer
 - Class: anti-feature
 - Status: out-of-scope
 - Description: No leaderboard, friend, or multiplayer features.
@@ -1730,3 +1730,117 @@ Use it to track what is actively in scope, what has been validated by completed 
 - Supporting slices: M019/S02
 - Validation: mapped
 - Notes: Requires PlayFab title configured with correct package name / bundle ID and shared secret.
+
+---
+
+## M023 Requirements — In-Game Camera Movement
+
+### R173 — Auto-tracking camera frames valid placement positions
+- Class: primary-user-loop
+- Status: active
+- Description: After each piece placement, the camera computes the world-space bounding box of all currently valid placement target positions (pieces in deck slots that have a placed neighbour) and smoothly animates to frame that region.
+- Why it matters: Guides the player's eye to where gameplay is happening. On larger boards (8×7+), valid placements may be off-screen without camera guidance.
+- Source: user
+- Primary owning slice: M023/S01
+- Supporting slices: M023/S03
+- Validation: unmapped
+- Notes: Valid placements determined by PuzzleBoard.CanPlace() against current slot contents. World positions from PuzzleStageController._solvedWorldPositions.
+
+### R174 — Camera animation is smooth and slow (~1–1.5s glide)
+- Class: quality-attribute
+- Status: active
+- Description: Camera transitions use smooth interpolation (SmoothDamp or similar) with a target duration of ~1–1.5 seconds. Movement feels deliberate, not snappy.
+- Why it matters: User explicitly wants "smooth and slow" camera movement — this is a feel requirement.
+- Source: user
+- Primary owning slice: M023/S01
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Speed configurable via ScriptableObject.
+
+### R175 — All valid moves visible on screen simultaneously
+- Class: primary-user-loop
+- Status: active
+- Description: The auto-tracking framing ensures every valid placement target position is visible within the camera viewport simultaneously, with appropriate padding.
+- Why it matters: Player must be able to see all possible moves to make informed decisions.
+- Source: user
+- Primary owning slice: M023/S01
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Zoom level is computed from the bounding box of valid targets plus padding, clamped to min/max zoom.
+
+### R176 — Configurable min/max zoom limits (orthographic size)
+- Class: quality-attribute
+- Status: active
+- Description: Camera zoom (orthographicSize) is clamped between configurable min and max values, enforced in both auto-tracking and manual zoom modes.
+- Why it matters: Prevents over-zoom (pieces too large, player loses context) and under-zoom (pieces too small to see).
+- Source: user
+- Primary owning slice: M023/S02
+- Supporting slices: M023/S01
+- Validation: unmapped
+- Notes: Limits stored in CameraConfig ScriptableObject.
+
+### R177 — Camera boundary clamping with ~10–15% margin beyond board
+- Class: quality-attribute
+- Status: active
+- Description: Camera position is clamped so it cannot drift beyond the puzzle board boundaries plus a configurable margin (~10–15% of board extent). Enforced in both auto and manual modes.
+- Why it matters: Prevents showing dead space beyond the puzzle, maintaining visual focus.
+- Source: user
+- Primary owning slice: M023/S02
+- Supporting slices: M023/S01
+- Validation: unmapped
+- Notes: Board bounds computed from GridPlanner: (0,0) to (unitScale, unitScale) where unitScale = max(rows, cols).
+
+### R178 — Manual drag override
+- Class: primary-user-loop
+- Status: active
+- Description: Single-finger drag (mobile) or mouse drag (PC) overrides auto-tracking and puts the camera in manual control mode. Extends the existing CameraController pan behavior.
+- Why it matters: Player must be able to look around the board freely.
+- Source: user
+- Primary owning slice: M023/S02
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Existing CameraController already handles drag panning — needs integration with auto/manual state machine.
+
+### R179 — Pinch-to-zoom on mobile / scroll wheel on PC
+- Class: primary-user-loop
+- Status: active
+- Description: Multi-touch pinch gesture (mobile) and scroll wheel (PC/Editor) control camera zoom. Zoom is centered on the pinch midpoint or cursor position.
+- Why it matters: Standard mobile camera control that players expect in any zooming interface.
+- Source: user
+- Primary owning slice: M023/S02
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Not currently implemented in CameraController — new feature.
+
+### R180 — Manual mode persists until next piece placement
+- Class: core-capability
+- Status: active
+- Description: Once the player interacts with the camera (drag or zoom), manual mode stays active until the next successful piece placement on the board, at which point auto-tracking resumes.
+- Why it matters: Player stays in control after deliberate interaction; auto-tracking doesn't fight manual exploration.
+- Source: user
+- Primary owning slice: M023/S02
+- Supporting slices: M023/S01
+- Validation: unmapped
+- Notes: PuzzleModel.OnPiecePlaced triggers return to auto-tracking.
+
+### R181 — Level start shows full board then zooms to first valid area
+- Class: primary-user-loop
+- Status: active
+- Description: At level start, the camera begins showing the entire puzzle board (zoomed out to fit), then smoothly transitions to frame the area around the first valid placements.
+- Why it matters: Gives the player spatial context before gameplay begins.
+- Source: user
+- Primary owning slice: M023/S03
+- Supporting slices: M023/S01, M023/S02
+- Validation: unmapped
+- Notes: Overview hold duration and transition speed configurable.
+
+### R182 — Camera config as ScriptableObject
+- Class: quality-attribute
+- Status: active
+- Description: All camera tuning values (move speed, zoom speed, min/max zoom, boundary padding, overview hold duration) are exposed on a CameraConfig ScriptableObject, tunable without code changes.
+- Why it matters: Iteration speed — designer can tune feel in the Inspector without recompilation.
+- Source: inferred
+- Primary owning slice: M023/S01
+- Supporting slices: M023/S02, M023/S03
+- Validation: unmapped
+- Notes: Follows project pattern of serialized ScriptableObject configs (GridLayoutConfig, PieceRenderConfig, PopupAnimationConfig).
