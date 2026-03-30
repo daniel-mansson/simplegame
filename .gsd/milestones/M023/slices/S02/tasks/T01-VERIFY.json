@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "taskId": "T01",
+  "unitId": "M023/S02/T01",
+  "timestamp": 1774878338568,
+  "passed": false,
+  "discoverySource": "task-plan",
+  "checks": [
+    {
+      "command": "grep -c \"ClampToBounds\" Assets/Scripts/Game/InGame/CameraMath.cs",
+      "exitCode": 1,
+      "durationMs": 14,
+      "verdict": "fail"
+    },
+    {
+      "command": "grep -c \"ComputeBoardRect\" Assets/Scripts/Game/InGame/CameraMath.cs",
+      "exitCode": 1,
+      "durationMs": 11,
+      "verdict": "fail"
+    },
+    {
+      "command": "grep -c \"BoundaryMargin\" Assets/Scripts/Game/InGame/CameraConfig.cs",
+      "exitCode": 1,
+      "durationMs": 11,
+      "verdict": "fail"
+    },
+    {
+      "command": "grep -c \"ZoomSpeed\" Assets/Scripts/Game/InGame/CameraConfig.cs",
+      "exitCode": 1,
+      "durationMs": 11,
+      "verdict": "fail"
+    },
+    {
+      "command": "grep -c \"GetBoardRect\" Assets/Scripts/Game/InGame/PuzzleStageController.cs",
+      "exitCode": 1,
+      "durationMs": 11,
+      "verdict": "fail"
+    },
+    {
+      "command": "grep -c \"\\[Test\\]\" Assets/Tests/EditMode/Game/CameraTests.cs",
+      "exitCode": 1,
+      "durationMs": 11,
+      "verdict": "fail"
+    }
+  ],
+  "retryAttempt": 1,
+  "maxRetries": 2
+}

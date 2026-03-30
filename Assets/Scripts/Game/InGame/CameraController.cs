@@ -32,6 +32,10 @@ namespace SimpleGame.Game.InGame
         private Vector3 _posVelocity;
         private float _sizeVelocity;
 
+        // ── Board bounds state ─────────────────────────────────────────────
+        private Rect _boardRect;
+        private bool _hasBoardRect;
+
         private void Awake()
         {
             _camera = GetComponent<Camera>();
@@ -57,8 +61,9 @@ namespace SimpleGame.Game.InGame
                 // Pass -1 for mouse pointer ID — the no-arg overload uses touch ID 0.
                 if (IsOverUI(-1)) return;
 
-                _isPanning     = true;
-                _lastScreenPos = Input.mousePosition;
+                _isPanning      = true;
+                _isAutoTracking = false;
+                _lastScreenPos  = Input.mousePosition;
             }
 
             if (_isPanning && Input.GetMouseButton(0))
@@ -70,6 +75,20 @@ namespace SimpleGame.Game.InGame
 
             if (Input.GetMouseButtonUp(0))
                 _isPanning = false;
+
+            // Scroll-wheel zoom
+            if (_config != null && _camera != null)
+            {
+                float scroll = Input.mouseScrollDelta.y;
+                if (Mathf.Abs(scroll) > 0.01f)
+                {
+                    _isAutoTracking = false;
+                    _camera.orthographicSize -= scroll * _config.ZoomSpeed * Time.deltaTime;
+                    _camera.orthographicSize  = Mathf.Clamp(_camera.orthographicSize, _config.MinZoom, _config.MaxZoom);
+                    if (_hasBoardRect)
+                        transform.position = CameraMath.ClampToBounds(transform.position, _camera.orthographicSize, _camera.aspect, _boardRect, _config.BoundaryMargin);
+                }
+            }
         }
 
         // ── Touch ──────────────────────────────────────────────────────────
@@ -82,14 +101,39 @@ namespace SimpleGame.Game.InGame
                 return;
             }
 
+            // Pinch-to-zoom: two-finger gesture takes priority over single-finger pan
+            if (Input.touchCount >= 2)
+            {
+                _isAutoTracking = false;
+
+                Touch t0 = Input.GetTouch(0);
+                Touch t1 = Input.GetTouch(1);
+
+                Vector2 prev0 = t0.position - t0.deltaPosition;
+                Vector2 prev1 = t1.position - t1.deltaPosition;
+                float prevDist = (prev0 - prev1).magnitude;
+                float currDist = (t0.position - t1.position).magnitude;
+                float delta    = prevDist - currDist;
+
+                if (_config != null && _camera != null)
+                {
+                    _camera.orthographicSize += delta * _config.ZoomSpeed * 0.01f;
+                    _camera.orthographicSize  = Mathf.Clamp(_camera.orthographicSize, _config.MinZoom, _config.MaxZoom);
+                    if (_hasBoardRect)
+                        transform.position = CameraMath.ClampToBounds(transform.position, _camera.orthographicSize, _camera.aspect, _boardRect, _config.BoundaryMargin);
+                }
+                return; // skip single-finger pan to avoid conflicts
+            }
+
             var touch = Input.GetTouch(0);
 
             if (touch.phase == TouchPhase.Began)
             {
                 if (IsOverUI(touch.fingerId)) return;
 
-                _isPanning     = true;
-                _lastScreenPos = touch.position;
+                _isPanning      = true;
+                _isAutoTracking = false;
+                _lastScreenPos  = touch.position;
             }
             else if (_isPanning && (touch.phase == TouchPhase.Moved || touch.phase == TouchPhase.Stationary))
             {
@@ -106,7 +150,8 @@ namespace SimpleGame.Game.InGame
 
         /// <summary>
         /// Converts a screen-pixel delta to world units and moves the camera in the
-        /// opposite direction (drag world under finger).
+        /// opposite direction (drag world under finger). Applies board-bounds clamping
+        /// if board bounds have been set.
         /// </summary>
         private void ApplyScreenDelta(Vector2 screenDelta)
         {
@@ -123,6 +168,9 @@ namespace SimpleGame.Game.InGame
             pos.x -= screenDelta.x * worldPerPixelX;
             pos.y -= screenDelta.y * worldPerPixelY;
             transform.position = pos;
+
+            if (_hasBoardRect && _config != null)
+                transform.position = CameraMath.ClampToBounds(transform.position, _camera.orthographicSize, _camera.aspect, _boardRect, _config.BoundaryMargin);
         }
 
         private static bool IsOverUI(int pointerId)
@@ -161,6 +209,17 @@ namespace SimpleGame.Game.InGame
             Debug.Log($"[CameraController] SetTarget center=({center.x},{center.y}) ortho={_targetOrthoSize}");
         }
 
+        /// <summary>
+        /// Store the world-space board rect used for boundary clamping during manual pan/zoom.
+        /// Call this once after the board is spawned (e.g. from InGamePresenter.HandlePiecePlaced).
+        /// </summary>
+        public void SetBoardBounds(Rect boardRect)
+        {
+            _boardRect    = boardRect;
+            _hasBoardRect = true;
+            Debug.Log($"[CameraController] SetBoardBounds rect=({boardRect.x},{boardRect.y} {boardRect.width}x{boardRect.height})");
+        }
+
         /// <summary>True while the camera is auto-tracking toward a target.</summary>
         public bool IsAutoTracking => _isAutoTracking;
 
@@ -171,13 +230,18 @@ namespace SimpleGame.Game.InGame
 
         private void LateUpdate()
         {
-            if (!_isAutoTracking || _config == null || _camera == null) return;
+            if (_isAutoTracking && _config != null && _camera != null)
+            {
+                transform.position = Vector3.SmoothDamp(
+                    transform.position, _targetPosition, ref _posVelocity, _config.SmoothTime);
 
-            transform.position = Vector3.SmoothDamp(
-                transform.position, _targetPosition, ref _posVelocity, _config.SmoothTime);
+                _camera.orthographicSize = Mathf.SmoothDamp(
+                    _camera.orthographicSize, _targetOrthoSize, ref _sizeVelocity, _config.SmoothTime);
+            }
 
-            _camera.orthographicSize = Mathf.SmoothDamp(
-                _camera.orthographicSize, _targetOrthoSize, ref _sizeVelocity, _config.SmoothTime);
+            // Always clamp after any LateUpdate movement if board bounds are set
+            if (_hasBoardRect && _config != null && _camera != null)
+                transform.position = CameraMath.ClampToBounds(transform.position, _camera.orthographicSize, _camera.aspect, _boardRect, _config.BoundaryMargin);
         }
     }
 }

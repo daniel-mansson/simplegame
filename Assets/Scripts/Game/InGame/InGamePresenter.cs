@@ -145,6 +145,8 @@ namespace SimpleGame.Game.InGame
             View.RefreshSlot(slotIndex, pieceId);
         }
 
+        private bool _boardBoundsSet;
+
         private void HandlePiecePlaced(int pieceId)
         {
             View.RevealPiece(pieceId);
@@ -155,6 +157,13 @@ namespace SimpleGame.Game.InGame
             // Auto-tracking camera: frame all currently placeable positions.
             if (_stage != null && _camera != null)
             {
+                // One-time: wire board bounds into the camera for manual-pan clamping.
+                if (!_boardBoundsSet)
+                {
+                    _camera.SetBoardBounds(_stage.GetBoardRect());
+                    _boardBoundsSet = true;
+                }
+
                 var config = _camera.Config;
                 if (config != null)
                 {

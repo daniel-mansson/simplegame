@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exported_at": "2026-03-30T13:45:25.524Z",
+  "exported_at": "2026-03-30T13:48:32.188Z",
   "milestones": [
     {
       "id": "M001",
@@ -7012,19 +7012,26 @@
       "milestone_id": "M023",
       "slice_id": "S02",
       "id": "T02",
-      "title": "Wire manual pan override, scroll/pinch zoom, and boundary clamping into CameraController",
-      "status": "pending",
-      "one_liner": "",
-      "narrative": "",
-      "verification_result": "",
+      "title": "Wired manual pan/zoom override, scroll-wheel and pinch-to-zoom with clamped orthographic size, and board-boundary enforcement into CameraController; wired SetBoardBounds in InGamePresenter",
+      "status": "complete",
+      "one_liner": "Wired manual pan/zoom override, scroll-wheel and pinch-to-zoom with clamped orthographic size, and board-boundary enforcement into CameraController; wired SetBoardBounds in InGamePresenter",
+      "narrative": "All changes required by the task plan were applied to two files. CameraController received: _boardRect/_hasBoardRect state, _isAutoTracking=false on mouse-down and touch pan-start, scroll-wheel zoom (mouseScrollDelta * ZoomSpeed * deltaTime, clamped, then ClampToBounds), pinch-to-zoom branch (two-finger distance delta * ZoomSpeed * 0.01f, clamped, ClampToBounds, early-return to avoid single-finger conflict), ClampToBounds in ApplyScreenDelta, unconditional ClampToBounds at the end of LateUpdate (after the SmoothDamp block), and SetBoardBounds(Rect) public API. InGamePresenter received a _boardBoundsSet guard and a one-time call to _camera.SetBoardBounds(_stage.GetBoardRect()) on the first piece placement. Previous auto-fix failure was a Windows environment issue (grep unavailable) not a code deficiency.",
+      "verification_result": "Symbol counts verified via PowerShell [regex]::Matches: mouseScrollDelta(1), _isAutoTracking=false(4), SetBoardBounds(2), ClampToBounds(4) in CameraController; GetBoardRect|SetBoardBounds(2) in InGamePresenter. T01 symbols also confirmed: ClampToBounds/ComputeBoardRect in CameraMath, BoundaryMargin/ZoomSpeed in CameraConfig, GetBoardRect in PuzzleStageController, 18 [Test] attributes in CameraTests.",
       "duration": "",
-      "completed_at": null,
+      "completed_at": "2026-03-30T13:48:32.162Z",
       "blocker_discovered": false,
-      "deviations": "",
-      "known_issues": "",
-      "key_files": [],
-      "key_decisions": [],
-      "full_summary_md": "",
+      "deviations": "None.",
+      "known_issues": "None.",
+      "key_files": [
+        "Assets/Scripts/Game/InGame/CameraController.cs",
+        "Assets/Scripts/Game/InGame/InGamePresenter.cs"
+      ],
+      "key_decisions": [
+        "LateUpdate clamping is always applied (not only during auto-tracking) so a manual pan near a boundary stays clamped as SmoothDamp converges",
+        "Pinch-to-zoom branch early-returns before single-finger pan to prevent gesture conflicts",
+        "_boardBoundsSet flag ensures SetBoardBounds is called exactly once on first piece placement"
+      ],
+      "full_summary_md": "---\nid: T02\nparent: S02\nmilestone: M023\nkey_files:\n  - Assets/Scripts/Game/InGame/CameraController.cs\n  - Assets/Scripts/Game/InGame/InGamePresenter.cs\nkey_decisions:\n  - LateUpdate clamping is always applied (not only during auto-tracking) so a manual pan near a boundary stays clamped as SmoothDamp converges\n  - Pinch-to-zoom branch early-returns before single-finger pan to prevent gesture conflicts\n  - _boardBoundsSet flag ensures SetBoardBounds is called exactly once on first piece placement\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-03-30T13:48:32.162Z\nblocker_discovered: false\n---\n\n# T02: Wired manual pan/zoom override, scroll-wheel and pinch-to-zoom with clamped orthographic size, and board-boundary enforcement into CameraController; wired SetBoardBounds in InGamePresenter\n\n**Wired manual pan/zoom override, scroll-wheel and pinch-to-zoom with clamped orthographic size, and board-boundary enforcement into CameraController; wired SetBoardBounds in InGamePresenter**\n\n## What Happened\n\nAll changes required by the task plan were applied to two files. CameraController received: _boardRect/_hasBoardRect state, _isAutoTracking=false on mouse-down and touch pan-start, scroll-wheel zoom (mouseScrollDelta * ZoomSpeed * deltaTime, clamped, then ClampToBounds), pinch-to-zoom branch (two-finger distance delta * ZoomSpeed * 0.01f, clamped, ClampToBounds, early-return to avoid single-finger conflict), ClampToBounds in ApplyScreenDelta, unconditional ClampToBounds at the end of LateUpdate (after the SmoothDamp block), and SetBoardBounds(Rect) public API. InGamePresenter received a _boardBoundsSet guard and a one-time call to _camera.SetBoardBounds(_stage.GetBoardRect()) on the first piece placement. Previous auto-fix failure was a Windows environment issue (grep unavailable) not a code deficiency.\n\n## Verification\n\nSymbol counts verified via PowerShell [regex]::Matches: mouseScrollDelta(1), _isAutoTracking=false(4), SetBoardBounds(2), ClampToBounds(4) in CameraController; GetBoardRect|SetBoardBounds(2) in InGamePresenter. T01 symbols also confirmed: ClampToBounds/ComputeBoardRect in CameraMath, BoundaryMargin/ZoomSpeed in CameraConfig, GetBoardRect in PuzzleStageController, 18 [Test] attributes in CameraTests.\n\n## Verification Evidence\n\n| # | Command | Exit Code | Verdict | Duration |\n|---|---------|-----------|---------|----------|\n| 1 | `[regex]::Matches(CameraController,'mouseScrollDelta').Count` | 0 | ✅ pass (1) | 200ms |\n| 2 | `[regex]::Matches(CameraController,'_isAutoTracking = false').Count` | 0 | ✅ pass (4) | 200ms |\n| 3 | `[regex]::Matches(CameraController,'SetBoardBounds').Count` | 0 | ✅ pass (2) | 200ms |\n| 4 | `[regex]::Matches(CameraController,'ClampToBounds').Count` | 0 | ✅ pass (4) | 200ms |\n| 5 | `[regex]::Matches(InGamePresenter,'GetBoardRect|SetBoardBounds').Count` | 0 | ✅ pass (2) | 200ms |\n| 6 | `[regex]::Matches(CameraMath,'ClampToBounds').Count` | 0 | ✅ pass (1) | 200ms |\n| 7 | `[regex]::Matches(CameraMath,'ComputeBoardRect').Count` | 0 | ✅ pass (2) | 200ms |\n| 8 | `[regex]::Matches(CameraConfig,'BoundaryMargin').Count` | 0 | ✅ pass (1) | 200ms |\n| 9 | `[regex]::Matches(CameraConfig,'ZoomSpeed').Count` | 0 | ✅ pass (1) | 200ms |\n| 10 | `[regex]::Matches(PuzzleStageController,'GetBoardRect').Count` | 0 | ✅ pass (1) | 200ms |\n| 11 | `[regex]::Matches(CameraTests,'\\[Test\\]').Count` | 0 | ✅ pass (18) | 200ms |\n\n\n## Deviations\n\nNone.\n\n## Known Issues\n\nNone.\n\n## Files Created/Modified\n\n- `Assets/Scripts/Game/InGame/CameraController.cs`\n- `Assets/Scripts/Game/InGame/InGamePresenter.cs`\n",
       "description": "Integrate all manual input handling and boundary enforcement into CameraController, then wire board bounds from InGamePresenter.\n\n**HandleMouse changes:**\n- Set `_isAutoTracking = false` when `_isPanning` first becomes true (alongside existing `_isPanning = true`)\n- After existing mouse handling, read `Input.mouseScrollDelta.y`; if abs > 0.01f and _config != null: set `_isAutoTracking = false`, adjust `_camera.orthographicSize -= scroll * _config.ZoomSpeed * Time.deltaTime`, clamp to [MinZoom, MaxZoom], then apply ClampToBounds\n\n**HandleTouch changes:**\n- Set `_isAutoTracking = false` when single-finger `_isPanning` starts\n- Add pinch-to-zoom branch: when `Input.touchCount >= 2`, set `_isAutoTracking = false`, compute previous/current two-finger distance, delta = prevDist - currDist, adjust `_camera.orthographicSize += delta * _config.ZoomSpeed * 0.01f`, clamp, apply ClampToBounds. When touchCount >= 2, skip single-finger pan to avoid conflicts.\n\n**ApplyScreenDelta change:** After setting `transform.position`, apply `CameraMath.ClampToBounds` if board rect is set.\n\n**LateUpdate change:** After SmoothDamp (existing), apply `CameraMath.ClampToBounds` if board rect is set.\n\n**New state:** `private Rect _boardRect; private bool _hasBoardRect;`\n**New API:** `public void SetBoardBounds(Rect boardRect)` stores the rect and sets the flag.\n\n**InGamePresenter wiring:** In HandlePiecePlaced, after existing camera targeting block, add a one-time call: if `_stage != null && _camera != null` and board bounds not yet set, call `_camera.SetBoardBounds(_stage.GetBoardRect())`.\n\nAll null guards: _config != null, _camera != null, _hasBoardRect checks before ClampToBounds calls.",
       "estimate": "30m",
       "files": [
@@ -8274,6 +8281,127 @@
       "verdict": "✅ pass (18 ≥ 17 required)",
       "duration_ms": 40,
       "created_at": "2026-03-30T13:45:25.498Z"
+    },
+    {
+      "id": 25,
+      "task_id": "T02",
+      "slice_id": "S02",
+      "milestone_id": "M023",
+      "command": "[regex]::Matches(CameraController,'mouseScrollDelta').Count",
+      "exit_code": 0,
+      "verdict": "✅ pass (1)",
+      "duration_ms": 200,
+      "created_at": "2026-03-30T13:48:32.162Z"
+    },
+    {
+      "id": 26,
+      "task_id": "T02",
+      "slice_id": "S02",
+      "milestone_id": "M023",
+      "command": "[regex]::Matches(CameraController,'_isAutoTracking = false').Count",
+      "exit_code": 0,
+      "verdict": "✅ pass (4)",
+      "duration_ms": 200,
+      "created_at": "2026-03-30T13:48:32.162Z"
+    },
+    {
+      "id": 27,
+      "task_id": "T02",
+      "slice_id": "S02",
+      "milestone_id": "M023",
+      "command": "[regex]::Matches(CameraController,'SetBoardBounds').Count",
+      "exit_code": 0,
+      "verdict": "✅ pass (2)",
+      "duration_ms": 200,
+      "created_at": "2026-03-30T13:48:32.162Z"
+    },
+    {
+      "id": 28,
+      "task_id": "T02",
+      "slice_id": "S02",
+      "milestone_id": "M023",
+      "command": "[regex]::Matches(CameraController,'ClampToBounds').Count",
+      "exit_code": 0,
+      "verdict": "✅ pass (4)",
+      "duration_ms": 200,
+      "created_at": "2026-03-30T13:48:32.162Z"
+    },
+    {
+      "id": 29,
+      "task_id": "T02",
+      "slice_id": "S02",
+      "milestone_id": "M023",
+      "command": "[regex]::Matches(InGamePresenter,'GetBoardRect|SetBoardBounds').Count",
+      "exit_code": 0,
+      "verdict": "✅ pass (2)",
+      "duration_ms": 200,
+      "created_at": "2026-03-30T13:48:32.162Z"
+    },
+    {
+      "id": 30,
+      "task_id": "T02",
+      "slice_id": "S02",
+      "milestone_id": "M023",
+      "command": "[regex]::Matches(CameraMath,'ClampToBounds').Count",
+      "exit_code": 0,
+      "verdict": "✅ pass (1)",
+      "duration_ms": 200,
+      "created_at": "2026-03-30T13:48:32.162Z"
+    },
+    {
+      "id": 31,
+      "task_id": "T02",
+      "slice_id": "S02",
+      "milestone_id": "M023",
+      "command": "[regex]::Matches(CameraMath,'ComputeBoardRect').Count",
+      "exit_code": 0,
+      "verdict": "✅ pass (2)",
+      "duration_ms": 200,
+      "created_at": "2026-03-30T13:48:32.162Z"
+    },
+    {
+      "id": 32,
+      "task_id": "T02",
+      "slice_id": "S02",
+      "milestone_id": "M023",
+      "command": "[regex]::Matches(CameraConfig,'BoundaryMargin').Count",
+      "exit_code": 0,
+      "verdict": "✅ pass (1)",
+      "duration_ms": 200,
+      "created_at": "2026-03-30T13:48:32.162Z"
+    },
+    {
+      "id": 33,
+      "task_id": "T02",
+      "slice_id": "S02",
+      "milestone_id": "M023",
+      "command": "[regex]::Matches(CameraConfig,'ZoomSpeed').Count",
+      "exit_code": 0,
+      "verdict": "✅ pass (1)",
+      "duration_ms": 200,
+      "created_at": "2026-03-30T13:48:32.162Z"
+    },
+    {
+      "id": 34,
+      "task_id": "T02",
+      "slice_id": "S02",
+      "milestone_id": "M023",
+      "command": "[regex]::Matches(PuzzleStageController,'GetBoardRect').Count",
+      "exit_code": 0,
+      "verdict": "✅ pass (1)",
+      "duration_ms": 200,
+      "created_at": "2026-03-30T13:48:32.162Z"
+    },
+    {
+      "id": 35,
+      "task_id": "T02",
+      "slice_id": "S02",
+      "milestone_id": "M023",
+      "command": "[regex]::Matches(CameraTests,'\\[Test\\]').Count",
+      "exit_code": 0,
+      "verdict": "✅ pass (18)",
+      "duration_ms": 200,
+      "created_at": "2026-03-30T13:48:32.162Z"
     }
   ]
 }

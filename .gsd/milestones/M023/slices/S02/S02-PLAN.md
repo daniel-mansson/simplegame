@@ -8,7 +8,7 @@
   - Estimate: 25m
   - Files: Assets/Scripts/Game/InGame/CameraConfig.cs, Assets/Scripts/Game/InGame/CameraMath.cs, Assets/Scripts/Game/InGame/PuzzleStageController.cs, Assets/Tests/EditMode/Game/CameraTests.cs
   - Verify: grep -c "ClampToBounds" Assets/Scripts/Game/InGame/CameraMath.cs && grep -c "ComputeBoardRect" Assets/Scripts/Game/InGame/CameraMath.cs && grep -c "BoundaryMargin" Assets/Scripts/Game/InGame/CameraConfig.cs && grep -c "ZoomSpeed" Assets/Scripts/Game/InGame/CameraConfig.cs && grep -c "GetBoardRect" Assets/Scripts/Game/InGame/PuzzleStageController.cs && grep -c "\[Test\]" Assets/Tests/EditMode/Game/CameraTests.cs
-- [ ] **T02: Wire manual pan override, scroll/pinch zoom, and boundary clamping into CameraController** — Integrate all manual input handling and boundary enforcement into CameraController, then wire board bounds from InGamePresenter.
+- [x] **T02: Wired manual pan/zoom override, scroll-wheel and pinch-to-zoom with clamped orthographic size, and board-boundary enforcement into CameraController; wired SetBoardBounds in InGamePresenter** — Integrate all manual input handling and boundary enforcement into CameraController, then wire board bounds from InGamePresenter.
 
 **HandleMouse changes:**
 - Set `_isAutoTracking = false` when `_isPanning` first becomes true (alongside existing `_isPanning = true`)
