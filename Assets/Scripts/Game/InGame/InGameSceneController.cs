@@ -110,6 +110,10 @@ namespace SimpleGame.Game.InGame
 
         private async UniTaskVoid WaitForBootOrSelfBootstrap()
         {
+            // If GameBootstrapper exists, it will call Initialize() + RunAsync() — never self-bootstrap.
+            if (FindObjectOfType<Boot.GameBootstrapper>() != null)
+                return;
+
             for (int i = 0; i < 10; i++)
             {
                 await UniTask.DelayFrame(1, cancellationToken: destroyCancellationToken);

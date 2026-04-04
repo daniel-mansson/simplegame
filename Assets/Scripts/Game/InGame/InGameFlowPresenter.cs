@@ -204,6 +204,8 @@ namespace SimpleGame.Game.InGame
                 modelFactory = () => BuildStubModel(_session.TotalPieces, slotCount);
             }
 
+            ITransitionPlayer retryTp = null;
+
             while (true)
             {
                 var model     = modelFactory();
@@ -226,6 +228,9 @@ namespace SimpleGame.Game.InGame
                         boardRect, config.Padding, aspect, config.MinZoom, config.MaxZoom);
                     _cameraController.SnapTo(overviewCenter, overviewOrtho);
 
+                    // Reveal screen after retry (new puzzle + camera are ready behind the overlay)
+                    if (retryTp != null) { await retryTp.FadeInAsync(ct); retryTp = null; }
+
                     // Hold for overview duration
                     await UniTask.Delay(
                         System.TimeSpan.FromSeconds(config.OverviewHoldDuration),
@@ -246,6 +251,8 @@ namespace SimpleGame.Game.InGame
                         _cameraController.SetTarget(center, ortho);
                     }
                 }
+                // Fallback: reveal after retry when no camera is available
+                if (retryTp != null) { await retryTp.FadeInAsync(ct); retryTp = null; }
 
                 _analytics?.TrackLevelStarted(_session.CurrentLevelId.ToString());
                 try
@@ -288,7 +295,8 @@ namespace SimpleGame.Game.InGame
                                 bool adWatched = await HandleRewardedAdAsync(ct);
                                 if (adWatched) { presenter.RestoreHeartsAndContinue(); continue; }
                                 _session.CurrentScore = 0;
-                                await RetryTransitionAsync(ct);
+                                retryTp = _stage?.GetTransitionPlayer();
+                                if (retryTp != null) await retryTp.FadeOutAsync(ct);
                                 break;
                             }
                             if (choice == LevelFailedChoice.Continue)
@@ -297,7 +305,8 @@ namespace SimpleGame.Game.InGame
                                 continue;
                             }
                             _session.CurrentScore = 0;
-                            await RetryTransitionAsync(ct);
+                            retryTp = _stage?.GetTransitionPlayer();
+                            if (retryTp != null) await retryTp.FadeOutAsync(ct);
                             break;
                         }
                     }

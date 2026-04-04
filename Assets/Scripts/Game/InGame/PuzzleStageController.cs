@@ -475,7 +475,7 @@ namespace SimpleGame.Game.InGame
             if (!_pieceObjects.TryGetValue(pieceId, out var go)) return;
 
             _shakingPieces.Add(pieceId);
-            ShakePieceAsync(go, pieceId, _traySlotPositions[slotIndex], destroyCancellationToken).Forget();
+            ShakePieceAsync(go, pieceId, go.transform.position, destroyCancellationToken).Forget();
         }
 
         private async UniTaskVoid ShakePieceAsync(GameObject go, int pieceId, Vector3 restPos,
