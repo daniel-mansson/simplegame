@@ -12,10 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2d57209a3c77a7045a16914022a4ab28, type: 3}
   m_Name: CameraConfig
   m_EditorClassIdentifier: SimpleGame.Game::SimpleGame.Game.InGame.CameraConfig
-  SmoothTime: 1.2
-  MinZoom: 2
-  MaxZoom: 15
+  SmoothTime: 50
+  FieldOfView: 60
+  MinZ: 5
+  MaxZ: 10
   Padding: 1.5
   BoundaryMargin: 0.5
-  ZoomSpeed: 5
+  ZoomSpeed: 10
+  TargetYOffset: -1
   OverviewHoldDuration: 1

@@ -157,7 +157,6 @@ namespace SimpleGame.Game.InGame
             // Auto-tracking camera: frame all currently placeable positions.
             if (_stage != null && _camera != null)
             {
-                // One-time: wire board bounds into the camera for manual-pan clamping.
                 if (!_boardBoundsSet)
                 {
                     _camera.SetBoardBounds(_stage.GetBoardRect());
@@ -178,9 +177,10 @@ namespace SimpleGame.Game.InGame
                     {
                         var cam = _camera.GetComponent<Camera>();
                         float aspect = cam != null ? cam.aspect : 1f;
-                        var (center, ortho) = CameraMath.ComputeFraming(
-                            positions, config.Padding, aspect, config.MinZoom, config.MaxZoom);
-                        _camera.SetTarget(center, ortho);
+                        var (center, z) = CameraMath.ComputeFraming(
+                            positions, config.Padding, aspect, config.FieldOfView, config.MinZ, config.MaxZ);
+                        _camera.SetTarget(center, z);
+                        _camera.SetDebugFraming(positions, center, z);
                     }
                 }
             }

@@ -9,7 +9,7 @@ namespace SimpleGame.Game.InGame
     /// No external tween library — uses UniTask + manual lerp with easing functions.
     ///
     /// <list type="bullet">
-    ///   <item><see cref="PlaceOnBoard"/> — anticipation wind-up → fly to board → settle bounce</item>
+    ///   <item><see cref="PlaceOnBoard"/> — linear lerp to board position</item>
     ///   <item><see cref="SlideToSlot"/> — smooth ease-out slide to tray slot</item>
     /// </list>
     ///
@@ -19,25 +19,17 @@ namespace SimpleGame.Game.InGame
     internal static class PieceTweener
     {
         // ── Timing ────────────────────────────────────────────────────────
-        private const float WindupSec   = 0.08f;   // anticipation pull-back
-        private const float FlySec      = 0.22f;   // main arc to board
-        private const float SettleSec   = 0.07f;   // squash-settle at landing
-
+        private const float PlaceSec    = 0.25f;   // linear lerp to board
         private const float SlideSec    = 0.14f;   // tray slot slide
         private const float ShakeSec    = 0.40f;   // wrong-tap shake duration
-
-        // ── Scale factors ─────────────────────────────────────────────────
-        private const float WindupScale = 1.30f;   // puff up before launch
-        private const float OvershootZ  = 0.6f;    // how far forward (−z) the piece pulls during windup
 
         // ─────────────────────────────────────────────────────────────────
         // Public API
         // ─────────────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Anticipation wind-up → fly to <paramref name="targetLocal"/> in board space
-        /// → settle with a slight squash. Rotation tweens from current to
-        /// <paramref name="targetRotation"/> (local space) across the fly phase.
+        /// Linear lerp from current position/scale/rotation to
+        /// <paramref name="targetLocal"/> in board space.
         /// The piece must already be reparented to boardParent before calling.
         /// </summary>
         public static async UniTaskVoid PlaceOnBoard(
@@ -49,78 +41,24 @@ namespace SimpleGame.Game.InGame
             if (piece == null) return;
             var t = piece.transform;
 
-            Vector3    startLocal    = t.localPosition;
-            Vector3    startScale    = t.localScale;
-            Quaternion startRotation = t.localRotation;
-            Vector3    finalScale    = Vector3.one;
-
-            // ── Phase 1: Windup — scale up, pull toward camera (−z in world = −z local here) ──
-            float windupZ    = startLocal.z - OvershootZ;
-            Vector3 windupLocal = new Vector3(startLocal.x, startLocal.y, windupZ);
-            Vector3 windupScale = startScale * WindupScale;
+            Vector3    startPos   = t.localPosition;
+            Vector3    startScale = t.localScale;
+            Quaternion startRot   = t.localRotation;
+            Vector3    finalScale = Vector3.one;
 
             float elapsed = 0f;
-            while (elapsed < WindupSec)
+            while (elapsed < PlaceSec)
             {
                 if (piece == null) return;
                 elapsed += Time.deltaTime;
-                float f = Mathf.Clamp01(elapsed / WindupSec);
-                float e = EaseOutQuad(f);
-                t.localPosition = Vector3.LerpUnclamped(startLocal, windupLocal, e);
-                t.localScale    = Vector3.LerpUnclamped(startScale, windupScale, e);
-                await UniTask.Yield(PlayerLoopTiming.Update, ct);
-            }
-            if (piece == null) return;
-            t.localPosition = windupLocal;
-            t.localScale    = windupScale;
-
-            // ── Phase 2: Fly — overshoot slightly past target on Z, ease-in-out ──
-            // A tiny arc: mid-point lifts toward camera before settling back
-            Vector3 flyStart = windupLocal;
-            Vector3 flyScale = windupScale;
-
-            elapsed = 0f;
-            while (elapsed < FlySec)
-            {
-                if (piece == null) return;
-                elapsed += Time.deltaTime;
-                float f = Mathf.Clamp01(elapsed / FlySec);
-                float ep = EaseInOutBack(f);
-                float es = EaseOutQuad(f);
-
-                Vector3 basePos = Vector3.LerpUnclamped(flyStart, targetLocal, ep);
-                float   arc     = Mathf.Sin(f * Mathf.PI) * 0.3f;
-                basePos.z -= arc;
-
-                t.localPosition = basePos;
-                t.localScale    = Vector3.LerpUnclamped(flyScale, finalScale, es);
-                t.localRotation = Quaternion.Slerp(startRotation, targetRotation, EaseOutQuad(f));
+                float f = Mathf.Clamp01(elapsed / PlaceSec);
+                t.localPosition = Vector3.Lerp(startPos, targetLocal, f);
+                t.localScale    = Vector3.Lerp(startScale, finalScale, f);
+                t.localRotation = Quaternion.Slerp(startRot, targetRotation, f);
                 await UniTask.Yield(PlayerLoopTiming.Update, ct);
             }
             if (piece == null) return;
 
-            // ── Phase 3: Settle — quick squash-and-stretch snap ──
-            // Squash: flatten XY, elongate Z briefly, then snap to finalScale
-            Vector3 squashScale = new Vector3(finalScale.x * 1.15f, finalScale.y * 0.88f, finalScale.z * 1.1f);
-
-            elapsed = 0f;
-            while (elapsed < SettleSec)
-            {
-                if (piece == null) return;
-                elapsed += Time.deltaTime;
-                float f = Mathf.Clamp01(elapsed / SettleSec);
-                float e = EaseOutQuad(f);
-                // First half squash, second half restore
-                Vector3 from = f < 0.5f ? finalScale : squashScale;
-                Vector3 to   = f < 0.5f ? squashScale : finalScale;
-                float   fn   = f < 0.5f ? f * 2f : (f - 0.5f) * 2f;
-                t.localPosition = Vector3.Lerp(t.localPosition, targetLocal, e);
-                t.localScale    = Vector3.Lerp(from, to, fn);
-                await UniTask.Yield(PlayerLoopTiming.Update, ct);
-            }
-            if (piece == null) return;
-
-            // Snap to exact final values
             t.localPosition = targetLocal;
             t.localScale    = finalScale;
             t.localRotation = targetRotation;
@@ -171,8 +109,12 @@ namespace SimpleGame.Game.InGame
             if (piece == null) return;
             var t = piece.transform;
 
-            const float amplitude = 0.28f;  // world-unit horizontal offset at peak
-            const float cycles    = 5.5f;   // oscillations (half-cycle extra so it ends back at rest)
+            const float ampFraction = 0.5f;   // shake distance as fraction of piece size
+            const float cycles      = 5.5f;
+
+            // Scale amplitude by piece size in XY
+            float pieceSize = Mathf.Max(t.localScale.x, t.localScale.y);
+            float amplitude = ampFraction * pieceSize;
 
             float elapsed = 0f;
             while (elapsed < ShakeSec)
@@ -180,7 +122,7 @@ namespace SimpleGame.Game.InGame
                 if (piece == null) return;
                 elapsed += Time.deltaTime;
                 float f       = Mathf.Clamp01(elapsed / ShakeSec);
-                float decay   = 1f - EaseOutQuad(f);          // amplitude envelope
+                float decay   = 1f - EaseOutQuad(f);
                 float offset  = Mathf.Sin(f * cycles * Mathf.PI * 2f) * amplitude * decay;
                 t.position = restWorld + new Vector3(offset, 0f, 0f);
                 await UniTask.Yield(PlayerLoopTiming.Update, ct);
@@ -198,15 +140,5 @@ namespace SimpleGame.Game.InGame
 
         private static float EaseOutCubic(float t)
             => 1f - Mathf.Pow(1f - t, 3f);
-
-        /// <summary>Ease-in-out with a small overshoot at the end (Back easing).</summary>
-        private static float EaseInOutBack(float t)
-        {
-            const float c1 = 1.70158f;
-            const float c2 = c1 * 1.525f;
-            return t < 0.5f
-                ? (Mathf.Pow(2f * t, 2f) * ((c2 + 1f) * 2f * t - c2)) / 2f
-                : (Mathf.Pow(2f * t - 2f, 2f) * ((c2 + 1f) * (2f * t - 2f) + c2) + 2f) / 2f;
-        }
     }
 }

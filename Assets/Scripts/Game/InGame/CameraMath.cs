@@ -4,62 +4,57 @@ using UnityEngine;
 namespace SimpleGame.Game.InGame
 {
     /// <summary>
-    /// Pure-math helpers for auto-tracking camera framing.
+    /// Pure-math helpers for perspective camera framing (fixed FOV, Z-based zoom).
     /// No Unity object dependencies — safe to use in EditMode tests.
     /// </summary>
     public static class CameraMath
     {
         /// <summary>
-        /// Compute the camera center and orthographic size needed to frame an entire
+        /// Compute the visible half-height at a given Z distance for a perspective camera.
+        /// </summary>
+        public static float FrustumHalfHeight(float z, float fovDegrees)
+            => z * Mathf.Tan(fovDegrees * 0.5f * Mathf.Deg2Rad);
+
+        /// <summary>
+        /// Compute the Z distance needed to see a given half-height with a perspective camera.
+        /// </summary>
+        public static float ZForHalfHeight(float halfHeight, float fovDegrees)
+            => halfHeight / Mathf.Tan(fovDegrees * 0.5f * Mathf.Deg2Rad);
+
+        /// <summary>
+        /// Compute the camera center and Z distance needed to frame an entire
         /// puzzle board defined by <paramref name="boardRect"/>.
         /// </summary>
-        /// <param name="boardRect">World-space rect of the board.</param>
-        /// <param name="padding">World-unit margin added around the rect on every side.</param>
-        /// <param name="aspect">Camera aspect ratio (width / height).</param>
-        /// <param name="minZoom">Minimum orthographic size (most zoomed-in).</param>
-        /// <param name="maxZoom">Maximum orthographic size (most zoomed-out).</param>
-        /// <returns>
-        /// A tuple of <c>(center, orthoSize)</c> where <c>center</c> is the centre of
-        /// <paramref name="boardRect"/> and <c>orthoSize</c> is clamped to
-        /// [<paramref name="minZoom"/>, <paramref name="maxZoom"/>].
-        /// </returns>
-        public static (Vector3 center, float orthoSize) ComputeFullBoardFraming(
-            Rect boardRect, float padding, float aspect, float minZoom, float maxZoom)
+        public static (Vector3 center, float z) ComputeFullBoardFraming(
+            Rect boardRect, float padding, float aspect, float fovDegrees, float minZ, float maxZ)
         {
             var center = new Vector3(boardRect.center.x, boardRect.center.y, 0f);
 
-            float requiredByHeight = (boardRect.height + 2f * padding) * 0.5f;
-            float requiredByWidth  = (boardRect.width  + 2f * padding) / (2f * aspect);
-            float orthoSize        = Mathf.Max(requiredByHeight, requiredByWidth);
+            float requiredHalfH = (boardRect.height + 2f * padding) * 0.5f;
+            float requiredHalfW = (boardRect.width  + 2f * padding) * 0.5f;
+            float halfHFromWidth = requiredHalfW / aspect;
 
-            orthoSize = Mathf.Clamp(orthoSize, minZoom, maxZoom);
+            float halfH = Mathf.Max(requiredHalfH, halfHFromWidth);
+            float z = ZForHalfHeight(halfH, fovDegrees);
 
-            return (center, orthoSize);
+            z = Mathf.Clamp(z, minZ, maxZ);
+            return (center, z);
         }
 
         /// <summary>
-        /// Compute the camera center and orthographic size needed to frame all
+        /// Compute the camera center and Z distance needed to frame all
         /// <paramref name="positions"/> with the given <paramref name="padding"/>.
         /// </summary>
-        /// <param name="positions">World-space positions to frame. Empty list returns board-center fallback.</param>
-        /// <param name="padding">World-unit margin added around the bounding box on every side.</param>
-        /// <param name="aspect">Camera aspect ratio (width / height).</param>
-        /// <param name="minZoom">Minimum orthographic size (most zoomed-in).</param>
-        /// <param name="maxZoom">Maximum orthographic size (most zoomed-out).</param>
-        /// <returns>
-        /// A tuple of <c>(center, orthoSize)</c> where <c>center</c> is the midpoint of the
-        /// bounding box and <c>orthoSize</c> is clamped to [<paramref name="minZoom"/>,
-        /// <paramref name="maxZoom"/>].
-        /// </returns>
-        public static (Vector3 center, float orthoSize) ComputeFraming(
+        public static (Vector3 center, float z) ComputeFraming(
             IReadOnlyList<Vector3> positions,
             float padding,
             float aspect,
-            float minZoom,
-            float maxZoom)
+            float fovDegrees,
+            float minZ,
+            float maxZ)
         {
             if (positions == null || positions.Count == 0)
-                return (Vector3.zero, minZoom);
+                return (Vector3.zero, minZ);
 
             float minX = positions[0].x, maxX = positions[0].x;
             float minY = positions[0].y, maxY = positions[0].y;
@@ -81,70 +76,58 @@ namespace SimpleGame.Game.InGame
             float spanY = maxY - minY;
             float spanX = maxX - minX;
 
-            // orthoSize covers half the camera height; aspect scales horizontal coverage.
-            float requiredByHeight = (spanY + 2f * padding) * 0.5f;
-            float requiredByWidth  = (spanX + 2f * padding) / (2f * aspect);
-            float orthoSize        = Mathf.Max(requiredByHeight, requiredByWidth);
+            float requiredHalfH = (spanY + 2f * padding) * 0.5f;
+            float requiredHalfW = (spanX + 2f * padding) * 0.5f;
+            float halfHFromWidth = requiredHalfW / aspect;
 
-            orthoSize = Mathf.Clamp(orthoSize, minZoom, maxZoom);
+            float halfH = Mathf.Max(requiredHalfH, halfHFromWidth);
+            float z = ZForHalfHeight(halfH, fovDegrees);
 
-            return (center, orthoSize);
+            z = Mathf.Clamp(z, minZ, maxZ);
+            return (center, z);
         }
 
         /// <summary>
         /// Clamp a proposed camera XY position so that the visible viewport (sized by
-        /// <paramref name="orthoSize"/> and <paramref name="aspect"/>) stays within
+        /// perspective frustum at the given Z distance) stays within
         /// <paramref name="bounds"/> plus a <paramref name="margin"/> on every side.
-        /// <para>
         /// When the viewport is larger than the board in a given axis the camera is
-        /// centred on the board in that axis rather than pushed to either edge.
-        /// </para>
+        /// centred on the board in that axis.
         /// </summary>
-        /// <param name="cameraPos">Proposed camera world position (XY used; Z preserved).</param>
-        /// <param name="orthoSize">Current orthographic half-height of the camera.</param>
-        /// <param name="aspect">Camera aspect ratio (width / height).</param>
-        /// <param name="bounds">The rect that defines board space (e.g. from ComputeBoardRect).</param>
-        /// <param name="margin">Extra world-unit margin to keep between viewport and board edge.</param>
-        /// <returns>Clamped camera position.</returns>
         public static Vector3 ClampToBounds(
             Vector3 cameraPos,
-            float   orthoSize,
+            float   z,
+            float   fovDegrees,
             float   aspect,
             Rect    bounds,
             float   margin)
         {
-            float halfH = orthoSize;
-            float halfW = orthoSize * aspect;
+            float halfH = FrustumHalfHeight(z, fovDegrees);
+            float halfW = halfH * aspect;
 
             float boardHalfW = bounds.width  * 0.5f;
             float boardHalfH = bounds.height * 0.5f;
-            float cx         = bounds.center.x;
-            float cy         = bounds.center.y;
+            float cx = bounds.center.x;
+            float cy = bounds.center.y;
 
             float x;
             if (halfW >= boardHalfW + margin)
-            {
-                // Viewport wider than (board + margin) — centre on board
                 x = cx;
-            }
             else
             {
-                float minX = bounds.xMin + margin + halfW;
-                float maxX = bounds.xMax - margin - halfW;
-                x = Mathf.Clamp(cameraPos.x, minX, maxX);
+                float lo = bounds.xMin + margin + halfW;
+                float hi = bounds.xMax - margin - halfW;
+                x = Mathf.Clamp(cameraPos.x, lo, hi);
             }
 
             float y;
             if (halfH >= boardHalfH + margin)
-            {
-                // Viewport taller than (board + margin) — centre on board
                 y = cy;
-            }
             else
             {
-                float minY = bounds.yMin + margin + halfH;
-                float maxY = bounds.yMax - margin - halfH;
-                y = Mathf.Clamp(cameraPos.y, minY, maxY);
+                float lo = bounds.yMin + margin + halfH;
+                float hi = bounds.yMax - margin - halfH;
+                y = Mathf.Clamp(cameraPos.y, lo, hi);
             }
 
             return new Vector3(x, y, cameraPos.z);
@@ -153,13 +136,10 @@ namespace SimpleGame.Game.InGame
         /// <summary>
         /// Compute the world-space Rect that encloses a puzzle board of
         /// <paramref name="rows"/> × <paramref name="cols"/> cells, using the same
-        /// unit-based convention as GridPlanner: the board is centred on the origin
-        /// and each cell is 1 / max(rows, cols) world units wide and tall so that the
+        /// unit-based convention: the board is centred on the origin
+        /// and each cell is 1 / max(rows, cols) world units so that the
         /// longest side always spans exactly 1 world unit.
         /// </summary>
-        /// <param name="rows">Number of grid rows.</param>
-        /// <param name="cols">Number of grid columns.</param>
-        /// <returns>A <see cref="Rect"/> centred on (0, 0).</returns>
         public static Rect ComputeBoardRect(int rows, int cols)
         {
             if (rows <= 0) rows = 1;

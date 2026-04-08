@@ -1,40 +1,42 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
 namespace SimpleGame.Game.InGame
 {
     /// <summary>
-    /// Orthographic camera pan controller. Drags the camera XY by following the pointer,
-    /// but only when pointer-down does NOT hit a UGUI element.
+    /// Perspective camera controller with free pan (XY) and Z-based zoom.
+    /// FOV is fixed; zoom moves the camera along Z.
     ///
-    /// Approach: track the delta in screen pixels each frame and convert to world units
-    /// via the orthographic size. This avoids the feedback loop that occurs when the
-    /// anchor is stored in world space and re-projected through a moving camera.
-    ///
-    /// Key detail: IsPointerOverGameObject(-1) must be used for mouse input.
-    /// The no-argument overload uses pointer ID 0 (touch finger 0) and gives
-    /// incorrect results for mouse-driven play.
+    /// Public API:
+    ///   SetTarget(center, z)  — smooth-animate to a world position + zoom level
+    ///   SnapTo(center, z)     — teleport instantly
+    ///   SetBoardBounds(rect)  — set XY clamp region
     /// </summary>
     public class CameraController : MonoBehaviour
     {
         // ── Drag-pan state ─────────────────────────────────────────────────
         private bool    _isPanning;
-        private Vector2 _lastScreenPos; // screen-pixel position from the previous frame
+        private Vector2 _lastScreenPos;
 
         private Camera _camera;
 
         // ── Auto-tracking state ────────────────────────────────────────────
         [SerializeField] private CameraConfig _config;
 
-        private bool  _isAutoTracking;
-        private Vector3 _targetPosition;
-        private float _targetOrthoSize;
+        private bool    _isAutoTracking;
+        private Vector3 _targetPosition;   // includes target Z
         private Vector3 _posVelocity;
-        private float _sizeVelocity;
 
-        // ── Board bounds state ─────────────────────────────────────────────
+        // ── Board bounds state (kept for gizmo display only) ───────────────
         private Rect _boardRect;
         private bool _hasBoardRect;
+
+        // ── Debug state (populated by callers, drawn by OnDrawGizmos) ──────
+        private List<Vector3> _debugPlaceablePositions = new();
+        private Vector3 _debugFramingCenter;
+        private float _debugFramingZ;
+        private bool _debugHasFraming;
 
         private void Awake()
         {
@@ -43,13 +45,13 @@ namespace SimpleGame.Game.InGame
                 _camera = Camera.main;
         }
 
-        private void Update()
+        private void Start()
         {
-#if UNITY_EDITOR || UNITY_STANDALONE || UNITY_WEBGL
-            HandleMouse();
-#else
-            HandleTouch();
-#endif
+            if (_camera != null && _config != null)
+            {
+                _camera.orthographic = false;
+                _camera.fieldOfView = _config.FieldOfView;
+            }
         }
 
         // ── Mouse ──────────────────────────────────────────────────────────
@@ -58,9 +60,7 @@ namespace SimpleGame.Game.InGame
         {
             if (Input.GetMouseButtonDown(0))
             {
-                // Pass -1 for mouse pointer ID — the no-arg overload uses touch ID 0.
                 if (IsOverUI(-1)) return;
-
                 _isPanning      = true;
                 _isAutoTracking = false;
                 _lastScreenPos  = Input.mousePosition;
@@ -83,10 +83,7 @@ namespace SimpleGame.Game.InGame
                 if (Mathf.Abs(scroll) > 0.01f)
                 {
                     _isAutoTracking = false;
-                    _camera.orthographicSize -= scroll * _config.ZoomSpeed * Time.deltaTime;
-                    _camera.orthographicSize  = Mathf.Clamp(_camera.orthographicSize, _config.MinZoom, _config.MaxZoom);
-                    if (_hasBoardRect)
-                        transform.position = CameraMath.ClampToBounds(transform.position, _camera.orthographicSize, _camera.aspect, _boardRect, _config.BoundaryMargin);
+                    ApplyZoom(-scroll * _config.ZoomSpeed * Time.deltaTime);
                 }
             }
         }
@@ -101,10 +98,10 @@ namespace SimpleGame.Game.InGame
                 return;
             }
 
-            // Pinch-to-zoom: two-finger gesture takes priority over single-finger pan
             if (Input.touchCount >= 2)
             {
                 _isAutoTracking = false;
+                _isPanning = false;
 
                 Touch t0 = Input.GetTouch(0);
                 Touch t1 = Input.GetTouch(1);
@@ -116,13 +113,9 @@ namespace SimpleGame.Game.InGame
                 float delta    = prevDist - currDist;
 
                 if (_config != null && _camera != null)
-                {
-                    _camera.orthographicSize += delta * _config.ZoomSpeed * 0.01f;
-                    _camera.orthographicSize  = Mathf.Clamp(_camera.orthographicSize, _config.MinZoom, _config.MaxZoom);
-                    if (_hasBoardRect)
-                        transform.position = CameraMath.ClampToBounds(transform.position, _camera.orthographicSize, _camera.aspect, _boardRect, _config.BoundaryMargin);
-                }
-                return; // skip single-finger pan to avoid conflicts
+                    ApplyZoom(delta * _config.ZoomSpeed * 0.01f);
+
+                return;
             }
 
             var touch = Input.GetTouch(0);
@@ -130,7 +123,6 @@ namespace SimpleGame.Game.InGame
             if (touch.phase == TouchPhase.Began)
             {
                 if (IsOverUI(touch.fingerId)) return;
-
                 _isPanning      = true;
                 _isAutoTracking = false;
                 _lastScreenPos  = touch.position;
@@ -148,29 +140,29 @@ namespace SimpleGame.Game.InGame
 
         // ── Helpers ────────────────────────────────────────────────────────
 
-        /// <summary>
-        /// Converts a screen-pixel delta to world units and moves the camera in the
-        /// opposite direction (drag world under finger). Applies board-bounds clamping
-        /// if board bounds have been set.
-        /// </summary>
         private void ApplyScreenDelta(Vector2 screenDelta)
         {
             if (_camera == null || Screen.height == 0) return;
 
-            // World units per pixel: orthoSize covers half the screen height.
-            float worldPerPixelY = (_camera.orthographicSize * 2f) / Screen.height;
-            float worldPerPixelX = worldPerPixelY * ((float)Screen.width / Screen.height)
-                                   / ((float)Screen.width / Screen.height);
-            // Simplifies to the same scale on both axes for ortho:
-            worldPerPixelX = worldPerPixelY;
+            float z = Mathf.Abs(transform.position.z);
+            float worldHeight = 2f * CameraMath.FrustumHalfHeight(z, _camera.fieldOfView);
+            float worldPerPixel = worldHeight / Screen.height;
 
             Vector3 pos = transform.position;
-            pos.x -= screenDelta.x * worldPerPixelX;
-            pos.y -= screenDelta.y * worldPerPixelY;
+            pos.x -= screenDelta.x * worldPerPixel;
+            pos.y -= screenDelta.y * worldPerPixel;
             transform.position = pos;
+        }
 
-            if (_hasBoardRect && _config != null)
-                transform.position = CameraMath.ClampToBounds(transform.position, _camera.orthographicSize, _camera.aspect, _boardRect, _config.BoundaryMargin);
+        private void ApplyZoom(float delta)
+        {
+            if (_config == null) return;
+
+            Vector3 pos = transform.position;
+            float z = Mathf.Abs(pos.z) + delta;
+            z = Mathf.Clamp(z, _config.MinZ, _config.MaxZ);
+            pos.z = -z;
+            transform.position = pos;
         }
 
         private static bool IsOverUI(int pointerId)
@@ -179,45 +171,43 @@ namespace SimpleGame.Game.InGame
 
         // ── Auto-tracking public API ───────────────────────────────────────
 
-        /// <summary>Inject a CameraConfig at runtime (e.g. from SceneSetup or a presenter).</summary>
         public void SetConfig(CameraConfig config)
         {
             _config = config;
+            if (_camera != null && config != null)
+            {
+                _camera.orthographic = false;
+                _camera.fieldOfView = config.FieldOfView;
+            }
         }
 
-        /// <summary>
-        /// Point the auto-tracker at a world-space center and desired orthographic size.
-        /// Enables auto-tracking; velocity refs are reset so the camera starts smoothly
-        /// from its current position each time a new target is set.
-        /// </summary>
-        public void SetTarget(Vector3 center, float orthoSize)
+        public void SetTarget(Vector3 center, float z)
         {
-            // Preserve the camera's current Z depth.
-            _targetPosition = new Vector3(center.x, center.y, transform.position.z);
-
             if (_config != null)
-                _targetOrthoSize = Mathf.Clamp(orthoSize, _config.MinZoom, _config.MaxZoom);
-            else
-                _targetOrthoSize = orthoSize;
+                z = Mathf.Clamp(z, _config.MinZ, _config.MaxZ);
 
-            // Reset velocity refs so SmoothDamp starts from a clean state.
-            _posVelocity  = Vector3.zero;
-            _sizeVelocity = 0f;
-
+            float yOffset = _config != null ? _config.TargetYOffset : 0f;
+            _targetPosition = new Vector3(center.x, center.y + yOffset, -z);
+            _posVelocity    = Vector3.zero;
             _isAutoTracking = true;
-
-            Debug.Log($"[CameraController] SetTarget center=({center.x},{center.y}) ortho={_targetOrthoSize}");
         }
 
-        /// <summary>
-        /// Store the world-space board rect used for boundary clamping during manual pan/zoom.
-        /// Call this once after the board is spawned (e.g. from InGamePresenter.HandlePiecePlaced).
-        /// </summary>
+        public void SnapTo(Vector3 center, float z)
+        {
+            if (_config != null)
+                z = Mathf.Clamp(z, _config.MinZ, _config.MaxZ);
+
+            float yOffset = _config != null ? _config.TargetYOffset : 0f;
+            transform.position = new Vector3(center.x, center.y + yOffset, -z);
+
+            _isAutoTracking = false;
+            _posVelocity    = Vector3.zero;
+        }
+
         public void SetBoardBounds(Rect boardRect)
         {
             _boardRect    = boardRect;
             _hasBoardRect = true;
-            Debug.Log($"[CameraController] SetBoardBounds rect=({boardRect.x},{boardRect.y} {boardRect.width}x{boardRect.height})");
         }
 
         /// <summary>True while the camera is auto-tracking toward a target.</summary>
@@ -226,47 +216,155 @@ namespace SimpleGame.Game.InGame
         /// <summary>The active CameraConfig (may be null if not yet assigned).</summary>
         public CameraConfig Config => _config;
 
+        // ── Debug API — call from presenters to feed gizmo data ────────────
+
         /// <summary>
-        /// Instantly teleport the camera to <paramref name="center"/> at <paramref name="orthoSize"/>
-        /// with no SmoothDamp animation. Cancels any active auto-tracking and resets velocity refs
-        /// so a subsequent <see cref="SetTarget"/> starts from a clean state.
+        /// Feed the latest placeable positions and computed framing target for gizmo drawing.
+        /// Called by presenters after computing camera framing.
         /// </summary>
-        /// <param name="center">World-space camera position (XY used; Z preserved).</param>
-        /// <param name="orthoSize">Target orthographic size; clamped to [MinZoom, MaxZoom] when Config is set.</param>
-        public void SnapTo(Vector3 center, float orthoSize)
+        public void SetDebugFraming(List<Vector3> placeablePositions, Vector3 framingCenter, float framingZ)
         {
-            if (_camera == null) return;
-
-            transform.position = new Vector3(center.x, center.y, transform.position.z);
-
-            float clamped = _config != null
-                ? Mathf.Clamp(orthoSize, _config.MinZoom, _config.MaxZoom)
-                : orthoSize;
-            _camera.orthographicSize = clamped;
-
-            _isAutoTracking = false;
-            _posVelocity    = Vector3.zero;
-            _sizeVelocity   = 0f;
-
-            Debug.Log($"[CameraController] SnapTo center=({center.x},{center.y}) ortho={clamped}");
+            _debugPlaceablePositions.Clear();
+            if (placeablePositions != null)
+                _debugPlaceablePositions.AddRange(placeablePositions);
+            _debugFramingCenter = framingCenter;
+            _debugFramingZ = framingZ;
+            _debugHasFraming = true;
         }
 
         // ── LateUpdate ─────────────────────────────────────────────────────
 
-        private void LateUpdate()
+        private void Update()
         {
-            if (_isAutoTracking && _config != null && _camera != null)
+#if UNITY_EDITOR || UNITY_STANDALONE || UNITY_WEBGL
+            HandleMouse();
+#else
+            HandleTouch();
+#endif
+
+            if (_isAutoTracking && _config != null)
             {
                 transform.position = Vector3.SmoothDamp(
                     transform.position, _targetPosition, ref _posVelocity, _config.SmoothTime);
 
-                _camera.orthographicSize = Mathf.SmoothDamp(
-                    _camera.orthographicSize, _targetOrthoSize, ref _sizeVelocity, _config.SmoothTime);
+                if (Vector3.Distance(transform.position, _targetPosition) < 0.001f)
+                {
+                    transform.position = _targetPosition;
+                    _isAutoTracking = false;
+                }
+            }
+        }
+
+        // ── Gizmos ─────────────────────────────────────────────────────────
+
+#if UNITY_EDITOR
+        private void OnDrawGizmos()
+        {
+            float camZ = Mathf.Abs(transform.position.z);
+            float fov  = _camera != null ? _camera.fieldOfView : (_config != null ? _config.FieldOfView : 60f);
+            float aspect = _camera != null ? _camera.aspect : 1.78f;
+
+            // ── Current viewport frustum at board plane (Z=0) ──────────────
+            float halfH = CameraMath.FrustumHalfHeight(camZ, fov);
+            float halfW = halfH * aspect;
+            Vector3 camXY = new Vector3(transform.position.x, transform.position.y, 0f);
+
+            Gizmos.color = Color.white;
+            DrawRectAtZ0(camXY, halfW, halfH);
+
+            // ── Board bounds ───────────────────────────────────────────────
+            if (_hasBoardRect)
+            {
+                Gizmos.color = Color.green;
+                Vector3 boardCenter = new Vector3(_boardRect.center.x, _boardRect.center.y, 0f);
+                DrawRectAtZ0(boardCenter, _boardRect.width * 0.5f, _boardRect.height * 0.5f);
             }
 
-            // Always clamp after any LateUpdate movement if board bounds are set
-            if (_hasBoardRect && _config != null && _camera != null)
-                transform.position = CameraMath.ClampToBounds(transform.position, _camera.orthographicSize, _camera.aspect, _boardRect, _config.BoundaryMargin);
+            // ── Auto-tracking target ───────────────────────────────────────
+            if (_isAutoTracking)
+            {
+                float targetZ = Mathf.Abs(_targetPosition.z);
+                float targetHalfH = CameraMath.FrustumHalfHeight(targetZ, fov);
+                float targetHalfW = targetHalfH * aspect;
+                Vector3 targetXY = new Vector3(_targetPosition.x, _targetPosition.y, 0f);
+
+                // Target viewport
+                Gizmos.color = Color.cyan;
+                DrawRectAtZ0(targetXY, targetHalfW, targetHalfH);
+
+                // Target center crosshair
+                Gizmos.color = Color.cyan;
+                float cross = 0.05f;
+                Gizmos.DrawLine(targetXY - Vector3.right * cross, targetXY + Vector3.right * cross);
+                Gizmos.DrawLine(targetXY - Vector3.up * cross, targetXY + Vector3.up * cross);
+
+                // Line from current to target
+                Gizmos.color = new Color(0f, 1f, 1f, 0.3f);
+                Gizmos.DrawLine(camXY, targetXY);
+            }
+
+            // ── Placeable piece positions ──────────────────────────────────
+            if (_debugPlaceablePositions != null && _debugPlaceablePositions.Count > 0)
+            {
+                Gizmos.color = Color.yellow;
+                foreach (var pos in _debugPlaceablePositions)
+                {
+                    Vector3 p = new Vector3(pos.x, pos.y, 0f);
+                    Gizmos.DrawWireSphere(p, 0.03f);
+                }
+            }
+
+            // ── Debug framing (computed target area) ───────────────────────
+            if (_debugHasFraming)
+            {
+                float fz = _debugFramingZ;
+                float fHalfH = CameraMath.FrustumHalfHeight(fz, fov);
+                float fHalfW = fHalfH * aspect;
+                Vector3 fc = new Vector3(_debugFramingCenter.x, _debugFramingCenter.y, 0f);
+
+                Gizmos.color = Color.magenta;
+                DrawRectAtZ0(fc, fHalfW, fHalfH);
+
+                // Framing center dot
+                float cross = 0.04f;
+                Gizmos.DrawLine(fc - Vector3.right * cross, fc + Vector3.right * cross);
+                Gizmos.DrawLine(fc - Vector3.up * cross, fc + Vector3.up * cross);
+            }
+
+            // ── Camera center on board plane ───────────────────────────────
+            Gizmos.color = Color.red;
+            float c = 0.03f;
+            Gizmos.DrawLine(camXY - Vector3.right * c, camXY + Vector3.right * c);
+            Gizmos.DrawLine(camXY - Vector3.up * c, camXY + Vector3.up * c);
+
+            // ── Z range indicators (MinZ / MaxZ frustum) ───────────────────
+            if (_config != null)
+            {
+                // MinZ frustum (most zoomed in)
+                float minHalfH = CameraMath.FrustumHalfHeight(_config.MinZ, fov);
+                float minHalfW = minHalfH * aspect;
+                Gizmos.color = new Color(1f, 0.5f, 0f, 0.2f); // dim orange
+                DrawRectAtZ0(camXY, minHalfW, minHalfH);
+
+                // MaxZ frustum (most zoomed out)
+                float maxHalfH = CameraMath.FrustumHalfHeight(_config.MaxZ, fov);
+                float maxHalfW = maxHalfH * aspect;
+                Gizmos.color = new Color(1f, 0.5f, 0f, 0.15f); // dimmer orange
+                DrawRectAtZ0(camXY, maxHalfW, maxHalfH);
+            }
         }
+
+        private static void DrawRectAtZ0(Vector3 center, float halfW, float halfH)
+        {
+            var tl = center + new Vector3(-halfW,  halfH, 0f);
+            var tr = center + new Vector3( halfW,  halfH, 0f);
+            var br = center + new Vector3( halfW, -halfH, 0f);
+            var bl = center + new Vector3(-halfW, -halfH, 0f);
+            Gizmos.DrawLine(tl, tr);
+            Gizmos.DrawLine(tr, br);
+            Gizmos.DrawLine(br, bl);
+            Gizmos.DrawLine(bl, tl);
+        }
+#endif
     }
 }

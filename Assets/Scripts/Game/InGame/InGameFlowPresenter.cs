@@ -224,9 +224,9 @@ namespace SimpleGame.Game.InGame
 
                     // Snap to full-board overview (no animation)
                     var boardRect = _stage.GetBoardRect();
-                    var (overviewCenter, overviewOrtho) = CameraMath.ComputeFullBoardFraming(
-                        boardRect, config.Padding, aspect, config.MinZoom, config.MaxZoom);
-                    _cameraController.SnapTo(overviewCenter, overviewOrtho);
+                    var (overviewCenter, overviewZ) = CameraMath.ComputeFullBoardFraming(
+                        boardRect, config.Padding, aspect, config.FieldOfView, config.MinZ, config.MaxZ);
+                    _cameraController.SnapTo(overviewCenter, overviewZ);
 
                     // Reveal screen after retry (new puzzle + camera are ready behind the overlay)
                     if (retryTp != null) { await retryTp.FadeInAsync(ct); retryTp = null; }
@@ -246,9 +246,10 @@ namespace SimpleGame.Game.InGame
                     }
                     if (positions.Count > 0)
                     {
-                        var (center, ortho) = CameraMath.ComputeFraming(
-                            positions, config.Padding, aspect, config.MinZoom, config.MaxZoom);
-                        _cameraController.SetTarget(center, ortho);
+                        var (center, z) = CameraMath.ComputeFraming(
+                            positions, config.Padding, aspect, config.FieldOfView, config.MinZ, config.MaxZ);
+                        _cameraController.SetTarget(center, z);
+                        _cameraController.SetDebugFraming(positions, center, z);
                     }
                 }
                 // Fallback: reveal after retry when no camera is available
@@ -294,6 +295,19 @@ namespace SimpleGame.Game.InGame
                             {
                                 bool adWatched = await HandleRewardedAdAsync(ct);
                                 if (adWatched) { presenter.RestoreHeartsAndContinue(); continue; }
+                                // Ad failed — re-show the failed popup so the player can pick another option
+                                choice = await HandleLevelFailedPopupAsync(ct);
+                                if (choice == LevelFailedChoice.Quit)
+                                {
+                                    if (_onSessionEnd != null) await _onSessionEnd();
+                                    return ScreenId.MainMenu;
+                                }
+                                if (choice == LevelFailedChoice.Continue)
+                                {
+                                    presenter.RestoreHeartsAndContinue();
+                                    continue;
+                                }
+                                // Retry
                                 _session.CurrentScore = 0;
                                 retryTp = _stage?.GetTransitionPlayer();
                                 if (retryTp != null) await retryTp.FadeOutAsync(ct);

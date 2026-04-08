@@ -379,7 +379,7 @@ public static class SceneSetup
         // PhysicsRaycaster on the camera lets OnMouseDown fire on 3D piece colliders
         cam.gameObject.AddComponent<PhysicsRaycaster>();
 
-        // CameraController enables orthographic pan by dragging on the board.
+        // CameraController enables perspective pan/zoom by dragging on the board.
         // UGUI Screen Space Overlay elements block pointer-down before it reaches this,
         // so slot buttons and board drag do not conflict.
         cam.gameObject.AddComponent<CameraController>();

@@ -166,10 +166,12 @@ namespace SimpleGame.Game.InGame
 
             // Initial tray slot positions — same formula as LateUpdate
             var cam = Camera.main;
-            float orthoH = cam != null && cam.orthographic ? cam.orthographicSize * 2f : 10f;
-            float orthoW = cam != null ? orthoH * cam.aspect : 18f;
-            float camX   = cam != null ? cam.transform.position.x : 0f;
-            float camY   = cam != null ? cam.transform.position.y : 0f;
+            float camZ    = cam != null ? Mathf.Abs(cam.transform.position.z) : 2f;
+            float fov     = cam != null ? cam.fieldOfView : 60f;
+            float orthoH  = 2f * CameraMath.FrustumHalfHeight(camZ, fov);
+            float orthoW  = cam != null ? orthoH * cam.aspect : orthoH * 1.78f;
+            float camX    = cam != null ? cam.transform.position.x : 0f;
+            float camY    = cam != null ? cam.transform.position.y : 0f;
 
             float unitScale = Mathf.Max(gridRows, gridCols);
             float cellH     = unitScale / gridRows;
@@ -197,8 +199,8 @@ namespace SimpleGame.Game.InGame
                 _traySlotScales[i]    = Vector3.one * slotScale;
             }
 
-            // Hidden off-screen position for pieces not yet drawn into a slot
-            var hiddenPos = new Vector3(camX + orthoW * 2f, trayY, -2f);
+            // Hidden position for pieces not yet drawn into a slot
+            var hiddenPos = new Vector3(0f, 0f, 100f);
 
             _traySlotData = new Dictionary<int, (Vector3 pos, Vector3 scale)>();
 
@@ -211,23 +213,26 @@ namespace SimpleGame.Game.InGame
                 if (desc.Id == seedPieceId) continue;
                 if (!_pieceObjects.TryGetValue(desc.Id, out var go)) continue;
 
-                Vector3 pos, scale;
                 if (deckSlotIndex.TryGetValue(desc.Id, out int slotIdx))
                 {
-                    pos   = _traySlotPositions[slotIdx];
-                    scale = _traySlotScales[slotIdx];
+                    // Piece is in the initial slot window — position in tray, keep active
+                    var pos   = _traySlotPositions[slotIdx];
+                    var scale = _traySlotScales[slotIdx];
+                    go.transform.SetParent(null, worldPositionStays: false);
+                    go.transform.position   = pos;
+                    go.transform.localScale = scale;
+                    go.SetActive(true);
+                    _traySlotData[desc.Id] = (pos, scale);
                 }
                 else
                 {
-                    pos   = hiddenPos;
-                    scale = _traySlotScales[slotCount - 1];
+                    // Piece is waiting in the deck — deactivate and move far away
+                    go.transform.SetParent(null, worldPositionStays: false);
+                    go.transform.position   = hiddenPos;
+                    go.transform.localScale = _traySlotScales[slotCount - 1];
+                    go.SetActive(false);
+                    _traySlotData[desc.Id] = (hiddenPos, _traySlotScales[slotCount - 1]);
                 }
-
-                go.transform.SetParent(null, worldPositionStays: false);
-                go.transform.position   = pos;
-                go.transform.localScale = scale;
-
-                _traySlotData[desc.Id] = (pos, scale);
             }
 
             _initialTrayData = new Dictionary<int, (Vector3, Vector3)>(_traySlotData);
@@ -256,6 +261,8 @@ namespace SimpleGame.Game.InGame
         {
             if (_pieceObjects == null || _initialTrayData == null) return;
 
+            var hiddenPos = new Vector3(0f, 0f, 100f);
+
             foreach (var kv in _initialTrayData)
             {
                 int pieceId      = kv.Key;
@@ -265,6 +272,10 @@ namespace SimpleGame.Game.InGame
                 go.transform.SetParent(null, worldPositionStays: false);
                 go.transform.position   = pos;
                 go.transform.localScale = scale;
+
+                // Pieces that were hidden initially should be deactivated again
+                bool isHidden = Vector3.Distance(pos, hiddenPos) < 0.1f;
+                go.SetActive(!isHidden);
 
                 var col = go.GetComponent<Collider>();
                 if (col != null) col.enabled = true;
@@ -323,17 +334,24 @@ namespace SimpleGame.Game.InGame
         }
 
         /// <summary>
-        /// Returns the world-space Rect that encloses the current puzzle board, computed
-        /// from the grid dimensions stored during <see cref="SpawnLevel"/>. Uses the same
-        /// unit convention as <see cref="CameraMath.ComputeBoardRect"/> (longest side = 1 unit,
-        /// centred on the origin).
-        /// Returns a default 1×1 rect centred on the origin if SpawnLevel has not yet run.
+        /// Returns the world-space Rect that encloses all solved piece positions.
+        /// Falls back to a 1×1 rect at origin if no pieces have been spawned.
         /// </summary>
         public Rect GetBoardRect()
         {
-            int rows = _currentGridRows > 0 ? _currentGridRows : 1;
-            int cols = _currentGridCols > 0 ? _currentGridCols : 1;
-            return CameraMath.ComputeBoardRect(rows, cols);
+            if (_solvedWorldPositions == null || _solvedWorldPositions.Count == 0)
+                return new Rect(-0.5f, -0.5f, 1f, 1f);
+
+            float minX = float.MaxValue, maxX = float.MinValue;
+            float minY = float.MaxValue, maxY = float.MinValue;
+            foreach (var pos in _solvedWorldPositions.Values)
+            {
+                if (pos.x < minX) minX = pos.x;
+                if (pos.x > maxX) maxX = pos.x;
+                if (pos.y < minY) minY = pos.y;
+                if (pos.y > maxY) maxY = pos.y;
+            }
+            return new Rect(minX, minY, maxX - minX, maxY - minY);
         }
 
         /// <summary>
@@ -372,7 +390,9 @@ namespace SimpleGame.Game.InGame
             var cam = Camera.main;
             if (cam == null) return;
 
-            float orthoH = cam.orthographic ? cam.orthographicSize * 2f : 10f;
+            float camZ   = Mathf.Abs(cam.transform.position.z);
+            float fov    = cam.fieldOfView;
+            float orthoH = 2f * CameraMath.FrustumHalfHeight(camZ, fov);
             float orthoW = orthoH * cam.aspect;
             float camX   = cam.transform.position.x;
             float camY   = cam.transform.position.y;
@@ -426,12 +446,12 @@ namespace SimpleGame.Game.InGame
                             {
                                 var rt     = slotBtn.GetComponent<RectTransform>();
                                 var centre = rt.TransformPoint(rt.rect.center);
-                                piecePos   = centre + _deckView.transform.forward * -0.5f;
+                                piecePos   = centre + _deckView.transform.forward * -0.01f;
 
                                 float slotW    = rt.rect.width  * rt.lossyScale.x;
                                 float slotH    = rt.rect.height * rt.lossyScale.y;
                                 float fitScale = slotW > 0
-                                    ? Mathf.Min(slotW, slotH) / Mathf.Max(cellW, cellH) * 0.85f
+                                    ? Mathf.Min(slotW, slotH) / Mathf.Max(cellW, cellH) * 0.80f
                                     : newScale.x;
                                 pieceScale = Vector3.one * fitScale;
                             }
@@ -454,6 +474,10 @@ namespace SimpleGame.Game.InGame
         {
             if (!_pieceObjects.TryGetValue(pieceId, out var go)) return;
             if (_traySlotPositions == null || slotIndex >= _traySlotPositions.Length) return;
+
+            // Activate the piece — it may have been deactivated while waiting in the deck
+            if (!go.activeSelf)
+                go.SetActive(true);
 
             var pos   = _traySlotPositions[slotIndex];
             var scale = _traySlotScales[slotIndex];

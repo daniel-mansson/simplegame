@@ -7,7 +7,7 @@ using UnityEngine;
 namespace SimpleGame.Tests.Game
 {
     /// <summary>
-    /// EditMode tests for CameraMath.ComputeFraming and PuzzleModel.GetPlaceablePieceIds.
+    /// EditMode tests for CameraMath perspective framing and PuzzleModel.GetPlaceablePieceIds.
     /// No Unity scene required — CameraMath is pure static, PuzzleModel has no MonoBehaviour deps.
     /// </summary>
     [TestFixture]
@@ -15,10 +15,13 @@ namespace SimpleGame.Tests.Game
     {
         // ── Helpers ───────────────────────────────────────────────────────
 
-        private const float Aspect = 1.0f; // square aspect for predictable framing math
-        private const float MinZoom = 2f;
-        private const float MaxZoom = 15f;
+        private const float Aspect = 1.0f;
+        private const float FOV    = 60f;
         private const float Padding = 1.5f;
+
+        // Z limits — MinZ is closest (zoomed in), MaxZ is furthest (zoomed out)
+        private static readonly float MinZ = CameraMath.ZForHalfHeight(2f, FOV); // same visible area as old MinZoom=2
+        private static readonly float MaxZ = CameraMath.ZForHalfHeight(15f, FOV);
 
         // ── Tests ─────────────────────────────────────────────────────────
 
@@ -28,19 +31,19 @@ namespace SimpleGame.Tests.Game
             var pos = new Vector3(3f, 7f, 0f);
             var positions = new List<Vector3> { pos };
 
-            var (center, ortho) = CameraMath.ComputeFraming(positions, Padding, Aspect, MinZoom, MaxZoom);
+            var (center, z) = CameraMath.ComputeFraming(positions, Padding, Aspect, FOV, MinZ, MaxZ);
 
             Assert.AreEqual(pos.x, center.x, 0.001f, "Center X should match the single position");
             Assert.AreEqual(pos.y, center.y, 0.001f, "Center Y should match the single position");
-            // span is zero → requiredByHeight = Padding, requiredByWidth = Padding / (2*aspect) = Padding
-            // ortho = Padding = 1.5 which is < MinZoom=2 → clamped to MinZoom
-            Assert.AreEqual(MinZoom, ortho, 0.001f, "Single position ortho should be clamped to MinZoom");
+            // span is zero → requiredHalfH = Padding = 1.5
+            // z = 1.5 / tan(30°) = 1.5 / 0.5774 ≈ 2.598, which is < MinZ equivalent
+            // so result should be clamped to MinZ
+            Assert.AreEqual(MinZ, z, 0.001f, "Single position Z should be clamped to MinZ");
         }
 
         [Test]
         public void CameraMath_ComputeFraming_MultiplePositions_CorrectBounds()
         {
-            // 4 corner positions at ±5 → bounding box is 10×10, center (0,0)
             var positions = new List<Vector3>
             {
                 new Vector3(-5f, -5f, 0f),
@@ -49,66 +52,77 @@ namespace SimpleGame.Tests.Game
                 new Vector3( 5f,  5f, 0f),
             };
 
-            var (center, ortho) = CameraMath.ComputeFraming(positions, Padding, Aspect, MinZoom, MaxZoom);
+            var (center, z) = CameraMath.ComputeFraming(positions, Padding, Aspect, FOV, MinZ, MaxZ);
 
             Assert.AreEqual(0f, center.x, 0.001f, "Center X should be 0 for symmetric positions");
             Assert.AreEqual(0f, center.y, 0.001f, "Center Y should be 0 for symmetric positions");
 
             // spanY=10, spanX=10, aspect=1
-            // requiredByHeight = (10 + 2*1.5) / 2 = 6.5
-            // requiredByWidth  = (10 + 2*1.5) / (2*1) = 6.5
-            // ortho = max(6.5, 6.5) = 6.5, clamped to [2,15] → 6.5
-            Assert.AreEqual(6.5f, ortho, 0.001f, "OrthoSize should cover spread + padding");
+            // requiredHalfH = (10 + 2*1.5) / 2 = 6.5
+            // requiredHalfW/aspect = 6.5/1 = 6.5
+            // halfH = 6.5 → z = 6.5 / tan(30°) ≈ 11.258
+            float expectedZ = CameraMath.ZForHalfHeight(6.5f, FOV);
+            expectedZ = Mathf.Clamp(expectedZ, MinZ, MaxZ);
+            Assert.AreEqual(expectedZ, z, 0.01f, "Z should cover spread + padding");
         }
 
         [Test]
         public void CameraMath_ComputeFraming_EmptyPositions_ReturnsFallback()
         {
-            var (center, ortho) = CameraMath.ComputeFraming(
-                new List<Vector3>(), Padding, Aspect, MinZoom, MaxZoom);
+            var (center, z) = CameraMath.ComputeFraming(
+                new List<Vector3>(), Padding, Aspect, FOV, MinZ, MaxZ);
 
             Assert.AreEqual(Vector3.zero, center, "Empty list should return Vector3.zero as center");
-            Assert.AreEqual(MinZoom, ortho, 0.001f, "Empty list should return minZoom as orthoSize");
+            Assert.AreEqual(MinZ, z, 0.001f, "Empty list should return MinZ");
         }
 
         [Test]
         public void CameraMath_ComputeFraming_NullPositions_ReturnsFallback()
         {
-            var (center, ortho) = CameraMath.ComputeFraming(
-                null, Padding, Aspect, MinZoom, MaxZoom);
+            var (center, z) = CameraMath.ComputeFraming(
+                null, Padding, Aspect, FOV, MinZ, MaxZ);
 
             Assert.AreEqual(Vector3.zero, center, "Null list should return Vector3.zero as center");
-            Assert.AreEqual(MinZoom, ortho, 0.001f, "Null list should return minZoom as orthoSize");
+            Assert.AreEqual(MinZ, z, 0.001f, "Null list should return MinZ");
         }
 
         [Test]
-        public void CameraMath_ComputeFraming_ClampsToMaxZoom()
+        public void CameraMath_ComputeFraming_ClampsToMaxZ()
         {
-            // Positions spread 200 units apart → required ortho far exceeds MaxZoom=15
             var positions = new List<Vector3>
             {
                 new Vector3(-100f,  0f, 0f),
                 new Vector3( 100f,  0f, 0f),
             };
 
-            var (_, ortho) = CameraMath.ComputeFraming(positions, Padding, Aspect, MinZoom, MaxZoom);
+            var (_, z) = CameraMath.ComputeFraming(positions, Padding, Aspect, FOV, MinZ, MaxZ);
 
-            Assert.AreEqual(MaxZoom, ortho, 0.001f, "Wide spread should be clamped to MaxZoom");
+            Assert.AreEqual(MaxZ, z, 0.001f, "Wide spread should be clamped to MaxZ");
         }
 
         [Test]
-        public void CameraMath_ComputeFraming_ClampsToMinZoom()
+        public void CameraMath_ComputeFraming_ClampsToMinZ()
         {
-            // Tiny spread — should be clamped up to MinZoom
             var positions = new List<Vector3>
             {
                 new Vector3(0f, 0f, 0f),
                 new Vector3(0.01f, 0.01f, 0f),
             };
 
-            var (_, ortho) = CameraMath.ComputeFraming(positions, 0f, Aspect, MinZoom, MaxZoom);
+            var (_, z) = CameraMath.ComputeFraming(positions, 0f, Aspect, FOV, MinZ, MaxZ);
 
-            Assert.GreaterOrEqual(ortho, MinZoom, "OrthoSize should never go below MinZoom");
+            Assert.GreaterOrEqual(z, MinZ, "Z should never go below MinZ");
+        }
+
+        // ── Frustum helpers ──────────────────────────────────────────────
+
+        [Test]
+        public void FrustumHalfHeight_RoundTrips_WithZForHalfHeight()
+        {
+            float halfH = 5f;
+            float z = CameraMath.ZForHalfHeight(halfH, FOV);
+            float result = CameraMath.FrustumHalfHeight(z, FOV);
+            Assert.AreEqual(halfH, result, 0.001f, "FrustumHalfHeight should round-trip with ZForHalfHeight");
         }
     }
 
@@ -119,8 +133,6 @@ namespace SimpleGame.Tests.Game
     [TestFixture]
     internal class GetPlaceablePieceIdsTests
     {
-        // Builds a linear chain: 0(seed) → 1 → 2 → 3 → 4
-        // with slotCount=1 so TryPlace from slot 0 places the piece at slot 0.
         private static PuzzleModel LinearChainModel(int totalPieces, int slotCount = 1)
         {
             var pieces = new List<IPuzzlePiece>(totalPieces);
@@ -139,8 +151,6 @@ namespace SimpleGame.Tests.Game
         [Test]
         public void GetPlaceablePieceIds_InitialState_ReturnsOnlyDirectNeighboursOfSeed()
         {
-            // 5-piece chain: seed=0. Only piece 1 is placeable initially (neighbour of 0).
-            // Pieces 2,3,4 are not yet reachable.
             var model = LinearChainModel(5);
 
             var ids = model.GetPlaceablePieceIds();
@@ -154,11 +164,8 @@ namespace SimpleGame.Tests.Game
         [Test]
         public void GetPlaceablePieceIds_ReturnsOnlyValidUnplacedPieces()
         {
-            // Place seed (already done) and piece 1 → only piece 2 should be placeable
             var model = LinearChainModel(5, slotCount: 1);
-
-            // slot 0 starts with piece 1 — place it
-            model.TryPlace(0); // places piece 1
+            model.TryPlace(0);
 
             var ids = model.GetPlaceablePieceIds();
 
@@ -173,12 +180,10 @@ namespace SimpleGame.Tests.Game
         public void GetPlaceablePieceIds_AllPlaced_ReturnsEmpty()
         {
             var model = LinearChainModel(5, slotCount: 1);
-
-            // Place all 4 non-seed pieces in sequence
-            model.TryPlace(0); // piece 1
-            model.TryPlace(0); // piece 2
-            model.TryPlace(0); // piece 3
-            model.TryPlace(0); // piece 4
+            model.TryPlace(0);
+            model.TryPlace(0);
+            model.TryPlace(0);
+            model.TryPlace(0);
 
             Assert.IsTrue(model.IsComplete, "Model should be complete after placing all pieces");
             var ids = model.GetPlaceablePieceIds();
@@ -188,30 +193,27 @@ namespace SimpleGame.Tests.Game
         [Test]
         public void GetPlaceablePieceIds_AfterEachPlacement_ListShrinks()
         {
-            // A linear chain: each placement removes one piece from the "placed" category
-            // and potentially adds the next. The list should change predictably.
             var model = LinearChainModel(5, slotCount: 1);
 
-            // Initially: 1 placeable (piece 1)
             var ids0 = model.GetPlaceablePieceIds();
             Assert.AreEqual(1, ids0.Count, "One placeable piece before any placement");
 
-            model.TryPlace(0); // place piece 1 → piece 2 becomes placeable
+            model.TryPlace(0);
             var ids1 = model.GetPlaceablePieceIds();
             Assert.AreEqual(1, ids1.Count, "One placeable piece after placing piece 1");
             CollectionAssert.Contains(ids1, 2);
 
-            model.TryPlace(0); // place piece 2 → piece 3 becomes placeable
+            model.TryPlace(0);
             var ids2 = model.GetPlaceablePieceIds();
             Assert.AreEqual(1, ids2.Count, "One placeable piece after placing piece 2");
             CollectionAssert.Contains(ids2, 3);
 
-            model.TryPlace(0); // place piece 3 → piece 4 becomes placeable
+            model.TryPlace(0);
             var ids3 = model.GetPlaceablePieceIds();
             Assert.AreEqual(1, ids3.Count, "One placeable piece after placing piece 3");
             CollectionAssert.Contains(ids3, 4);
 
-            model.TryPlace(0); // place piece 4 → complete, nothing placeable
+            model.TryPlace(0);
             var ids4 = model.GetPlaceablePieceIds();
             Assert.AreEqual(0, ids4.Count, "No placeable pieces when puzzle is complete");
         }
@@ -219,8 +221,6 @@ namespace SimpleGame.Tests.Game
         [Test]
         public void GetPlaceablePieceIds_BranchingModel_MultipleRootsReachable()
         {
-            // Star topology: piece 0 (seed) connects to pieces 1,2,3 (all neighbours of 0).
-            // After seed, all three should be immediately placeable.
             var pieces = new List<IPuzzlePiece>
             {
                 new PuzzlePiece(0, new[] { 1, 2, 3 }),
@@ -248,17 +248,18 @@ namespace SimpleGame.Tests.Game
     internal class CameraClampAndBoardRectTests
     {
         private const float Aspect = 1.0f;
+        private const float FOV    = 60f;
 
         // ── ClampToBounds ─────────────────────────────────────────────────
 
         [Test]
         public void ClampToBounds_PositionInsideBounds_Unchanged()
         {
-            // 10×10 board centred at origin; camera at (0,0) with orthoSize=2 (viewport 4×4)
             var bounds = new Rect(-5f, -5f, 10f, 10f);
-            var cam    = new Vector3(0f, 0f, -10f);
+            // Z=2 → halfH ≈ 1.155, halfW ≈ 1.155 — well within 10×10 board
+            var cam = new Vector3(0f, 0f, -10f);
 
-            var result = CameraMath.ClampToBounds(cam, orthoSize: 2f, aspect: Aspect, bounds: bounds, margin: 0f);
+            var result = CameraMath.ClampToBounds(cam, z: 2f, fovDegrees: FOV, aspect: Aspect, bounds: bounds, margin: 0f);
 
             Assert.AreEqual(0f, result.x, 0.001f, "X should be unchanged when inside bounds");
             Assert.AreEqual(0f, result.y, 0.001f, "Y should be unchanged when inside bounds");
@@ -268,37 +269,40 @@ namespace SimpleGame.Tests.Game
         [Test]
         public void ClampToBounds_PositionBeyondRight_ClampsX()
         {
-            // 10×10 board; camera pushed far right (x=20) — should be pulled back so viewport edge aligns with board edge
             var bounds = new Rect(-5f, -5f, 10f, 10f);
-            var cam    = new Vector3(20f, 0f, -10f);
+            float z = 2f;
+            var cam = new Vector3(20f, 0f, -10f);
 
-            var result = CameraMath.ClampToBounds(cam, orthoSize: 2f, aspect: Aspect, bounds: bounds, margin: 0f);
+            var result = CameraMath.ClampToBounds(cam, z: z, fovDegrees: FOV, aspect: Aspect, bounds: bounds, margin: 0f);
 
-            // halfW = 2*1 = 2; maxX = 5 - 0 - 2 = 3
-            Assert.AreEqual(3f, result.x, 0.001f, "X should be clamped to keep right viewport edge on board");
+            float halfW = CameraMath.FrustumHalfHeight(z, FOV) * Aspect;
+            float expectedMaxX = 5f - halfW;
+            Assert.AreEqual(expectedMaxX, result.x, 0.01f, "X should be clamped to keep right viewport edge on board");
         }
 
         [Test]
         public void ClampToBounds_PositionBeyondLeft_ClampsX()
         {
-            // 10×10 board; camera pushed far left (x=-20)
             var bounds = new Rect(-5f, -5f, 10f, 10f);
-            var cam    = new Vector3(-20f, 0f, -10f);
+            float z = 2f;
+            var cam = new Vector3(-20f, 0f, -10f);
 
-            var result = CameraMath.ClampToBounds(cam, orthoSize: 2f, aspect: Aspect, bounds: bounds, margin: 0f);
+            var result = CameraMath.ClampToBounds(cam, z: z, fovDegrees: FOV, aspect: Aspect, bounds: bounds, margin: 0f);
 
-            // halfW = 2; minX = -5 + 0 + 2 = -3
-            Assert.AreEqual(-3f, result.x, 0.001f, "X should be clamped to keep left viewport edge on board");
+            float halfW = CameraMath.FrustumHalfHeight(z, FOV) * Aspect;
+            float expectedMinX = -5f + halfW;
+            Assert.AreEqual(expectedMinX, result.x, 0.01f, "X should be clamped to keep left viewport edge on board");
         }
 
         [Test]
         public void ClampToBounds_ViewportLargerThanBoard_CentresOnBoard()
         {
-            // 2×2 board centred at (1,1); camera with orthoSize=10 (viewport 20×20 — far bigger)
             var bounds = new Rect(0f, 0f, 2f, 2f);
-            var cam    = new Vector3(99f, -99f, -10f);
+            // Large Z → viewport much bigger than 2×2 board
+            float z = 20f;
+            var cam = new Vector3(99f, -99f, -10f);
 
-            var result = CameraMath.ClampToBounds(cam, orthoSize: 10f, aspect: Aspect, bounds: bounds, margin: 0f);
+            var result = CameraMath.ClampToBounds(cam, z: z, fovDegrees: FOV, aspect: Aspect, bounds: bounds, margin: 0f);
 
             Assert.AreEqual(bounds.center.x, result.x, 0.001f, "X should be board centre when viewport exceeds board");
             Assert.AreEqual(bounds.center.y, result.y, 0.001f, "Y should be board centre when viewport exceeds board");
@@ -307,15 +311,15 @@ namespace SimpleGame.Tests.Game
         [Test]
         public void ClampToBounds_MarginReducesAllowedRange()
         {
-            // 10×10 board; margin=1 shrinks the allowed movement range by 1 unit each side
             var bounds = new Rect(-5f, -5f, 10f, 10f);
-            // Push camera to the right past the margin-adjusted edge
-            var cam    = new Vector3(20f, 0f, -10f);
+            float z = 2f;
+            var cam = new Vector3(20f, 0f, -10f);
 
-            var result = CameraMath.ClampToBounds(cam, orthoSize: 2f, aspect: Aspect, bounds: bounds, margin: 1f);
+            var result = CameraMath.ClampToBounds(cam, z: z, fovDegrees: FOV, aspect: Aspect, bounds: bounds, margin: 1f);
 
-            // halfW=2, margin=1: maxX = 5 - 1 - 2 = 2
-            Assert.AreEqual(2f, result.x, 0.001f, "Margin should further restrict the clamp range");
+            float halfW = CameraMath.FrustumHalfHeight(z, FOV) * Aspect;
+            float expectedMaxX = 5f - 1f - halfW;
+            Assert.AreEqual(expectedMaxX, result.x, 0.01f, "Margin should further restrict the clamp range");
         }
 
         // ── ComputeBoardRect ──────────────────────────────────────────────
@@ -323,7 +327,6 @@ namespace SimpleGame.Tests.Game
         [Test]
         public void ComputeBoardRect_SquareGrid_ReturnsUnitSquare()
         {
-            // 4×4 grid — longest side = 4, so each axis spans 4/4 = 1 world unit
             var rect = CameraMath.ComputeBoardRect(4, 4);
 
             Assert.AreEqual(1f, rect.width,  0.001f, "Square grid width should be 1 world unit");
@@ -335,7 +338,6 @@ namespace SimpleGame.Tests.Game
         [Test]
         public void ComputeBoardRect_RectangularGrid_CorrectAspect()
         {
-            // 2 rows × 4 cols — longest side = 4. Width = 4/4 = 1, height = 2/4 = 0.5
             var rect = CameraMath.ComputeBoardRect(2, 4);
 
             Assert.AreEqual(1f,   rect.width,  0.001f, "Width (longest side) should be 1");
@@ -353,59 +355,58 @@ namespace SimpleGame.Tests.Game
     internal class ComputeFullBoardFramingTests
     {
         private const float Aspect  = 1.0f;
-        private const float MinZoom = 2f;
-        private const float MaxZoom = 15f;
+        private const float FOV     = 60f;
         private const float Padding = 1.0f;
+
+        private static readonly float MinZ = CameraMath.ZForHalfHeight(2f, FOV);
+        private static readonly float MaxZ = CameraMath.ZForHalfHeight(15f, FOV);
 
         [Test]
         public void ComputeFullBoardFraming_SquareBoard_ReturnsCorrectFraming()
         {
-            // 1×1 board centred at origin
             var boardRect = new Rect(-0.5f, -0.5f, 1f, 1f);
 
-            var (center, orthoSize) = CameraMath.ComputeFullBoardFraming(
-                boardRect, Padding, Aspect, MinZoom, MaxZoom);
+            var (center, z) = CameraMath.ComputeFullBoardFraming(
+                boardRect, Padding, Aspect, FOV, MinZ, MaxZ);
 
             Assert.AreEqual(0f, center.x, 0.001f, "Center X should be 0 for origin-centred board");
             Assert.AreEqual(0f, center.y, 0.001f, "Center Y should be 0 for origin-centred board");
             Assert.AreEqual(0f, center.z, 0.001f, "Center Z should be 0");
 
-            // requiredByHeight = (1 + 2*1) * 0.5 = 1.5
-            // requiredByWidth  = (1 + 2*1) / (2*1) = 1.5
-            // orthoSize = max(1.5, 1.5) = 1.5 → clamped to MinZoom=2
-            Assert.AreEqual(MinZoom, orthoSize, 0.001f, "OrthoSize should be clamped to MinZoom for small board");
+            // requiredHalfH = (1 + 2*1) * 0.5 = 1.5
+            // requiredHalfW = (1 + 2*1) * 0.5 = 1.5; halfHFromWidth = 1.5/1 = 1.5
+            // halfH = max(1.5, 1.5) = 1.5 → z = 1.5/tan(30°) ≈ 2.598 → clamped to MinZ
+            float expectedZ = Mathf.Clamp(CameraMath.ZForHalfHeight(1.5f, FOV), MinZ, MaxZ);
+            Assert.AreEqual(expectedZ, z, 0.01f, "Z should frame the small board or be clamped to MinZ");
         }
 
         [Test]
         public void ComputeFullBoardFraming_RectangularBoard_AdjustsForAspect()
         {
-            // 2×1 board centred at origin, aspect=1
             var boardRect = new Rect(-1f, -0.5f, 2f, 1f);
 
-            var (center, orthoSize) = CameraMath.ComputeFullBoardFraming(
-                boardRect, Padding, Aspect, MinZoom, MaxZoom);
+            var (center, z) = CameraMath.ComputeFullBoardFraming(
+                boardRect, Padding, Aspect, FOV, MinZ, MaxZ);
 
             Assert.AreEqual(0f, center.x, 0.001f, "Center X should be 0");
             Assert.AreEqual(0f, center.y, 0.001f, "Center Y should be 0");
 
-            // requiredByHeight = (1 + 2*1) * 0.5 = 1.5
-            // requiredByWidth  = (2 + 2*1) / (2*1) = 2.0
-            // orthoSize = max(1.5, 2.0) = 2.0 → clamped to [2,15] → 2.0
-            float expected = Mathf.Clamp((2f + 2f * Padding) / (2f * Aspect), MinZoom, MaxZoom);
-            Assert.AreEqual(expected, orthoSize, 0.001f, "OrthoSize should account for the wider dimension");
+            // requiredHalfH = (1 + 2*1) * 0.5 = 1.5
+            // requiredHalfW = (2 + 2*1) * 0.5 = 2.0; halfHFromWidth = 2.0/1 = 2.0
+            // halfH = max(1.5, 2.0) = 2.0 → z = 2.0/tan(30°) ≈ 3.464
+            float expectedZ = Mathf.Clamp(CameraMath.ZForHalfHeight(2f, FOV), MinZ, MaxZ);
+            Assert.AreEqual(expectedZ, z, 0.01f, "Z should account for the wider dimension");
         }
 
         [Test]
-        public void ComputeFullBoardFraming_TinyBoard_ClampsToMinZoom()
+        public void ComputeFullBoardFraming_TinyBoard_ClampsToMinZ()
         {
-            // Very small board (0.1×0.1) with zero padding — required ortho << MinZoom
             var boardRect = new Rect(-0.05f, -0.05f, 0.1f, 0.1f);
 
-            var (_, orthoSize) = CameraMath.ComputeFullBoardFraming(
-                boardRect, padding: 0f, aspect: Aspect, minZoom: MinZoom, maxZoom: MaxZoom);
+            var (_, z) = CameraMath.ComputeFullBoardFraming(
+                boardRect, padding: 0f, aspect: Aspect, fovDegrees: FOV, minZ: MinZ, maxZ: MaxZ);
 
-            // requiredByHeight = 0.1 * 0.5 = 0.05 → clamped to MinZoom=2
-            Assert.AreEqual(MinZoom, orthoSize, 0.001f, "Tiny board orthoSize must be clamped to MinZoom");
+            Assert.AreEqual(MinZ, z, 0.001f, "Tiny board Z must be clamped to MinZ");
         }
     }
 }
